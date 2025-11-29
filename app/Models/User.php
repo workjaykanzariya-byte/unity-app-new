@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -22,12 +23,17 @@ class User extends Authenticatable
     public $incrementing = false;
 
     protected $fillable = [
-        'email',
-        'phone',
-        'password_hash',
+        'id',
         'first_name',
         'last_name',
         'display_name',
+        'email',
+        'phone',
+        'city_id',
+        'password_hash',
+        'membership_status',
+        'membership_expiry',
+        'coins_balance',
         'designation',
         'company_name',
         'profile_photo_url',
@@ -36,10 +42,6 @@ class User extends Authenticatable
         'industry_tags',
         'business_type',
         'turnover_range',
-        'city_id',
-        'membership_status',
-        'membership_expiry',
-        'coins_balance',
         'introduced_by',
         'members_introduced_count',
         'influencer_stars',
@@ -56,6 +58,11 @@ class User extends Authenticatable
         'last_login_at',
     ];
 
+    protected $hidden = [
+        'password_hash',
+        'remember_token',
+    ];
+
     protected $casts = [
         'industry_tags' => 'array',
         'target_regions' => 'array',
@@ -68,6 +75,15 @@ class User extends Authenticatable
         'anonymized_at' => 'datetime',
         'last_login_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $user): void {
+            if (empty($user->id)) {
+                $user->id = Str::uuid()->toString();
+            }
+        });
+    }
 
     public function links(): HasMany
     {
