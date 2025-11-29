@@ -14,7 +14,22 @@ class ForgotPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email:rfc,dns', 'max:255'],
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'max:255',
+                // Important: validate against users table
+                'exists:users,email',
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            // We do not reveal whether email exists for security,
+            // but we override the validation error message.
+            'email.exists' => 'If your email is registered, a reset link has been sent.',
         ];
     }
 }
