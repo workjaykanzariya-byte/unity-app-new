@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Post extends Model
+{
+    use HasFactory;
+    use SoftDeletes;
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    protected $fillable = [
+        'user_id',
+        'circle_id',
+        'content_text',
+        'media',
+        'tags',
+        'visibility',
+        'moderation_status',
+        'sponsored',
+        'is_deleted',
+    ];
+
+    protected $casts = [
+        'media' => 'array',
+        'tags' => 'array',
+        'sponsored' => 'boolean',
+        'is_deleted' => 'boolean',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function circle(): BelongsTo
+    {
+        return $this->belongsTo(Circle::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(PostComment::class);
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(PostLike::class);
+    }
+}
