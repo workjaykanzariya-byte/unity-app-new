@@ -98,6 +98,8 @@ Route::prefix('v1')->group(function () {
         // Admin Activities
         Route::get('/admin/activities', [AdminActivityController::class, 'index']);
         Route::patch('/admin/activities/{id}', [AdminActivityController::class, 'updateStatus']);
+        Route::patch('/admin/activities/{activity}/approve', [AdminActivityController::class, 'approve']);
+        Route::patch('/admin/activities/{activity}/reject', [AdminActivityController::class, 'reject']);
 
         // Wallet
         Route::get('/wallet/transactions', [WalletController::class, 'myTransactions']);
