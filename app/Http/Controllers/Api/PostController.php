@@ -101,23 +101,18 @@ class PostController extends BaseApiController
 
     public function destroy(Request $request, string $id)
     {
-        $authUser = $request->user();
+        $user = $request->user();
 
+        // User can delete ONLY their own posts
         $post = Post::where('id', $id)
-            ->where('user_id', $authUser->id)
+            ->where('user_id', $user->id)
             ->first();
 
         if (! $post) {
             return $this->error('Post not found or you are not allowed to delete it', 404);
         }
 
-        if ($post->is_deleted) {
-            return $this->success(null, 'Post already deleted');
-        }
-
-        $post->is_deleted = true;
-        $post->deleted_at = now();
-        $post->save();
+        $post->delete(); // respects SoftDeletes if used on the model
 
         return $this->success(null, 'Post deleted successfully');
     }
