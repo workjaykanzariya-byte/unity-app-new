@@ -8,6 +8,10 @@ class CircleResource extends JsonResource
 {
     public function toArray($request): array
     {
+        $founder = $this->whenLoaded('founder');
+        $city = $this->whenLoaded('city');
+        $currentMember = $this->whenLoaded('currentMember');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -20,24 +24,20 @@ class CircleResource extends JsonResource
             'visitor_count' => $this->visitor_count,
             'industry_tags' => $this->industry_tags,
             'calendar' => $this->calendar,
-            'city' => $this->whenLoaded('city', function () {
-                return [
-                    'id' => $this->city->id,
-                    'name' => $this->city->name,
-                    'state' => $this->city->state,
-                    'country' => $this->city->country,
-                ];
-            }),
-            'founder' => $this->whenLoaded('founder', function () {
-                return [
-                    'id' => $this->founder->id,
-                    'display_name' => $this->founder->display_name,
-                    'first_name' => $this->founder->first_name,
-                    'last_name' => $this->founder->last_name,
-                    'profile_photo_url' => $this->founder->profile_photo_url,
-                ];
-            }),
-            'template_id' => $this->template_id,
+            'city' => $city ? [
+                'id' => $city->id,
+                'name' => $city->name,
+            ] : null,
+            'founder' => $founder ? [
+                'id' => $founder->id,
+                'display_name' => $founder->display_name,
+                'first_name' => $founder->first_name,
+                'last_name' => $founder->last_name,
+                'profile_photo_url' => $founder->profile_photo_url,
+            ] : null,
+            'members_count' => $this->members_count ?? null,
+            'is_member' => $currentMember ? true : false,
+            'member_status' => $currentMember->status ?? null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
