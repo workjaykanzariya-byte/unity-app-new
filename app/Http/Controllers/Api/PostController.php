@@ -17,21 +17,22 @@ class PostController extends BaseApiController
 {
     public function feed(Request $request)
     {
-        $request->user(); // Ensure authentication but no filtering yet
+        $user = $request->user();
 
-        $perPage = (int) $request->query('per_page', 20);
-        $perPage = max(1, min($perPage, 50));
-
-        $paginator = Post::query()
-            ->with(['user', 'circle'])
+        $query = Post::query()
+            ->with([
+                'author:id,display_name,first_name,last_name,profile_photo_url',
+            ])
             ->withCount(['likes', 'comments'])
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at')
-            ->where('moderation_status', 'approved')
-            ->orderByDesc('created_at')
-            ->paginate($perPage);
+            ->orderByDesc('created_at');
 
-        $data = [
+        // For now, just show all public posts.
+        // Do NOT filter by moderation status so that newly created posts appear immediately.
+        $query->where('visibility', 'public');
+
+        $paginator = $query->paginate(20);
+
+        return $this->success([
             'items' => PostResource::collection($paginator),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
@@ -39,9 +40,7 @@ class PostController extends BaseApiController
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
             ],
-        ];
-
-        return $this->success($data);
+        ]);
     }
 
     public function store(StorePostRequest $request)

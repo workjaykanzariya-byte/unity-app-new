@@ -6,46 +6,30 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class PostResource extends JsonResource
 {
-    public function toArray($request)
+    public function toArray($request): array
     {
-        $authUser = $request->user();
+        $user = $this->whenLoaded('author');
+
+        $currentUser = $request->user();
 
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
-            'circle_id' => $this->circle_id,
-            'content_text' => $this->content_text,
-            'media' => $this->media,
-            'tags' => $this->tags,
-            'visibility' => $this->visibility,
-            'moderation_status' => $this->moderation_status,
-            'sponsored' => (bool) $this->sponsored,
-            'is_deleted' => (bool) $this->is_deleted,
+            'content' => $this->content_text,
+            'author' => $user ? [
+                'id' => $user->id,
+                'display_name' => $user->display_name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'profile_photo_url' => $user->profile_photo_url,
+            ] : null,
+            'likes_count' => $this->likes_count ?? 0,
+            'comments_count' => $this->comments_count ?? 0,
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'user' => $this->whenLoaded('user', function () {
-                return [
-                    'id' => $this->user->id,
-                    'display_name' => $this->user->display_name,
-                    'first_name' => $this->user->first_name,
-                    'last_name' => $this->user->last_name,
-                    'profile_photo_url' => $this->user->profile_photo_url,
-                ];
-            }),
-            'circle' => $this->whenLoaded('circle', function () {
-                return [
-                    'id' => $this->circle->id,
-                    'name' => $this->circle->name,
-                    'slug' => $this->circle->slug,
-                ];
-            }),
-            'like_count' => $this->when(isset($this->likes_count), (int) $this->likes_count),
-            'comment_count' => $this->when(isset($this->comments_count), (int) $this->comments_count),
-            'is_liked_by_me' => $this->when($authUser, function () use ($authUser) {
-                return $this->likes()
-                    ->where('user_id', $authUser->id)
-                    ->exists();
-            }),
+            'is_liked_by_me' => (bool) ($currentUser
+                ? $this->whenLoaded('likes', function () use ($currentUser) {
+                    return $this->likes->contains('user_id', $currentUser->id);
+                }, false)
+                : false),
         ];
     }
 }
