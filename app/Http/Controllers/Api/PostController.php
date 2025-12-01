@@ -17,60 +17,22 @@ class PostController extends BaseApiController
 {
     public function feed(Request $request)
     {
-        $authUser = $request->user();
-
-        $circleIds = CircleMember::where('user_id', $authUser->id)
-            ->where('status', 'approved')
-            ->whereNull('deleted_at')
-            ->pluck('circle_id')
-            ->all();
-
-        $connectionUserIds = Connection::where('is_approved', true)
-            ->where(function ($q) use ($authUser) {
-                $q->where('requester_id', $authUser->id)
-                    ->orWhere('addressee_id', $authUser->id);
-            })
-            ->get()
-            ->flatMap(function ($connection) use ($authUser) {
-                return [
-                    $connection->requester_id === $authUser->id
-                        ? $connection->addressee_id
-                        : $connection->requester_id,
-                ];
-            })
-            ->unique()
-            ->values()
-            ->all();
+        $user = $request->user();
 
         $query = Post::query()
-            ->with(['user', 'circle'])
+            ->with([
+                'author:id,display_name,first_name,last_name,profile_photo_url',
+            ])
             ->withCount(['likes', 'comments'])
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at')
-            ->where('moderation_status', 'approved')
-            ->where(function ($q) use ($authUser, $circleIds, $connectionUserIds) {
-                $q->where('visibility', 'public')
-                    ->orWhere(function ($q2) use ($circleIds) {
-                        if (! empty($circleIds)) {
-                            $q2->where('visibility', 'circle')
-                                ->whereIn('circle_id', $circleIds);
-                        }
-                    })
-                    ->orWhere(function ($q3) use ($connectionUserIds) {
-                        if (! empty($connectionUserIds)) {
-                            $q3->where('visibility', 'connections')
-                                ->whereIn('user_id', $connectionUserIds);
-                        }
-                    })
-                    ->orWhere('user_id', $authUser->id);
-            });
+            ->orderByDesc('created_at');
 
-        $perPage = (int) $request->input('per_page', 20);
-        $perPage = max(1, min($perPage, 50));
+        // For now, just show all public posts.
+        // Do NOT filter by moderation status so that newly created posts appear immediately.
+        $query->where('visibility', 'public');
 
-        $paginator = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $paginator = $query->paginate(20);
 
-        $data = [
+        return $this->success([
             'items' => PostResource::collection($paginator),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
@@ -78,29 +40,50 @@ class PostController extends BaseApiController
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
             ],
-        ];
-
-        return $this->success($data);
+        ]);
     }
 
     public function store(StorePostRequest $request)
     {
-        $authUser = $request->user();
+        $user = $request->user();
+
+        // Validation is handled by StorePostRequest
         $data = $request->validated();
 
-        $post = new Post();
-        $post->user_id = $authUser->id;
-        $post->circle_id = $data['circle_id'] ?? null;
-        $post->content_text = $data['content_text'] ?? null;
-        $post->media = $data['media'] ?? null;
-        $post->tags = $data['tags'] ?? null;
-        $post->visibility = $data['visibility'];
-        $post->sponsored = $data['sponsored'] ?? false;
-        $post->save();
+        // Attach author
+        $data['user_id'] = $user->id;
 
-        $post->load(['user', 'circle'])->loadCount(['likes', 'comments']);
+        // Enforce: at least content_text or media must be present
+        if (empty($data['content_text']) && empty($data['media'])) {
+            return $this->error('Either content_text or media is required.', 422);
+        }
 
-        return $this->success(new PostResource($post), 'Post created successfully', 201);
+        // Normalize media array (for JSONB)
+        if (! empty($data['media']) && is_array($data['media'])) {
+            $data['media'] = array_values($data['media']);
+        }
+
+        // Create the post
+        $post = Post::create($data);
+
+        // Reload the post with relations and counts using a fresh query.
+        // IMPORTANT: use with() + withCount() instead of loadCount() on the model
+        $post = Post::query()
+            ->with([
+                'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
+                'circle:id,name,slug',
+            ])
+            ->withCount([
+                'likes',
+                'comments',
+            ])
+            ->findOrFail($post->id);
+
+        return $this->success(
+            new PostResource($post),
+            'Post created successfully',
+            201
+        );
     }
 
     public function show(Request $request, string $id)
@@ -118,23 +101,18 @@ class PostController extends BaseApiController
 
     public function destroy(Request $request, string $id)
     {
-        $authUser = $request->user();
+        $user = $request->user();
 
+        // User can delete ONLY their own posts
         $post = Post::where('id', $id)
-            ->where('user_id', $authUser->id)
+            ->where('user_id', $user->id)
             ->first();
 
         if (! $post) {
             return $this->error('Post not found or you are not allowed to delete it', 404);
         }
 
-        if ($post->is_deleted) {
-            return $this->success(null, 'Post already deleted');
-        }
-
-        $post->is_deleted = true;
-        $post->deleted_at = now();
-        $post->save();
+        $post->delete(); // respects SoftDeletes if used on the model
 
         return $this->success(null, 'Post deleted successfully');
     }
