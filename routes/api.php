@@ -62,6 +62,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
         Route::post('/circles', [CircleController::class, 'store']);
+        Route::put('/circles/{id}', [CircleController::class, 'update']);
+        Route::patch('/circles/{id}', [CircleController::class, 'update']);
         Route::post('/circles/{id}/join', [CircleController::class, 'join']);
         Route::get('/my/circles', [CircleController::class, 'myCircles']);
         Route::get('/circles/{id}/members', [CircleController::class, 'members']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Circle\CircleJoinRequest;
 use App\Http\Requests\Circle\StoreCircleRequest;
+use App\Http\Requests\Circle\UpdateCircleRequest;
 use App\Http\Requests\Circle\UpdateCircleMemberRequest;
 use App\Http\Resources\CircleMemberResource;
 use App\Http\Resources\CircleResource;
@@ -190,6 +191,28 @@ class CircleController extends BaseApiController
         $members = $membersQuery->orderBy('role')->orderBy('joined_at')->get();
 
         return $this->success(CircleMemberResource::collection($members));
+    }
+
+    public function update(UpdateCircleRequest $request, string $id)
+    {
+        $authUser = $request->user();
+
+        $circle = Circle::with(['city', 'founder'])->find($id);
+
+        if (! $circle) {
+            return $this->error('Circle not found', 404);
+        }
+
+        if ($circle->founder_user_id !== $authUser->id) {
+            return $this->error('You are not allowed to update this circle', 403);
+        }
+
+        $circle->fill($request->validated());
+        $circle->save();
+
+        $circle->load(['city', 'founder']);
+
+        return $this->success(new CircleResource($circle), 'Circle updated successfully');
     }
 
     public function updateMember(UpdateCircleMemberRequest $request, string $circleId, string $memberId)
