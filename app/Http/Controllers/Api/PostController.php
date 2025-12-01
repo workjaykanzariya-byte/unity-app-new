@@ -85,22 +85,36 @@ class PostController extends BaseApiController
 
     public function store(StorePostRequest $request)
     {
-        $authUser = $request->user();
+        $user = $request->user();
+
+        // Validation is handled by StorePostRequest (either content_text or media is required)
         $data = $request->validated();
 
-        $post = new Post();
-        $post->user_id = $authUser->id;
-        $post->circle_id = $data['circle_id'] ?? null;
-        $post->content_text = $data['content_text'] ?? null;
-        $post->media = $data['media'] ?? null;
-        $post->tags = $data['tags'] ?? null;
-        $post->visibility = $data['visibility'];
-        $post->sponsored = $data['sponsored'] ?? false;
-        $post->save();
+        // Attach the logged-in user as the author of the post
+        $data['user_id'] = $user->id;
 
-        $post->load(['user', 'circle'])->loadCount(['likes', 'comments']);
+        // Ensure media is a simple array for JSONB storage if provided
+        if (! empty($data['media'])) {
+            $data['media'] = array_values($data['media']);
+        }
 
-        return $this->success(new PostResource($post), 'Post created successfully', 201);
+        // Create the post directly - this always returns a Post model instance (not null)
+        $post = Post::create($data);
+
+        // Eager-load relations and counts on this single model instance
+        $post->load([
+            'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
+            'circle:id,name,slug',
+        ])->loadCount([
+            'likes',
+            'comments',
+        ]);
+
+        return $this->success(
+            new PostResource($post),
+            'Post created successfully',
+            201
+        );
     }
 
     public function show(Request $request, string $id)
