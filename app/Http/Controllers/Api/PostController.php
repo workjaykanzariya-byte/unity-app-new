@@ -17,58 +17,19 @@ class PostController extends BaseApiController
 {
     public function feed(Request $request)
     {
-        $authUser = $request->user();
+        $request->user(); // Ensure authentication but no filtering yet
 
-        $circleIds = CircleMember::where('user_id', $authUser->id)
-            ->where('status', 'approved')
-            ->whereNull('deleted_at')
-            ->pluck('circle_id')
-            ->all();
+        $perPage = (int) $request->query('per_page', 20);
+        $perPage = max(1, min($perPage, 50));
 
-        $connectionUserIds = Connection::where('is_approved', true)
-            ->where(function ($q) use ($authUser) {
-                $q->where('requester_id', $authUser->id)
-                    ->orWhere('addressee_id', $authUser->id);
-            })
-            ->get()
-            ->flatMap(function ($connection) use ($authUser) {
-                return [
-                    $connection->requester_id === $authUser->id
-                        ? $connection->addressee_id
-                        : $connection->requester_id,
-                ];
-            })
-            ->unique()
-            ->values()
-            ->all();
-
-        $query = Post::query()
+        $paginator = Post::query()
             ->with(['user', 'circle'])
             ->withCount(['likes', 'comments'])
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
             ->where('moderation_status', 'approved')
-            ->where(function ($q) use ($authUser, $circleIds, $connectionUserIds) {
-                $q->where('visibility', 'public')
-                    ->orWhere(function ($q2) use ($circleIds) {
-                        if (! empty($circleIds)) {
-                            $q2->where('visibility', 'circle')
-                                ->whereIn('circle_id', $circleIds);
-                        }
-                    })
-                    ->orWhere(function ($q3) use ($connectionUserIds) {
-                        if (! empty($connectionUserIds)) {
-                            $q3->where('visibility', 'connections')
-                                ->whereIn('user_id', $connectionUserIds);
-                        }
-                    })
-                    ->orWhere('user_id', $authUser->id);
-            });
-
-        $perPage = (int) $request->input('per_page', 20);
-        $perPage = max(1, min($perPage, 50));
-
-        $paginator = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
 
         $data = [
             'items' => PostResource::collection($paginator),
