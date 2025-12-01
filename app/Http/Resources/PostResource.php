@@ -8,28 +8,45 @@ class PostResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $user = $this->whenLoaded('author');
-
-        $currentUser = $request->user();
-
         return [
             'id' => $this->id,
-            'content' => $this->content_text,
-            'author' => $user ? [
-                'id' => $user->id,
-                'display_name' => $user->display_name,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'profile_photo_url' => $user->profile_photo_url,
-            ] : null,
-            'likes_count' => $this->likes_count ?? 0,
-            'comments_count' => $this->comments_count ?? 0,
+
+            'content'        => $this->content_text,
+            'media'          => $this->media,
+            'tags'           => $this->tags,
+            'visibility'     => $this->visibility,
+            'moderation_status' => $this->moderation_status ?? null,
+
+            'author' => $this->when(
+                $this->relationLoaded('user') && $this->user,
+                function () {
+                    return [
+                        'id'               => $this->user->id,
+                        'display_name'     => $this->user->display_name,
+                        'first_name'       => $this->user->first_name,
+                        'last_name'        => $this->user->last_name,
+                        'profile_photo_url'=> $this->user->profile_photo_url,
+                    ];
+                }
+            ),
+
+            'circle' => $this->when(
+                $this->relationLoaded('circle') && $this->circle,
+                function () {
+                    return [
+                        'id'   => $this->circle->id,
+                        'name' => $this->circle->name,
+                    ];
+                }
+            ),
+
+            'likes_count'    => isset($this->likes_count) ? (int) $this->likes_count : 0,
+            'comments_count' => isset($this->comments_count) ? (int) $this->comments_count : 0,
+
+            'is_liked_by_me' => (bool) ($this->is_liked_by_me ?? false),
+
             'created_at' => $this->created_at,
-            'is_liked_by_me' => (bool) ($currentUser
-                ? $this->whenLoaded('likes', function () use ($currentUser) {
-                    return $this->likes->contains('user_id', $currentUser->id);
-                }, false)
-                : false),
+            'updated_at' => $this->updated_at,
         ];
     }
 }
