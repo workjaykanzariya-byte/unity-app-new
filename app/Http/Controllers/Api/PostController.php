@@ -87,25 +87,37 @@ class PostController extends BaseApiController
     {
         $user = $request->user();
 
-        // Validation is handled by StorePostRequest (either content_text or media is required)
+        // Validation is handled by StorePostRequest
         $data = $request->validated();
 
-        // Attach the logged-in user as the author of the post
+        // Attach author
         $data['user_id'] = $user->id;
 
-        // Ensure media is a simple array for JSONB storage if provided
-        if (! empty($data['media'])) {
+        // Safety: enforce either content_text or media
+        if (empty($data['content_text']) && empty($data['media'])) {
+            return $this->error('Either content_text or media is required.', 422);
+        }
+
+        // Normalize media array for JSONB
+        if (! empty($data['media']) && is_array($data['media'])) {
             $data['media'] = array_values($data['media']);
         }
 
-        // Create the post directly - this always returns a Post model instance (not null)
+        // Create post – always returns a Model instance, never null
         $post = Post::create($data);
 
-        // Eager-load relations and counts on this single model instance
+        // Guard: ensure we actually have a Post instance
+        if (! $post instanceof Post) {
+            return $this->error('Failed to create post.', 500);
+        }
+
+        // Load relations & counts safely on the single model instance
         $post->load([
             'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
             'circle:id,name,slug',
-        ])->loadCount([
+        ]);
+
+        $post->loadCount([
             'likes',
             'comments',
         ]);
