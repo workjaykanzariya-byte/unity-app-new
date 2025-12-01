@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Post extends Model
 {
@@ -35,6 +36,15 @@ class Post extends Model
         'sponsored' => 'boolean',
         'is_deleted' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $post): void {
+            if (empty($post->id)) {
+                $post->id = Str::uuid()->toString();
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {
