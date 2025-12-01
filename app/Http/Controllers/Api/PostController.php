@@ -93,34 +93,31 @@ class PostController extends BaseApiController
         // Attach author
         $data['user_id'] = $user->id;
 
-        // Safety: enforce either content_text or media
+        // Enforce: at least content_text or media must be present
         if (empty($data['content_text']) && empty($data['media'])) {
             return $this->error('Either content_text or media is required.', 422);
         }
 
-        // Normalize media array for JSONB
+        // Normalize media array (for JSONB)
         if (! empty($data['media']) && is_array($data['media'])) {
             $data['media'] = array_values($data['media']);
         }
 
-        // Create post – always returns a Model instance, never null
+        // Create the post
         $post = Post::create($data);
 
-        // Guard: ensure we actually have a Post instance
-        if (! $post instanceof Post) {
-            return $this->error('Failed to create post.', 500);
-        }
-
-        // Load relations & counts safely on the single model instance
-        $post->load([
-            'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
-            'circle:id,name,slug',
-        ]);
-
-        $post->loadCount([
-            'likes',
-            'comments',
-        ]);
+        // Reload the post with relations and counts using a fresh query.
+        // IMPORTANT: use with() + withCount() instead of loadCount() on the model
+        $post = Post::query()
+            ->with([
+                'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
+                'circle:id,name,slug',
+            ])
+            ->withCount([
+                'likes',
+                'comments',
+            ])
+            ->findOrFail($post->id);
 
         return $this->success(
             new PostResource($post),
