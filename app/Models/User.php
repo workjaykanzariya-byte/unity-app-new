@@ -79,8 +79,40 @@ class User extends Authenticatable
     protected static function booted(): void
     {
         static::creating(function (self $user): void {
+            // Ensure UUID primary key
             if (empty($user->id)) {
                 $user->id = Str::uuid()->toString();
+            }
+
+            // Ensure display_name is set (fallback)
+            if (empty($user->display_name)) {
+                $user->display_name = trim($user->first_name . ' ' . ($user->last_name ?? ''));
+            }
+
+            // Auto-generate unique public_profile_slug if not provided
+            if (empty($user->public_profile_slug)) {
+                // Base string for slug
+                $base = Str::slug(
+                    $user->display_name
+                    ?: trim($user->first_name . ' ' . ($user->last_name ?? ''))
+                    ?: $user->email
+                    ?: 'user'
+                );
+
+                if ($base === '') {
+                    $base = 'user';
+                }
+
+                $slug = $base;
+                $i = 1;
+
+                // Make sure slug is unique
+                while (static::where('public_profile_slug', $slug)->exists()) {
+                    $slug = $base . '-' . $i;
+                    $i++;
+                }
+
+                $user->public_profile_slug = $slug;
             }
         });
     }

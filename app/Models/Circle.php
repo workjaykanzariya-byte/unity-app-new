@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Circle extends Model
 {
@@ -14,12 +15,11 @@ class Circle extends Model
     use SoftDeletes;
 
     protected $keyType = 'string';
-
     public $incrementing = false;
 
     protected $fillable = [
         'name',
-        'slug',
+        // 'slug' removed from fillable — backend generates it
         'description',
         'purpose',
         'announcement',
@@ -37,6 +37,43 @@ class Circle extends Model
         'calendar' => 'array',
         'industry_tags' => 'array',
     ];
+
+    protected static function booted()
+    {
+        static::creating(function (Circle $circle) {
+
+            /** Generate UUID */
+            if (empty($circle->id)) {
+                $circle->id = Str::uuid()->toString();
+            }
+
+            /** Auto-generate slug if not provided */
+            if (empty($circle->slug)) {
+
+                $base = Str::slug($circle->name ?: 'circle');
+
+                if ($base === '') {
+                    $base = 'circle';
+                }
+
+                $slug = $base;
+                $i = 1;
+
+                // Ensure uniqueness
+                while (Circle::where('slug', $slug)->exists()) {
+                    $slug = $base . '-' . $i;
+                    $i++;
+                }
+
+                $circle->slug = $slug;
+            }
+
+            /** Default status */
+            if (empty($circle->status)) {
+                $circle->status = 'pending';
+            }
+        });
+    }
 
     public function founder(): BelongsTo
     {
