@@ -9,8 +9,8 @@ class ReferralLinkResource extends JsonResource
     public function toArray($request): array
     {
         return [
-            'id' => $this->id,
-            'referrer_user_id' => $this->referrer_user_id,
+            'id' => (string) $this->id,
+            'referrer_user_id' => (string) $this->referrer_user_id,
             'token' => $this->token,
             'status' => $this->status,
             'stats' => $this->stats,

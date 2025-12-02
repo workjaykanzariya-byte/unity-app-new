@@ -16,7 +16,8 @@ class ReferralController extends BaseApiController
 {
     public function storeLink(StoreReferralLinkRequest $request)
     {
-        $authUser = $request->user();
+        $userId = auth()->id();
+
         $data = $request->validated();
 
         $expiresAt = null;
@@ -34,15 +35,17 @@ class ReferralController extends BaseApiController
             $exists = ReferralLink::where('token', $token)->exists();
         } while ($exists);
 
-        $link = new ReferralLink();
-        $link->referrer_user_id = $authUser->id;
-        $link->token = $token;
-        $link->status = 'active';
-        $link->stats = null;
-        $link->expires_at = $expiresAt;
-        $link->save();
+        $link = ReferralLink::create([
+            'referrer_user_id' => $userId,
+            'token' => $token,
+            'status' => 'active',
+            'stats' => null,
+            'expires_at' => $expiresAt,
+        ]);
 
-        $link->loadCount('visitorLeads as visitors_count');
+        $link->load([
+            'referrerUser:id,display_name,first_name,last_name,profile_photo_url',
+        ])->loadCount('visitorLeads as visitors_count');
 
         return $this->success(new ReferralLinkResource($link), 'Referral link created successfully', 201);
     }
