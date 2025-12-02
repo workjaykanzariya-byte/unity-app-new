@@ -150,7 +150,7 @@ class ChatController extends BaseApiController
     public function storeMessage(StoreMessageRequest $request, string $id)
     {
         $authUser = $request->user();
-        $data = $request->validated();
+        $data = $request->validated() ?? $request->all();
 
         $chat = Chat::where('id', $id)
             ->where(function ($q) use ($authUser) {
@@ -163,21 +163,21 @@ class ChatController extends BaseApiController
             return $this->error('Chat not found', 404);
         }
 
-        $message = new Message();
-        $message->chat_id = $chat->id;
-        $message->sender_id = $authUser->id;
-        $message->content = $data['content'] ?? null;
-        $message->attachments = $data['attachments'] ?? null;
-        $message->is_read = false;
-        $message->save();
+        $message = $chat->messages()->create([
+            'sender_id' => $authUser->id,
+            'content' => $data['content_text'] ?? $data['content'] ?? null,
+            'attachments' => $data['attachments'] ?? null,
+            'is_read' => false,
+        ]);
+
+        $message->refresh();
+        $message->load('sender');
 
         $chat->last_message_id = $message->id;
         $chat->last_message_at = $message->created_at;
         $chat->save();
 
-        $message->load('sender');
-
-        return $this->success(new MessageResource($message->fresh()), 'Message sent', 201);
+        return $this->success(new MessageResource($message), 'Message sent', 201);
     }
 
     public function markRead(Request $request, string $id)
