@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class SupportRequest extends Model
 {
     use HasFactory;
+
+    protected $primaryKey = 'id';
 
     protected $keyType = 'string';
 
@@ -26,6 +29,15 @@ class SupportRequest extends Model
     protected $casts = [
         'attachments' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $supportRequest): void {
+            if (empty($supportRequest->id)) {
+                $supportRequest->id = Str::uuid()->toString();
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {
