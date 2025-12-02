@@ -48,6 +48,13 @@ class AdminActivityController extends BaseApiController
         return $this->success($data);
     }
 
+    public function show(Activity $activity)
+    {
+        $activity->load(['user', 'circle', 'event']);
+
+        return $this->success(new ActivityResource($activity));
+    }
+
     public function updateStatus(UpdateActivityAdminRequest $request, string $id)
     {
         $admin = $request->user();
