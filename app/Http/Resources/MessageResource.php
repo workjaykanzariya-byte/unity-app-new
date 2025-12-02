@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Http\Resources\UserBasicResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class MessageResource extends JsonResource
@@ -22,7 +21,15 @@ class MessageResource extends JsonResource
             'is_read' => (bool) $this->is_read,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'sender' => new UserBasicResource($this->whenLoaded('sender')),
+            'sender' => $this->whenLoaded('sender', function () {
+                return [
+                    'id' => (string) $this->sender->id,
+                    'display_name' => $this->sender->display_name,
+                    'first_name' => $this->sender->first_name,
+                    'last_name' => $this->sender->last_name,
+                    'profile_photo_url' => $this->sender->profile_photo_url,
+                ];
+            }),
         ];
     }
 }
