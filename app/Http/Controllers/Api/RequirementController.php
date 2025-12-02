@@ -26,6 +26,7 @@ class RequirementController extends BaseApiController
         $requirement->status = 'open';
         $requirement->save();
 
+        $requirement->refresh();
         $requirement->load('user');
 
         return $this->success(new RequirementResource($requirement), 'Requirement created successfully', 201);

@@ -9,8 +9,8 @@ class RequirementResource extends JsonResource
     public function toArray($request): array
     {
         return [
-            'id' => $this->id,
-            'user_id' => $this->user_id,
+            'id' => (string) $this->id,
+            'user_id' => (string) $this->user_id,
             'subject' => $this->subject,
             'description' => $this->description,
             'media' => $this->media,
@@ -21,7 +21,7 @@ class RequirementResource extends JsonResource
             'updated_at' => $this->updated_at,
             'user' => $this->whenLoaded('user', function () {
                 return [
-                    'id' => $this->user->id,
+                    'id' => (string) $this->user->id,
                     'display_name' => $this->user->display_name,
                     'first_name' => $this->user->first_name,
                     'last_name' => $this->user->last_name,

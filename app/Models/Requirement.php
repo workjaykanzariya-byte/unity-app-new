@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Requirement extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
+    protected $primaryKey = 'id';
     protected $keyType = 'string';
 
     public $incrementing = false;
@@ -31,6 +33,15 @@ class Requirement extends Model
         'region_filter' => 'array',
         'category_filter' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $requirement): void {
+            if (empty($requirement->id)) {
+                $requirement->id = Str::uuid()->toString();
+            }
+        });
+    }
 
     public function user(): BelongsTo
     {
