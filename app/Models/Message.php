@@ -10,11 +10,16 @@ class Message extends Model
 {
     use HasFactory;
 
+    protected $table = 'messages';
+
+    protected $primaryKey = 'id';
+
     protected $keyType = 'string';
 
     public $incrementing = false;
 
     protected $fillable = [
+        'id',
         'chat_id',
         'sender_id',
         'content',

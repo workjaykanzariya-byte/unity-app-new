@@ -177,7 +177,7 @@ class ChatController extends BaseApiController
 
         $message->load('sender');
 
-        return $this->success(new MessageResource($message), 'Message sent', 201);
+        return $this->success(new MessageResource($message->fresh()), 'Message sent', 201);
     }
 
     public function markRead(Request $request, string $id)
