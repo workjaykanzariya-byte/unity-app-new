@@ -7,6 +7,7 @@ use App\Http\Requests\Activity\UpdateActivityAdminRequest;
 use App\Http\Resources\ActivityResource;
 use App\Models\Activity;
 use App\Models\ActivityAudit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -62,62 +63,131 @@ class AdminActivityController extends BaseApiController
 
         $data = $request->validated();
 
+        $activity = Activity::find($id);
+
+        if (! $activity) {
+            return $this->error('Activity not found', 404);
+        }
+
+        $result = $this->applyStatusChange(
+            $activity,
+            $admin,
+            $data['status'],
+            $data['coins_awarded'] ?? null,
+            $data['admin_notes'] ?? null,
+            $data['reference'] ?? null
+        );
+
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return $this->success(new ActivityResource($result), 'Activity updated');
+    }
+
+    public function approve(Activity $activity, Request $request)
+    {
+        $admin = $request->user();
+
+        $result = $this->applyStatusChange(
+            $activity,
+            $admin,
+            'approved',
+            $request->input('coins_awarded'),
+            $request->input('admin_notes'),
+            $request->input('reference')
+        );
+
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return $this->success(new ActivityResource($result), 'Activity approved');
+    }
+
+    public function reject(Activity $activity, Request $request)
+    {
+        $admin = $request->user();
+
+        $result = $this->applyStatusChange(
+            $activity,
+            $admin,
+            'rejected',
+            0,
+            $request->input('admin_notes'),
+            $request->input('reference')
+        );
+
+        if ($result instanceof JsonResponse) {
+            return $result;
+        }
+
+        return $this->success(new ActivityResource($result), 'Activity rejected');
+    }
+
+    private function applyStatusChange(
+        Activity $activity,
+        $admin,
+        string $toStatus,
+        ?int $coinsAwarded = null,
+        ?string $adminNotes = null,
+        ?string $reference = null
+    ) {
         try {
             DB::beginTransaction();
 
-            $activity = Activity::where('id', $id)->lockForUpdate()->first();
+            $lockedActivity = Activity::where('id', $activity->id)->lockForUpdate()->first();
 
-            if (! $activity) {
+            if (! $lockedActivity) {
                 DB::rollBack();
                 return $this->error('Activity not found', 404);
             }
 
-            if ($activity->status !== 'pending') {
+            if ($lockedActivity->status !== 'pending') {
                 DB::rollBack();
                 return $this->error('Only pending activities can be updated', 422);
             }
 
-            $fromStatus = $activity->status;
-            $toStatus = $data['status'];
-            $adminNotes = $data['admin_notes'] ?? null;
-            $reference = $data['reference'] ?? ('activity_'.$activity->type);
+            $fromStatus = $lockedActivity->status;
+            $reference = $reference ?? ('activity_'.$lockedActivity->type);
 
-            $activity->status = $toStatus;
-            $activity->admin_notes = $adminNotes;
-            $activity->requires_verification = false;
-            $activity->verified_by_admin_id = $admin->id;
-            $activity->verified_at = now();
+            $lockedActivity->status = $toStatus;
+            $lockedActivity->admin_notes = $adminNotes;
+            $lockedActivity->requires_verification = false;
+            $lockedActivity->verified_by_admin_id = $admin->id;
+            $lockedActivity->verified_at = now();
 
             if ($toStatus === 'approved') {
-                $coinsAwarded = (int) ($data['coins_awarded'] ?? 0);
+                $coinsAwarded = (int) ($coinsAwarded ?? 0);
+
                 if ($coinsAwarded <= 0) {
                     DB::rollBack();
                     return $this->error('coins_awarded must be greater than zero when approving', 422);
                 }
 
-                $activity->coins_awarded = $coinsAwarded;
+                $lockedActivity->coins_awarded = $coinsAwarded;
 
                 $txRow = DB::selectOne(
                     "SELECT coins_apply_transaction(?, ?, ?, ?, ?) AS transaction_id",
                     [
-                        $activity->user_id,
-                        $activity->coins_awarded,
-                        $activity->id,
+                        $lockedActivity->user_id,
+                        $lockedActivity->coins_awarded,
+                        $lockedActivity->id,
                         $reference,
                         $admin->id,
                     ]
                 );
 
-                $activity->coins_ledger_id = $txRow->transaction_id ?? null;
+                $lockedActivity->coins_ledger_id = $txRow->transaction_id ?? null;
             } else {
-                $activity->coins_awarded = 0;
-                $activity->coins_ledger_id = null;
+                $lockedActivity->coins_awarded = 0;
+                $lockedActivity->coins_ledger_id = null;
             }
 
-            $activity->save();
+            $lockedActivity->save();
 
             ActivityAudit::create([
-                'activity_id' => $activity->id,
+                'activity_id' => $lockedActivity->id,
                 'changed_by' => $admin->id,
                 'from_status' => $fromStatus,
                 'to_status' => $toStatus,
@@ -132,8 +202,8 @@ class AdminActivityController extends BaseApiController
             return $this->error('Failed to update activity: '.$e->getMessage(), 500);
         }
 
-        $activity->load(['user', 'circle', 'event']);
+        $lockedActivity->load(['user', 'circle', 'event']);
 
-        return $this->success(new ActivityResource($activity), 'Activity updated');
+        return $lockedActivity;
     }
 }
