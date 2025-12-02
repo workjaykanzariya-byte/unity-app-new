@@ -55,6 +55,8 @@ class FileController extends BaseApiController
         $model->duration = $duration;
         $model->save();
 
+        $model->refresh();
+
         return $this->success(new FileResource($model), 'File uploaded successfully', 201);
     }
 }
