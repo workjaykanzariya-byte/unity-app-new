@@ -25,6 +25,7 @@ class SupportController extends BaseApiController
         $ticket->routed_to_user_id = null;
         $ticket->save();
 
+        $ticket->refresh();
         $ticket->load(['user', 'routedToUser']);
 
         return $this->success(new SupportRequestResource($ticket), 'Support request created successfully', 201);
