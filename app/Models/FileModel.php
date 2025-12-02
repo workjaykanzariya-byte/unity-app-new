@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class FileModel extends Model
 {
     use HasFactory;
+    use HasUuids;
 
     protected $table = 'files';
 
@@ -16,9 +18,12 @@ class FileModel extends Model
 
     public $incrementing = false;
 
-    public $timestamps = false;
+    public $timestamps = true;
+
+    public const UPDATED_AT = null;
 
     protected $fillable = [
+        'id',
         'uploader_user_id',
         's3_key',
         'mime_type',
@@ -26,7 +31,6 @@ class FileModel extends Model
         'width',
         'height',
         'duration',
-        'created_at',
     ];
 
     protected $casts = [
