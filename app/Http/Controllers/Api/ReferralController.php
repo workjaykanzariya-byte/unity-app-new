@@ -16,8 +16,13 @@ class ReferralController extends BaseApiController
 {
     public function storeLink(StoreReferralLinkRequest $request)
     {
-        $authUser = $request->user();
+        $userId = auth()->id();
+
         $data = $request->validated();
+        $data = empty($data) ? $request->all() : array_merge($request->all(), $data);
+
+        $label = $data['label'] ?? null;
+        $medium = $data['medium'] ?? null;
 
         $expiresAt = null;
         if (! empty($data['expires_at'])) {
@@ -28,21 +33,33 @@ class ReferralController extends BaseApiController
             $expiresAt = now()->addDays(90);
         }
 
-        $token = null;
-        do {
-            $token = Str::upper(Str::random(12));
-            $exists = ReferralLink::where('token', $token)->exists();
-        } while ($exists);
+        /** @var ReferralLink|null $link */
+        $link = ReferralLink::where('referrer_user_id', $userId)
+            ->where('label', $label)
+            ->where('medium', $medium)
+            ->first();
 
-        $link = new ReferralLink();
-        $link->referrer_user_id = $authUser->id;
-        $link->token = $token;
-        $link->status = 'active';
-        $link->stats = null;
-        $link->expires_at = $expiresAt;
-        $link->save();
+        if (! $link) {
+            $token = null;
+            do {
+                $token = Str::upper(Str::random(12));
+                $exists = ReferralLink::where('token', $token)->exists();
+            } while ($exists);
 
-        $link->loadCount('visitorLeads as visitors_count');
+            $link = ReferralLink::create([
+                'referrer_user_id' => $userId,
+                'label' => $label,
+                'medium' => $medium,
+                'token' => $token,
+                'status' => 'active',
+                'stats' => null,
+                'expires_at' => $expiresAt,
+            ]);
+        }
+
+        $link->load([
+            'referrerUser:id,display_name,first_name,last_name,profile_photo_url',
+        ])->loadCount('visitorLeads as visitors_count');
 
         return $this->success(new ReferralLinkResource($link), 'Referral link created successfully', 201);
     }
