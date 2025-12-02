@@ -11,10 +11,6 @@ class ReferralLinkResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'referrer_user_id' => (string) $this->referrer_user_id,
-            'label' => $this->label,
-            'medium' => $this->medium,
-            'code' => $this->code,
-            'url' => $this->url,
             'token' => $this->token,
             'status' => $this->status,
             'stats' => $this->stats,

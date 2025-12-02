@@ -20,10 +20,6 @@ class ReferralLink extends Model
     protected $fillable = [
         'id',
         'referrer_user_id',
-        'label',
-        'medium',
-        'code',
-        'url',
         'token',
         'status',
         'stats',

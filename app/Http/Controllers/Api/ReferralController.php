@@ -19,10 +19,6 @@ class ReferralController extends BaseApiController
         $userId = auth()->id();
 
         $data = $request->validated();
-        $data = empty($data) ? $request->all() : array_merge($request->all(), $data);
-
-        $label = $data['label'] ?? null;
-        $medium = $data['medium'] ?? null;
 
         $expiresAt = null;
         if (! empty($data['expires_at'])) {
@@ -33,29 +29,19 @@ class ReferralController extends BaseApiController
             $expiresAt = now()->addDays(90);
         }
 
-        /** @var ReferralLink|null $link */
-        $link = ReferralLink::where('referrer_user_id', $userId)
-            ->where('label', $label)
-            ->where('medium', $medium)
-            ->first();
+        $token = null;
+        do {
+            $token = Str::upper(Str::random(12));
+            $exists = ReferralLink::where('token', $token)->exists();
+        } while ($exists);
 
-        if (! $link) {
-            $token = null;
-            do {
-                $token = Str::upper(Str::random(12));
-                $exists = ReferralLink::where('token', $token)->exists();
-            } while ($exists);
-
-            $link = ReferralLink::create([
-                'referrer_user_id' => $userId,
-                'label' => $label,
-                'medium' => $medium,
-                'token' => $token,
-                'status' => 'active',
-                'stats' => null,
-                'expires_at' => $expiresAt,
-            ]);
-        }
+        $link = ReferralLink::create([
+            'referrer_user_id' => $userId,
+            'token' => $token,
+            'status' => 'active',
+            'stats' => null,
+            'expires_at' => $expiresAt,
+        ]);
 
         $link->load([
             'referrerUser:id,display_name,first_name,last_name,profile_photo_url',
