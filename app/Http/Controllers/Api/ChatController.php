@@ -40,11 +40,11 @@ class ChatController extends BaseApiController
 
     public function storeChat(StoreChatRequest $request)
     {
-        $authUser = $request->user();
+        $authUserId = auth()->id();
         $data = $request->validated();
-        $otherUserId = $data['user_id'];
+        $otherUserId = $data['user_id'] ?? $request->input('user_id');
 
-        if ($authUser->id === $otherUserId) {
+        if ($authUserId === $otherUserId) {
             return $this->error('You cannot start a chat with yourself', 422);
         }
 
@@ -53,26 +53,31 @@ class ChatController extends BaseApiController
             return $this->error('User not found', 404);
         }
 
-        $ids = [$authUser->id, $otherUserId];
-        sort($ids);
-        [$user1, $user2] = $ids;
-
-        $chat = Chat::where('user1_id', $user1)
-            ->where('user2_id', $user2)
+        $chat = Chat::where(function ($q) use ($authUserId, $otherUserId) {
+                $q->where('user1_id', $authUserId)
+                    ->where('user2_id', $otherUserId);
+            })
+            ->orWhere(function ($q) use ($authUserId, $otherUserId) {
+                $q->where('user1_id', $otherUserId)
+                    ->where('user2_id', $authUserId);
+            })
             ->first();
 
         if (! $chat) {
-            $chat = new Chat();
-            $chat->user1_id = $user1;
-            $chat->user2_id = $user2;
-            $chat->last_message_at = null;
-            $chat->last_message_id = null;
-            $chat->save();
+            $chat = Chat::create([
+                'user1_id' => $authUserId,
+                'user2_id' => $otherUserId,
+            ]);
         }
 
-        $chat->load(['user1', 'user2', 'lastMessage']);
-        $chat->loadCount(['messages as unread_count' => function ($q) use ($authUser) {
-            $q->where('sender_id', '!=', $authUser->id)
+        $chat->load([
+            'user1',
+            'user2',
+            'lastMessage',
+        ]);
+
+        $chat->loadCount(['messages as unread_count' => function ($q) use ($authUserId) {
+            $q->where('sender_id', '!=', $authUserId)
                 ->where('is_read', false)
                 ->whereNull('deleted_at');
         }]);
@@ -145,7 +150,7 @@ class ChatController extends BaseApiController
     public function storeMessage(StoreMessageRequest $request, string $id)
     {
         $authUser = $request->user();
-        $data = $request->validated();
+        $data = $request->validated() ?? $request->all();
 
         $chat = Chat::where('id', $id)
             ->where(function ($q) use ($authUser) {
@@ -158,19 +163,19 @@ class ChatController extends BaseApiController
             return $this->error('Chat not found', 404);
         }
 
-        $message = new Message();
-        $message->chat_id = $chat->id;
-        $message->sender_id = $authUser->id;
-        $message->content = $data['content'] ?? null;
-        $message->attachments = $data['attachments'] ?? null;
-        $message->is_read = false;
-        $message->save();
+        $message = $chat->messages()->create([
+            'sender_id' => $authUser->id,
+            'content' => $data['content_text'] ?? $data['content'] ?? null,
+            'attachments' => $data['attachments'] ?? null,
+            'is_read' => false,
+        ]);
+
+        $message->refresh();
+        $message->load('sender');
 
         $chat->last_message_id = $message->id;
         $chat->last_message_at = $message->created_at;
         $chat->save();
-
-        $message->load('sender');
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
     }

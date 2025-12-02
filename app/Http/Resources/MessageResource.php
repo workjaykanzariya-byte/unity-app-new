@@ -8,10 +8,14 @@ class MessageResource extends JsonResource
 {
     public function toArray($request): array
     {
+        if (! $this->resource) {
+            return null;
+        }
+
         return [
-            'id' => $this->id,
-            'chat_id' => $this->chat_id,
-            'sender_id' => $this->sender_id,
+            'id' => (string) $this->id,
+            'chat_id' => (string) $this->chat_id,
+            'sender_id' => (string) $this->sender_id,
             'content' => $this->content,
             'attachments' => $this->attachments,
             'is_read' => (bool) $this->is_read,
@@ -19,7 +23,7 @@ class MessageResource extends JsonResource
             'updated_at' => $this->updated_at,
             'sender' => $this->whenLoaded('sender', function () {
                 return [
-                    'id' => $this->sender->id,
+                    'id' => (string) $this->sender->id,
                     'display_name' => $this->sender->display_name,
                     'first_name' => $this->sender->first_name,
                     'last_name' => $this->sender->last_name,
