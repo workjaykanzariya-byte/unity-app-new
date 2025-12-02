@@ -40,11 +40,11 @@ class ChatController extends BaseApiController
 
     public function storeChat(StoreChatRequest $request)
     {
-        $authUser = $request->user();
+        $authUserId = auth()->id();
         $data = $request->validated();
-        $otherUserId = $data['user_id'];
+        $otherUserId = $data['user_id'] ?? $request->input('user_id');
 
-        if ($authUser->id === $otherUserId) {
+        if ($authUserId === $otherUserId) {
             return $this->error('You cannot start a chat with yourself', 422);
         }
 
@@ -53,26 +53,31 @@ class ChatController extends BaseApiController
             return $this->error('User not found', 404);
         }
 
-        $ids = [$authUser->id, $otherUserId];
-        sort($ids);
-        [$user1, $user2] = $ids;
-
-        $chat = Chat::where('user1_id', $user1)
-            ->where('user2_id', $user2)
+        $chat = Chat::where(function ($q) use ($authUserId, $otherUserId) {
+                $q->where('user1_id', $authUserId)
+                    ->where('user2_id', $otherUserId);
+            })
+            ->orWhere(function ($q) use ($authUserId, $otherUserId) {
+                $q->where('user1_id', $otherUserId)
+                    ->where('user2_id', $authUserId);
+            })
             ->first();
 
         if (! $chat) {
-            $chat = new Chat();
-            $chat->user1_id = $user1;
-            $chat->user2_id = $user2;
-            $chat->last_message_at = null;
-            $chat->last_message_id = null;
-            $chat->save();
+            $chat = Chat::create([
+                'user1_id' => $authUserId,
+                'user2_id' => $otherUserId,
+            ]);
         }
 
-        $chat->load(['user1', 'user2', 'lastMessage']);
-        $chat->loadCount(['messages as unread_count' => function ($q) use ($authUser) {
-            $q->where('sender_id', '!=', $authUser->id)
+        $chat->load([
+            'user1',
+            'user2',
+            'lastMessage',
+        ]);
+
+        $chat->loadCount(['messages as unread_count' => function ($q) use ($authUserId) {
+            $q->where('sender_id', '!=', $authUserId)
                 ->where('is_read', false)
                 ->whereNull('deleted_at');
         }]);
