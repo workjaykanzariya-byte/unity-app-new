@@ -22,30 +22,63 @@ use Illuminate\Support\Str;
 
 class AuthController extends BaseApiController
 {
-    public function register(RegisterRequest $request): JsonResponse
+    public function register(RegisterRequest $request)
     {
         $data = $request->validated();
 
-        $user = new User();
-        $user->id = $data['id'] ?? null;
-        $user->first_name = $data['first_name'];
-        $user->last_name = $data['last_name'] ?? null;
-        $user->display_name = $data['display_name'] ?? trim($user->first_name . ' ' . ($user->last_name ?? ''));
-        $user->email = $data['email'];
-        $user->phone = $data['phone'] ?? null;
-        $user->city_id = $data['city_id'] ?? null;
-        $user->password_hash = Hash::make($data['password']);
-        $user->membership_status = 'visitor';
-        $user->coins_balance = 0;
-        $user->save();
-        $user->refresh();
+        // Build a display name from first + last name
+        $displayName = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
 
-        $token = $user->createToken('api')->plainTextToken;
+        $user           = new User();
+        $user->id       = Str::uuid();
+        $user->first_name   = $data['first_name'];
+        $user->last_name    = $data['last_name'] ?? null;
+        $user->display_name = $displayName;
+
+        $user->email        = $data['email'];
+        $user->phone        = $data['phone'];
+
+        // NEW FIELDS
+        $user->company_name = $data['company_name'] ?? null;
+        $user->designation  = $data['designation'] ?? null;
+
+        // Set defaults as per existing schema / logic
+        $user->city_id            = $user->city_id ?? null;
+        $user->membership_status  = $user->membership_status ?? 'visitor';
+        $user->coins_balance      = $user->coins_balance ?? 0;
+
+        // Password: stored as password_hash column
+        $user->password_hash = Hash::make($data['password']);
+
+        // Public profile slug, e.g. "usera-1"
+        if (empty($user->public_profile_slug)) {
+            $baseSlug = Str::slug($displayName ?: $data['first_name'] ?: 'user');
+            $user->public_profile_slug = $baseSlug;
+        }
+
+        $user->save();
+
+        // Create auth token (use whatever you already use: Sanctum / Passport / JWT)
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->success([
-            'user' => new UserResource($user->load('city')),
-            'token' => $token,
-        ], 'Registration successful', 201);
+            'user' => [
+                'id'              => $user->id,
+                'first_name'      => $user->first_name,
+                'last_name'       => $user->last_name,
+                'display_name'    => $user->display_name,
+                'email'           => $user->email,
+                'phone'           => $user->phone,
+                'company_name'    => $user->company_name,
+                'designation'     => $user->designation,
+                'profile_photo_url' => $user->profile_photo_url,
+                'created_at'      => $user->created_at,
+            ],
+            'token' => [
+                'access_token' => $token,
+                'token_type'   => 'Bearer',
+            ],
+        ], 'Registration successful');
     }
 
     public function login(LoginRequest $request): JsonResponse
