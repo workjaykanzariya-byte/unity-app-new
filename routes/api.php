@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Activities\RequirementController as ActivitiesRequirementController;
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AdsController;
 use App\Http\Controllers\Api\AdminActivityController;
@@ -98,9 +99,9 @@ Route::prefix('v1')->group(function () {
             Route::get('p2p-meetings/{id}', [P2pMeetingController::class, 'show']);
 
             // Requirements
-            Route::get('requirements', [RequirementController::class, 'index']);
-            Route::post('requirements', [RequirementController::class, 'store']);
-            Route::get('requirements/{id}', [RequirementController::class, 'show']);
+            Route::get('requirements', [ActivitiesRequirementController::class, 'index']);
+            Route::post('requirements', [ActivitiesRequirementController::class, 'store']);
+            Route::get('requirements/{id}', [ActivitiesRequirementController::class, 'show']);
 
             // Referrals
             Route::get('referrals', [ReferralController::class, 'index']);
