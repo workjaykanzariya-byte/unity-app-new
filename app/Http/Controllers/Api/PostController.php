@@ -11,7 +11,10 @@ use App\Models\Connection;
 use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
+use App\Models\Upload;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class PostController extends BaseApiController
 {
@@ -45,45 +48,53 @@ class PostController extends BaseApiController
 
     public function store(StorePostRequest $request)
     {
-        $user = $request->user();
+        $user = Auth::user();
 
-        // Validation is handled by StorePostRequest
-        $data = $request->validated();
+        $media = null;
 
-        // Attach author
-        $data['user_id'] = $user->id;
+        if ($request->filled('image_id')) {
+            $upload = Upload::findOrFail($request->image_id);
 
-        // Enforce: at least content_text or media must be present
-        if (empty($data['content_text']) && empty($data['media'])) {
-            return $this->error('Either content_text or media is required.', 422);
+            $media = [[
+                'id' => $upload->id,
+                'type' => 'image',
+                'disk' => $upload->disk ?? 'public',
+                'path' => $upload->path,
+                'url' => $upload->url,
+                'mime_type' => $upload->mime_type,
+            ]];
         }
 
-        // Normalize media array (for JSONB)
-        if (! empty($data['media']) && is_array($data['media'])) {
-            $data['media'] = array_values($data['media']);
-        }
+        $post = Post::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'circle_id' => $request->input('circle_id'),
+            'content_text' => $request->input('content_text'),
+            'media' => $media,
+            'tags' => $request->input('tags', []),
+            'visibility' => $request->input('visibility', 'public'),
+            'moderation_status' => $request->input('moderation_status', 'pending'),
+            'sponsored' => $request->boolean('sponsored', false),
+            'is_deleted' => false,
+        ]);
 
-        // Create the post
-        $post = Post::create($data);
-
-        // Reload the post with relations and counts using a fresh query.
-        // IMPORTANT: use with() + withCount() instead of loadCount() on the model
-        $post = Post::query()
-            ->with([
-                'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
-                'circle:id,name,slug',
-            ])
-            ->withCount([
-                'likes',
-                'comments',
-            ])
-            ->findOrFail($post->id);
-
-        return $this->success(
-            new PostResource($post),
-            'Post created successfully',
-            201
-        );
+        return response()->json([
+            'success' => true,
+            'message' => 'Post created successfully',
+            'data' => [
+                'id' => $post->id,
+                'user_id' => $post->user_id,
+                'circle_id' => $post->circle_id,
+                'content_text' => $post->content_text,
+                'media' => $post->media,
+                'tags' => $post->tags,
+                'visibility' => $post->visibility,
+                'moderation_status' => $post->moderation_status,
+                'sponsored' => $post->sponsored,
+                'is_deleted' => $post->is_deleted,
+                'created_at' => $post->created_at,
+            ],
+        ]);
     }
 
     public function show(Request $request, string $id)

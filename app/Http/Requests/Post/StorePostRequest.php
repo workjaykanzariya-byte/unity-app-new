@@ -14,23 +14,13 @@ class StorePostRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'content_text' => 'required|string',
+            'image_id' => 'nullable|uuid|exists:uploads,id',
             'circle_id' => 'nullable|uuid|exists:circles,id',
-            'content_text' => 'nullable|string',
-            'media' => 'nullable|array',
-            'media.*' => 'array',
+            'visibility' => 'required|in:public,members,circle,private',
             'tags' => 'nullable|array',
-            'tags.*' => 'string|max:150',
-            'visibility' => 'required|string|in:public,circle,connections',
-            'sponsored' => 'sometimes|boolean',
+            'tags.*' => 'string|max:50',
+            'sponsored' => 'nullable|boolean',
         ];
-    }
-
-    public function withValidator($validator)
-    {
-        $validator->after(function ($v) {
-            if (! $this->input('content_text') && ! $this->input('media')) {
-                $v->errors()->add('content_text', 'Either content_text or media is required.');
-            }
-        });
     }
 }
