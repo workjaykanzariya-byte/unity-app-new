@@ -6,6 +6,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProfileRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'first_name' => $this->input('first_name') !== null
+                ? trim((string) $this->input('first_name'))
+                : null,
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -36,6 +45,13 @@ class UpdateProfileRequest extends FormRequest
             'social_links.website' => ['nullable', 'url'],
             'profile_photo_id' => ['nullable'],
             'cover_photo_id' => ['nullable'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'first_name.required' => 'The first name field is required.',
         ];
     }
 }
