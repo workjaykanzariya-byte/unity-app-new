@@ -14,35 +14,27 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name'          => ['sometimes', 'string', 'max:100'],
-            'last_name'           => ['sometimes', 'nullable', 'string', 'max:100'],
-            'company_name'        => ['sometimes', 'nullable', 'string', 'max:255'],
-            'designation'         => ['sometimes', 'nullable', 'string', 'max:255'],
-
-            'about'               => ['sometimes', 'nullable', 'string', 'max:1000'],
-
-            'gender'              => ['sometimes', 'nullable', 'string', 'max:20'],
-            'dob'                 => ['sometimes', 'nullable', 'date'],
-
-            'experience_years'    => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
-            'experience_summary'  => ['sometimes', 'nullable', 'string'],
-
-            'city'                => ['sometimes', 'nullable', 'string', 'max:150'],
-
-            'skills'              => ['sometimes', 'array'],
-            'skills.*'            => ['nullable', 'string', 'max:100'],
-
-            'interests'           => ['sometimes', 'array'],
-            'interests.*'         => ['nullable', 'string', 'max:100'],
-
-            'social_links'        => ['sometimes', 'array'],
-            'social_links.linkedin'  => ['nullable', 'url'],
-            'social_links.facebook'  => ['nullable', 'url'],
-            'social_links.instagram' => ['nullable', 'url'],
-            'social_links.website'   => ['nullable', 'url'],
-
-            'profile_photo_id'    => ['sometimes', 'nullable', 'uuid'],
-            'cover_photo_id'      => ['sometimes', 'nullable', 'uuid'],
+            'first_name' => ['sometimes', 'required', 'string', 'max:100'],
+            'last_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'company_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'designation' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'about' => ['sometimes', 'nullable', 'string'],
+            'gender' => ['sometimes', 'nullable', 'string', 'in:male,female,other'],
+            'dob' => ['sometimes', 'nullable', 'date'],
+            'experience_years' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'experience_summary' => ['sometimes', 'nullable', 'string'],
+            'city_id' => ['sometimes', 'nullable', 'uuid', 'exists:cities,id'],
+            'skills' => ['sometimes', 'nullable', 'array'],
+            'skills.*' => ['string', 'max:150'],
+            'interests' => ['sometimes', 'nullable', 'array'],
+            'interests.*' => ['string', 'max:150'],
+            'social_links' => ['sometimes', 'nullable', 'array'],
+            'social_links.linkedin' => ['sometimes', 'nullable', 'url'],
+            'social_links.facebook' => ['sometimes', 'nullable', 'url'],
+            'social_links.instagram' => ['sometimes', 'nullable', 'url'],
+            'social_links.website' => ['sometimes', 'nullable', 'url'],
+            'profile_photo_id' => ['sometimes', 'nullable', 'uuid'],
+            'cover_photo_id' => ['sometimes', 'nullable', 'uuid'],
         ];
     }
 }
