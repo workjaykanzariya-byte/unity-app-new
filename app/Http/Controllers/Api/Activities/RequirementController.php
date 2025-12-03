@@ -17,16 +17,25 @@ class RequirementController extends BaseApiController
         $user = $request->user();
         $data = $request->validated();
 
+        $media = null;
+        if (! empty($data['media_id'])) {
+            $media = [[
+                'id' => $data['media_id'],
+                'type' => 'image',
+            ]];
+        }
+
         try {
             $requirement = Requirement::create([
                 'user_id' => $user->id,
                 'subject' => $data['subject'],
                 'description' => $data['description'],
-                'media_id' => $data['media_id'] ?? null,
+                'media' => $media,
                 'region_label' => $data['region_label'],
                 'city_name' => $data['city_name'],
                 'category' => $data['category'],
                 'status' => $data['status'] ?? 'open',
+                'is_deleted' => false,
             ]);
 
             return $this->success(

@@ -14,7 +14,7 @@ class RequirementResource extends JsonResource
             'user_id' => $this->user_id,
             'subject' => $this->subject,
             'description' => $this->description,
-            'media_id' => $this->media_id,
+            'media' => $this->media,
             'region_label' => $this->region_label,
             'city_name' => $this->city_name,
             'category' => $this->category,

@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Requirement extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'requirements';
 
@@ -22,11 +24,17 @@ class Requirement extends Model
         'user_id',
         'subject',
         'description',
-        'media_id',
+        'media',
         'region_label',
         'city_name',
         'category',
         'status',
+        'is_deleted',
+    ];
+
+    protected $casts = [
+        'media' => 'array',
+        'is_deleted' => 'boolean',
     ];
 
     protected static function booted(): void
