@@ -19,6 +19,7 @@ class Post extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'id',
         'user_id',
         'circle_id',
         'content_text',
