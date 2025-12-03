@@ -8,7 +8,6 @@ use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Requests\Profile\UpdateUserLinkRequest;
 use App\Http\Resources\UserLinkResource;
 use App\Http\Resources\UserProfileResource;
-use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 
 class ProfileController extends BaseApiController
@@ -64,7 +63,7 @@ class ProfileController extends BaseApiController
 
         $user->load(['city', 'userLinks', 'profilePhotoFile', 'coverPhotoFile']);
 
-        return $this->success(new UserResource($user), 'Profile updated successfully');
+        return $this->success(new UserProfileResource($user), 'Profile updated successfully');
     }
 
     public function links(Request $request)
