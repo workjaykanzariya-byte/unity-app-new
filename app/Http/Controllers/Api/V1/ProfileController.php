@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Profile\UpdateProfileRequest;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProfileController extends Controller
@@ -12,7 +11,7 @@ class ProfileController extends Controller
     /**
      * Display the authenticated user's profile without triggering validation.
      */
-    public function show(Request $request): JsonResponse
+    public function show(Request $request)
     {
         $user = $request->user();
 
@@ -26,7 +25,7 @@ class ProfileController extends Controller
     /**
      * Update the authenticated user's profile using validated data.
      */
-    public function update(UpdateProfileRequest $request): JsonResponse
+    public function update(UpdateProfileRequest $request)
     {
         $user = $request->user();
         $data = $request->validated();
