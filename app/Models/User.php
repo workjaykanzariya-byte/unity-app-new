@@ -66,6 +66,7 @@ class User extends Authenticatable
         'social_links',
         'profile_photo_file_id',
         'cover_photo_file_id',
+        'password',
     ];
 
     protected $hidden = [
