@@ -28,27 +28,33 @@ class ProfileController extends BaseApiController
         $user = $request->user();
         $data = $request->validated();
 
-        $fieldMappings = [
-            'first_name' => 'first_name',
-            'last_name' => 'last_name',
-            'company_name' => 'company_name',
-            'designation' => 'designation',
-            'gender' => 'gender',
-            'dob' => 'dob',
-            'experience_years' => 'experience_years',
-            'experience_summary' => 'experience_summary',
-            'skills' => 'skills',
-            'interests' => 'interests',
-            'social_links' => 'social_links',
-            'city_id' => 'city_id',
-            'profile_photo_id' => 'profile_photo_file_id',
-            'cover_photo_id' => 'cover_photo_file_id',
+        $directFields = [
+            'first_name',
+            'last_name',
+            'company_name',
+            'designation',
+            'gender',
+            'dob',
+            'experience_years',
+            'experience_summary',
+            'skills',
+            'interests',
+            'social_links',
+            'city_id',
         ];
 
-        foreach ($fieldMappings as $requestKey => $userAttribute) {
-            if (array_key_exists($requestKey, $data)) {
-                $user->{$userAttribute} = $data[$requestKey];
+        foreach ($directFields as $field) {
+            if (array_key_exists($field, $data)) {
+                $user->{$field} = $data[$field];
             }
+        }
+
+        if (array_key_exists('profile_photo_id', $data)) {
+            $user->profile_photo_file_id = $data['profile_photo_id'];
+        }
+
+        if (array_key_exists('cover_photo_id', $data)) {
+            $user->cover_photo_file_id = $data['cover_photo_id'];
         }
 
         if (array_key_exists('about', $data)) {
