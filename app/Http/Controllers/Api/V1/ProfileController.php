@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
+    /**
+     * Display the authenticated user's profile without triggering validation.
+     */
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -20,6 +23,9 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Update the authenticated user's profile using validated data.
+     */
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
