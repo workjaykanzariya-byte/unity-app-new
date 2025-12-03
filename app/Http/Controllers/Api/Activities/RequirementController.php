@@ -40,6 +40,14 @@ class RequirementController extends BaseApiController
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            if (config('app.env') !== 'production') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ], 500);
+            }
+
             return $this->error('Failed to create requirement', 500);
         }
     }
