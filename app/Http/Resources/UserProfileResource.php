@@ -6,6 +6,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserProfileResource extends JsonResource
 {
+    /**
+     * Transform the resource into an array.
+     */
     public function toArray($request): array
     {
         return [
@@ -19,6 +22,7 @@ class UserProfileResource extends JsonResource
             'company_name'       => $this->company_name,
             'designation'        => $this->designation,
 
+            // DB column short_bio is exposed as "about" in API
             'about'              => $this->short_bio,
 
             'gender'             => $this->gender,
@@ -27,18 +31,34 @@ class UserProfileResource extends JsonResource
             'experience_years'   => $this->experience_years,
             'experience_summary' => $this->experience_summary,
 
-            'city'               => $this->city,
+            // city_id is editable; city relation is optional/read-only
+            'city_id'            => $this->city_id,
+            'city'               => $this->whenLoaded('city', function () {
+                return [
+                    'id'      => $this->city->id,
+                    'name'    => $this->city->name,
+                    'state'   => $this->city->state_name,
+                    'country' => $this->city->country_name,
+                ];
+            }),
 
             'skills'             => $this->skills ?? [],
             'interests'          => $this->interests ?? [],
 
-            'social_links'       => $this->social_links,
+            // JSON object with social links
+            'social_links'       => $this->social_links ?? [
+                'linkedin'  => null,
+                'facebook'  => null,
+                'instagram' => null,
+                'website'   => null,
+            ],
 
             'profile_photo_id'   => $this->profile_photo_file_id,
             'cover_photo_id'     => $this->cover_photo_file_id,
 
-            'profile_photo_url'  => optional($this->profilePhotoFile)->public_url,
-            'cover_photo_url'    => optional($this->coverPhotoFile)->public_url,
+            // URLs built from related File models if they are loaded
+            'profile_photo_url'  => optional($this->profilePhotoFile)->public_url ?? null,
+            'cover_photo_url'    => optional($this->coverPhotoFile)->public_url ?? null,
 
             'created_at'         => $this->created_at,
             'updated_at'         => $this->updated_at,
