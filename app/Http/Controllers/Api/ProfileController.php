@@ -28,71 +28,30 @@ class ProfileController extends BaseApiController
         $user = $request->user();
         $data = $request->validated();
 
-        if (array_key_exists('first_name', $data)) {
-            $user->first_name = $data['first_name'];
-        }
+        $user->forceFill([
+            'first_name'            => $data['first_name'] ?? $user->first_name,
+            'last_name'             => $data['last_name'] ?? $user->last_name,
+            'company_name'          => $data['company_name'] ?? $user->company_name,
+            'designation'           => $data['designation'] ?? $user->designation,
+            'short_bio'             => array_key_exists('about', $data) ? $data['about'] : $user->short_bio,
+            'gender'                => $data['gender'] ?? $user->gender,
+            'dob'                   => $data['dob'] ?? $user->dob,
+            'experience_years'      => $data['experience_years'] ?? $user->experience_years,
+            'experience_summary'    => $data['experience_summary'] ?? $user->experience_summary,
+            'city_id'               => array_key_exists('city_id', $data) ? $data['city_id'] : $user->city_id,
+            'city'                  => $data['city'] ?? $user->city,
+            'skills'                => $data['skills'] ?? $user->skills ?? [],
+            'interests'             => $data['interests'] ?? $user->interests ?? [],
+            'social_links'          => $data['social_links'] ?? $user->social_links ?? [],
+            'profile_photo_file_id' => array_key_exists('profile_photo_id', $data) ? $data['profile_photo_id'] : $user->profile_photo_file_id,
+            'cover_photo_file_id'   => array_key_exists('cover_photo_id', $data) ? $data['cover_photo_id'] : $user->cover_photo_file_id,
+        ]);
 
-        if (array_key_exists('last_name', $data)) {
-            $user->last_name = $data['last_name'];
-        }
-
-        if (array_key_exists('company_name', $data)) {
-            $user->company_name = $data['company_name'];
-        }
-
-        if (array_key_exists('designation', $data)) {
-            $user->designation = $data['designation'];
-        }
-
-        if (isset($data['first_name']) || isset($data['last_name'])) {
+        if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
             $user->display_name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: $user->email;
         }
 
-        if (array_key_exists('about', $data)) {
-            $user->short_bio = $data['about'];
-        }
-
-        if (array_key_exists('gender', $data)) {
-            $user->gender = $data['gender'];
-        }
-
-        if (array_key_exists('dob', $data)) {
-            $user->dob = $data['dob'];
-        }
-
-        if (array_key_exists('experience_years', $data)) {
-            $user->experience_years = $data['experience_years'];
-        }
-
-        if (array_key_exists('experience_summary', $data)) {
-            $user->experience_summary = $data['experience_summary'];
-        }
-
-        if (array_key_exists('city', $data)) {
-            $user->city = $data['city'];
-        }
-
-        if (array_key_exists('skills', $data)) {
-            $user->skills = $data['skills'] ?? [];
-        }
-
-        if (array_key_exists('interests', $data)) {
-            $user->interests = $data['interests'] ?? [];
-        }
-
-        if (array_key_exists('social_links', $data)) {
-            $user->social_links = $data['social_links'] ?? [];
-        }
-
-        if (array_key_exists('profile_photo_id', $data)) {
-            $user->profile_photo_file_id = $data['profile_photo_id'];
-        }
-
-        if (array_key_exists('cover_photo_id', $data)) {
-            $user->cover_photo_file_id = $data['cover_photo_id'];
-        }
-
-        $user->save();
+        $user->saveOrFail();
 
         $user->load(['profilePhotoFile', 'coverPhotoFile', 'userLinks']);
 
