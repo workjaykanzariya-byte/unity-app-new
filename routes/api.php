@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
-use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
