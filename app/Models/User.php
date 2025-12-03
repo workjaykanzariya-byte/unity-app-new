@@ -18,8 +18,8 @@ class User extends Authenticatable
     use Notifiable;
     use SoftDeletes;
 
+    protected $table = 'users';
     protected $keyType = 'string';
-
     public $incrementing = false;
 
     protected $fillable = [
@@ -30,6 +30,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'city_id',
+        'city',
         'password_hash',
         'membership_status',
         'membership_expiry',
@@ -56,9 +57,19 @@ class User extends Authenticatable
         'anonymized_at',
         'is_gdpr_exported',
         'last_login_at',
+        'gender',
+        'dob',
+        'experience_years',
+        'experience_summary',
+        'skills',
+        'interests',
+        'social_links',
+        'profile_photo_file_id',
+        'cover_photo_file_id',
     ];
 
     protected $hidden = [
+        'password',
         'password_hash',
         'remember_token',
     ];
@@ -74,24 +85,24 @@ class User extends Authenticatable
         'gdpr_deleted_at' => 'datetime',
         'anonymized_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'dob' => 'date',
+        'skills' => 'array',
+        'interests' => 'array',
+        'social_links' => 'array',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (self $user): void {
-            // Ensure UUID primary key
             if (empty($user->id)) {
                 $user->id = Str::uuid()->toString();
             }
 
-            // Ensure display_name is set (fallback)
             if (empty($user->display_name)) {
                 $user->display_name = trim($user->first_name . ' ' . ($user->last_name ?? ''));
             }
 
-            // Auto-generate unique public_profile_slug if not provided
             if (empty($user->public_profile_slug)) {
-                // Base string for slug
                 $base = Str::slug(
                     $user->display_name
                     ?: trim($user->first_name . ' ' . ($user->last_name ?? ''))
@@ -106,7 +117,6 @@ class User extends Authenticatable
                 $slug = $base;
                 $i = 1;
 
-                // Make sure slug is unique
                 while (static::where('public_profile_slug', $slug)->exists()) {
                     $slug = $base . '-' . $i;
                     $i++;
@@ -260,5 +270,15 @@ class User extends Authenticatable
     public function feedback(): HasMany
     {
         return $this->hasMany(Feedback::class);
+    }
+
+    public function profilePhotoFile(): BelongsTo
+    {
+        return $this->belongsTo(File::class, 'profile_photo_file_id');
+    }
+
+    public function coverPhotoFile(): BelongsTo
+    {
+        return $this->belongsTo(File::class, 'cover_photo_file_id');
     }
 }
