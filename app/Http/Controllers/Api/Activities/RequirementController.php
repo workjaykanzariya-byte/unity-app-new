@@ -26,16 +26,23 @@ class RequirementController extends BaseApiController
         }
 
         try {
+            $regionFilter = [
+                'region_label' => $data['region_label'],
+                'city_name' => $data['city_name'],
+            ];
+
+            $categoryFilter = [
+                'category' => $data['category'],
+            ];
+
             $requirement = Requirement::create([
                 'user_id' => $user->id,
                 'subject' => $data['subject'],
                 'description' => $data['description'],
                 'media' => $media,
-                'region_label' => $data['region_label'],
-                'city_name' => $data['city_name'],
-                'category' => $data['category'],
+                'region_filter' => $regionFilter,
+                'category_filter' => $categoryFilter,
                 'status' => $data['status'] ?? 'open',
-                'is_deleted' => false,
             ]);
 
             return $this->success(

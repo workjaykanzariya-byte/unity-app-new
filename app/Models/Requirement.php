@@ -25,16 +25,15 @@ class Requirement extends Model
         'subject',
         'description',
         'media',
-        'region_label',
-        'city_name',
-        'category',
+        'region_filter',
+        'category_filter',
         'status',
-        'is_deleted',
     ];
 
     protected $casts = [
         'media' => 'array',
-        'is_deleted' => 'boolean',
+        'region_filter' => 'array',
+        'category_filter' => 'array',
     ];
 
     protected static function booted(): void
