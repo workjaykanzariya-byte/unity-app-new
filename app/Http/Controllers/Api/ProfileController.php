@@ -6,12 +6,23 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Profile\StoreUserLinkRequest;
 use App\Http\Requests\Profile\UpdateProfileRequest;
 use App\Http\Requests\Profile\UpdateUserLinkRequest;
+use App\Http\Resources\UserFullResource;
 use App\Http\Resources\UserLinkResource;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 
 class ProfileController extends BaseApiController
 {
+    public function show()
+    {
+        $user = auth()->user()->load('city');
+
+        return $this->success(
+            'Profile fetched successfully',
+            new UserFullResource($user)
+        );
+    }
+
     public function update(UpdateProfileRequest $request)
     {
         $user = $request->user();
@@ -20,7 +31,10 @@ class ProfileController extends BaseApiController
         $user->fill($data);
         $user->save();
 
-        return $this->success(new UserResource($user->load('city', 'userLinks')), 'Profile updated successfully');
+        return $this->success(
+            'Profile updated successfully',
+            new UserResource($user->load('city', 'userLinks'))
+        );
     }
 
     public function links(Request $request)
@@ -28,7 +42,7 @@ class ProfileController extends BaseApiController
         $user = $request->user();
         $links = $user->userLinks()->orderByDesc('created_at')->get();
 
-        return $this->success(UserLinkResource::collection($links));
+        return $this->success(null, UserLinkResource::collection($links));
     }
 
     public function storeLink(StoreUserLinkRequest $request)
@@ -38,7 +52,7 @@ class ProfileController extends BaseApiController
 
         $link = $user->userLinks()->create($data);
 
-        return $this->success(new UserLinkResource($link), 'Link created successfully', 201);
+        return $this->success('Link created successfully', new UserLinkResource($link), 201);
     }
 
     public function updateLink(UpdateUserLinkRequest $request, string $id)
@@ -55,7 +69,7 @@ class ProfileController extends BaseApiController
         $link->fill($data);
         $link->save();
 
-        return $this->success(new UserLinkResource($link), 'Link updated successfully');
+        return $this->success('Link updated successfully', new UserLinkResource($link));
     }
 
     public function destroyLink(Request $request, string $id)
@@ -69,6 +83,6 @@ class ProfileController extends BaseApiController
 
         $link->delete();
 
-        return $this->success(null, 'Link deleted successfully');
+        return $this->success('Link deleted successfully');
     }
 }

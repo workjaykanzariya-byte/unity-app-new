@@ -34,6 +34,8 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+    Route::get('profile', [ProfileController::class, 'show'])->middleware('auth:sanctum');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('profile')->group(function () {
             Route::put('/', [ProfileController::class, 'update']);

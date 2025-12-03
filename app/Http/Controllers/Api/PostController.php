@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Post\PostRequest;
 use App\Http\Requests\Post\StorePostCommentRequest;
-use App\Http\Requests\Post\StorePostRequest;
 use App\Http\Resources\PostCommentResource;
 use App\Http\Resources\PostResource;
 use App\Models\CircleMember;
@@ -17,11 +17,10 @@ class PostController extends BaseApiController
 {
     public function feed(Request $request)
     {
-        $user = $request->user();
-
         $query = Post::query()
             ->with([
                 'author:id,display_name,first_name,last_name,profile_photo_url',
+                'media',
             ])
             ->withCount(['likes', 'comments'])
             ->orderByDesc('created_at');
@@ -32,7 +31,7 @@ class PostController extends BaseApiController
 
         $paginator = $query->paginate(20);
 
-        return $this->success([
+        return $this->success(null, [
             'items' => PostResource::collection($paginator),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
@@ -43,45 +42,22 @@ class PostController extends BaseApiController
         ]);
     }
 
-    public function store(StorePostRequest $request)
+    public function store(PostRequest $request)
     {
         $user = $request->user();
 
-        // Validation is handled by StorePostRequest
-        $data = $request->validated();
+        $post = $user->posts()->create([
+            'content' => $request->content,
+            'visibility' => 'public',
+        ]);
 
-        // Attach author
-        $data['user_id'] = $user->id;
-
-        // Enforce: at least content_text or media must be present
-        if (empty($data['content_text']) && empty($data['media'])) {
-            return $this->error('Either content_text or media is required.', 422);
+        if ($request->media_ids) {
+            $post->media()->sync($request->media_ids);
         }
-
-        // Normalize media array (for JSONB)
-        if (! empty($data['media']) && is_array($data['media'])) {
-            $data['media'] = array_values($data['media']);
-        }
-
-        // Create the post
-        $post = Post::create($data);
-
-        // Reload the post with relations and counts using a fresh query.
-        // IMPORTANT: use with() + withCount() instead of loadCount() on the model
-        $post = Post::query()
-            ->with([
-                'user:id,first_name,last_name,display_name,profile_photo_url,public_profile_slug',
-                'circle:id,name,slug',
-            ])
-            ->withCount([
-                'likes',
-                'comments',
-            ])
-            ->findOrFail($post->id);
 
         return $this->success(
-            new PostResource($post),
             'Post created successfully',
+            new PostResource($post->load('media')),
             201
         );
     }
@@ -90,13 +66,14 @@ class PostController extends BaseApiController
     {
         $post = Post::with(['user', 'circle'])
             ->withCount(['likes', 'comments'])
+            ->with(['media'])
             ->find($id);
 
         if (! $post || $post->is_deleted || $post->deleted_at) {
             return $this->error('Post not found', 404);
         }
 
-        return $this->success(new PostResource($post));
+        return $this->success(null, new PostResource($post));
     }
 
     public function destroy(Request $request, string $id)
@@ -114,7 +91,7 @@ class PostController extends BaseApiController
 
         $post->delete(); // respects SoftDeletes if used on the model
 
-        return $this->success(null, 'Post deleted successfully');
+        return $this->success('Post deleted successfully');
     }
 
     public function like(Request $request, string $id)
@@ -137,7 +114,7 @@ class PostController extends BaseApiController
 
         $likeCount = PostLike::where('post_id', $post->id)->count();
 
-        return $this->success(['like_count' => $likeCount], 'Post liked');
+        return $this->success('Post liked', ['like_count' => $likeCount]);
     }
 
     public function unlike(Request $request, string $id)
@@ -159,7 +136,7 @@ class PostController extends BaseApiController
 
         $likeCount = PostLike::where('post_id', $post->id)->count();
 
-        return $this->success(['like_count' => $likeCount], 'Post unliked');
+        return $this->success('Post unliked', ['like_count' => $likeCount]);
     }
 
     public function storeComment(StorePostCommentRequest $request, string $id)
@@ -186,7 +163,7 @@ class PostController extends BaseApiController
 
         $comment->load('user');
 
-        return $this->success(new PostCommentResource($comment), 'Comment added', 201);
+        return $this->success('Comment added', new PostCommentResource($comment), 201);
     }
 
     public function listComments(Request $request, string $id)
@@ -218,6 +195,6 @@ class PostController extends BaseApiController
             ],
         ];
 
-        return $this->success($data);
+        return $this->success(null, $data);
     }
 }

@@ -7,8 +7,12 @@ use Illuminate\Http\JsonResponse;
 
 class BaseApiController extends Controller
 {
-    protected function success($data = null, ?string $message = null, int $status = 200): JsonResponse
+    protected function success(?string $message = null, $data = null, int $status = 200): JsonResponse
     {
+        if ($message !== null && ! is_string($message) && (is_string($data) || $data === null)) {
+            [$message, $data] = [$data, $message];
+        }
+
         return response()->json([
             'success' => true,
             'message' => $message,

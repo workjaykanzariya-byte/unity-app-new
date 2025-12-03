@@ -11,8 +11,8 @@ class PostResource extends JsonResource
         return [
             'id' => $this->id,
 
-            'content'        => $this->content_text,
-            'media'          => $this->media,
+            'content'        => $this->content,
+            'media'          => FileResource::collection($this->whenLoaded('media')),
             'tags'           => $this->tags,
             'visibility'     => $this->visibility,
             'moderation_status' => $this->moderation_status ?? null,
