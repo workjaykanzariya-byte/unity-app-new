@@ -23,7 +23,6 @@ class User extends Authenticatable
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
         'first_name',
         'last_name',
         'display_name',
@@ -38,29 +37,6 @@ class User extends Authenticatable
         'experience_summary',
         'city',
         'city_id',
-        'password_hash',
-        'membership_status',
-        'membership_expiry',
-        'coins_balance',
-        'profile_photo_url',
-        'long_bio_html',
-        'industry_tags',
-        'business_type',
-        'turnover_range',
-        'introduced_by',
-        'members_introduced_count',
-        'influencer_stars',
-        'target_regions',
-        'target_business_categories',
-        'hobbies_interests',
-        'leadership_roles',
-        'is_sponsored_member',
-        'public_profile_slug',
-        'special_recognitions',
-        'gdpr_deleted_at',
-        'anonymized_at',
-        'is_gdpr_exported',
-        'last_login_at',
         'skills',
         'interests',
         'social_links',
@@ -75,16 +51,6 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'industry_tags' => 'array',
-        'target_regions' => 'array',
-        'target_business_categories' => 'array',
-        'hobbies_interests' => 'array',
-        'leadership_roles' => 'array',
-        'special_recognitions' => 'array',
-        'membership_expiry' => 'datetime',
-        'gdpr_deleted_at' => 'datetime',
-        'anonymized_at' => 'datetime',
-        'last_login_at' => 'datetime',
         'dob' => 'date',
         'skills' => 'array',
         'interests' => 'array',
@@ -282,8 +248,4 @@ class User extends Authenticatable
         return $this->belongsTo(File::class, 'cover_photo_file_id');
     }
 
-    public function cityRelation(): BelongsTo
-    {
-        return $this->belongsTo(City::class, 'city_id');
-    }
 }

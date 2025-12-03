@@ -8,7 +8,7 @@ class UserProfileResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $skills = is_array($this->skills) ? $this->skills : [];
+        $skills    = is_array($this->skills) ? $this->skills : [];
         $interests = is_array($this->interests) ? $this->interests : [];
 
         $links = $this->social_links ?? [];
@@ -27,7 +27,7 @@ class UserProfileResource extends JsonResource
             'company_name'       => $this->company_name,
             'designation'        => $this->designation,
 
-            // DB: short_bio → API: about
+            // DB short_bio -> API about
             'about'              => $this->short_bio,
 
             'gender'             => $this->gender,
@@ -36,17 +36,8 @@ class UserProfileResource extends JsonResource
             'experience_years'   => $this->experience_years,
             'experience_summary' => $this->experience_summary,
 
-            'city'               => $this->city,      // text field
-            'city_id'            => $this->city_id,   // FK
-
-            'city_detail'        => $this->whenLoaded('cityRelation', function () {
-                return [
-                    'id'      => $this->cityRelation->id,
-                    'name'    => $this->cityRelation->name,
-                    'state'   => $this->cityRelation->state_name,
-                    'country' => $this->cityRelation->country_name,
-                ];
-            }),
+            'city'               => $this->city,
+            'city_id'            => $this->city_id,
 
             'skills'             => $skills,
             'interests'          => $interests,

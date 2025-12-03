@@ -11,14 +11,12 @@ class ProfileController extends Controller
 {
     /**
      * GET /api/v1/profile
-     * Return the logged-in user's full profile.
      */
     public function show(Request $request)
     {
         $user = $request->user()->load([
             'profilePhotoFile',
             'coverPhotoFile',
-            'cityRelation',
         ]);
 
         return response()->json([
@@ -30,7 +28,6 @@ class ProfileController extends Controller
 
     /**
      * PUT/PATCH /api/v1/profile
-     * Update the logged-in user's profile.
      */
     public function update(UpdateProfileRequest $request)
     {
@@ -51,7 +48,7 @@ class ProfileController extends Controller
             $user->designation = $data['designation'];
         }
 
-        // Derive display_name if names changed
+        // Derive display_name
         if (isset($data['first_name']) || isset($data['last_name'])) {
             $first = $user->first_name ?? '';
             $last  = $user->last_name ?? '';
@@ -77,7 +74,7 @@ class ProfileController extends Controller
             $user->experience_summary = $data['experience_summary'];
         }
 
-        // city text + city_id
+        // City text + city_id
         if (array_key_exists('city', $data)) {
             $user->city = $data['city'];
         }
@@ -109,7 +106,6 @@ class ProfileController extends Controller
         $user->refresh()->load([
             'profilePhotoFile',
             'coverPhotoFile',
-            'cityRelation',
         ]);
 
         return response()->json([
