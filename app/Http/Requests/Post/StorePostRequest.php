@@ -15,7 +15,7 @@ class StorePostRequest extends FormRequest
     {
         return [
             'content_text' => 'required|string',
-            'image_id' => 'nullable|uuid|exists:uploads,id',
+            'image_id' => ['nullable', 'uuid'],
             'circle_id' => 'nullable|uuid|exists:circles,id',
             'visibility' => 'required|in:public,members,circle,private',
             'tags' => 'nullable|array',

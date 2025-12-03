@@ -11,7 +11,6 @@ use App\Models\Connection;
 use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
-use App\Models\Upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -53,15 +52,9 @@ class PostController extends BaseApiController
         $media = null;
 
         if ($request->filled('image_id')) {
-            $upload = Upload::findOrFail($request->image_id);
-
             $media = [[
-                'id' => $upload->id,
+                'id' => $request->image_id,
                 'type' => 'image',
-                'disk' => $upload->disk ?? 'public',
-                'path' => $upload->path,
-                'url' => $upload->url,
-                'mime_type' => $upload->mime_type,
             ]];
         }
 
