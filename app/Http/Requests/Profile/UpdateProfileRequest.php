@@ -13,34 +13,36 @@ class UpdateProfileRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()?->id;
-
         return [
-            'first_name' => 'sometimes|required|string|max:100',
-            'last_name' => 'sometimes|nullable|string|max:100',
-            'display_name' => 'sometimes|nullable|string|max:150',
-            'designation' => 'sometimes|nullable|string|max:100',
-            'company_name' => 'sometimes|nullable|string|max:150',
-            'profile_photo_url' => 'sometimes|nullable|url|max:2000',
-            'short_bio' => 'sometimes|nullable|string',
-            'long_bio_html' => 'sometimes|nullable|string',
-            'business_type' => 'sometimes|nullable|string|max:100',
-            'turnover_range' => 'sometimes|nullable|string|max:100',
-            'city_id' => 'sometimes|nullable|uuid|exists:cities,id',
-            'email' => 'sometimes|required|email:rfc,dns|max:255|unique:users,email,' . $userId,
-            'phone' => 'sometimes|nullable|string|max:30|unique:users,phone,' . $userId,
-            'industry_tags' => 'sometimes|array',
-            'industry_tags.*' => 'string|max:150',
-            'target_regions' => 'sometimes|array',
-            'target_regions.*' => 'string|max:150',
-            'target_business_categories' => 'sometimes|array',
-            'target_business_categories.*' => 'string|max:150',
-            'hobbies_interests' => 'sometimes|array',
-            'hobbies_interests.*' => 'string|max:150',
-            'leadership_roles' => 'sometimes|array',
-            'leadership_roles.*' => 'string|max:150',
-            'special_recognitions' => 'sometimes|array',
-            'special_recognitions.*' => 'string|max:150',
+            'first_name'          => ['sometimes', 'string', 'max:100'],
+            'last_name'           => ['sometimes', 'nullable', 'string', 'max:100'],
+            'company_name'        => ['sometimes', 'nullable', 'string', 'max:255'],
+            'designation'         => ['sometimes', 'nullable', 'string', 'max:255'],
+
+            'about'               => ['sometimes', 'nullable', 'string', 'max:1000'],
+
+            'gender'              => ['sometimes', 'nullable', 'string', 'max:20'],
+            'dob'                 => ['sometimes', 'nullable', 'date'],
+
+            'experience_years'    => ['sometimes', 'nullable', 'integer', 'min:0', 'max:80'],
+            'experience_summary'  => ['sometimes', 'nullable', 'string'],
+
+            'city'                => ['sometimes', 'nullable', 'string', 'max:150'],
+
+            'skills'              => ['sometimes', 'array'],
+            'skills.*'            => ['nullable', 'string', 'max:100'],
+
+            'interests'           => ['sometimes', 'array'],
+            'interests.*'         => ['nullable', 'string', 'max:100'],
+
+            'social_links'        => ['sometimes', 'array'],
+            'social_links.linkedin'  => ['nullable', 'url'],
+            'social_links.facebook'  => ['nullable', 'url'],
+            'social_links.instagram' => ['nullable', 'url'],
+            'social_links.website'   => ['nullable', 'url'],
+
+            'profile_photo_id'    => ['sometimes', 'nullable', 'uuid'],
+            'cover_photo_id'      => ['sometimes', 'nullable', 'uuid'],
         ];
     }
 }
