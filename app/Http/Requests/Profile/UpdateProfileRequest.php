@@ -28,6 +28,7 @@ class UpdateProfileRequest extends FormRequest
             'experience_summary'  => ['sometimes', 'nullable', 'string'],
 
             'city'                => ['sometimes', 'nullable', 'string', 'max:150'],
+            'city_id'             => ['sometimes', 'nullable', 'uuid'],
 
             'skills'              => ['sometimes', 'array'],
             'skills.*'            => ['nullable', 'string', 'max:100'],

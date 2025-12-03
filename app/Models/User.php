@@ -29,16 +29,20 @@ class User extends Authenticatable
         'display_name',
         'email',
         'phone',
-        'city_id',
+        'company_name',
+        'designation',
+        'short_bio',
+        'gender',
+        'dob',
+        'experience_years',
+        'experience_summary',
         'city',
+        'city_id',
         'password_hash',
         'membership_status',
         'membership_expiry',
         'coins_balance',
-        'designation',
-        'company_name',
         'profile_photo_url',
-        'short_bio',
         'long_bio_html',
         'industry_tags',
         'business_type',
@@ -57,10 +61,6 @@ class User extends Authenticatable
         'anonymized_at',
         'is_gdpr_exported',
         'last_login_at',
-        'gender',
-        'dob',
-        'experience_years',
-        'experience_summary',
         'skills',
         'interests',
         'social_links',
@@ -280,5 +280,10 @@ class User extends Authenticatable
     public function coverPhotoFile(): BelongsTo
     {
         return $this->belongsTo(File::class, 'cover_photo_file_id');
+    }
+
+    public function cityRelation(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id');
     }
 }

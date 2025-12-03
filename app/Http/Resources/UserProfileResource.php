@@ -6,16 +6,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserProfileResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     */
     public function toArray($request): array
     {
-        // Normalise skills & interests
         $skills = is_array($this->skills) ? $this->skills : [];
         $interests = is_array($this->interests) ? $this->interests : [];
 
-        // Normalise social_links into an object with fixed keys
         $links = $this->social_links ?? [];
         if (!is_array($links)) {
             $links = [];
@@ -41,17 +36,15 @@ class UserProfileResource extends JsonResource
             'experience_years'   => $this->experience_years,
             'experience_summary' => $this->experience_summary,
 
-            // city_id (fk) + city_name (text column)
-            'city_id'            => $this->city_id,
-            'city_name'          => $this->city, // <-- text field from users table
+            'city'               => $this->city,      // text field
+            'city_id'            => $this->city_id,   // FK
 
-            // city object from relation (if loaded)
-            'city'               => $this->whenLoaded('city', function () {
+            'city_detail'        => $this->whenLoaded('cityRelation', function () {
                 return [
-                    'id'      => $this->city->id,
-                    'name'    => $this->city->name,
-                    'state'   => $this->city->state_name,
-                    'country' => $this->city->country_name,
+                    'id'      => $this->cityRelation->id,
+                    'name'    => $this->cityRelation->name,
+                    'state'   => $this->cityRelation->state_name,
+                    'country' => $this->cityRelation->country_name,
                 ];
             }),
 

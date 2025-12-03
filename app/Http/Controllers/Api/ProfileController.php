@@ -18,7 +18,7 @@ class ProfileController extends Controller
         $user = $request->user()->load([
             'profilePhotoFile',
             'coverPhotoFile',
-            'city',
+            'cityRelation',
         ]);
 
         return response()->json([
@@ -76,6 +76,11 @@ class ProfileController extends Controller
         if (array_key_exists('experience_summary', $data)) {
             $user->experience_summary = $data['experience_summary'];
         }
+
+        // city text + city_id
+        if (array_key_exists('city', $data)) {
+            $user->city = $data['city'];
+        }
         if (array_key_exists('city_id', $data)) {
             $user->city_id = $data['city_id'];
         }
@@ -104,7 +109,7 @@ class ProfileController extends Controller
         $user->refresh()->load([
             'profilePhotoFile',
             'coverPhotoFile',
-            'city',
+            'cityRelation',
         ]);
 
         return response()->json([
