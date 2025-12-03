@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PostController;
-use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\AdsController;
@@ -35,17 +35,9 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::prefix('profile')->group(function () {
-            Route::get('/', [ProfileController::class, 'show']);
-            Route::put('/', [ProfileController::class, 'update']);
-            Route::patch('/', [ProfileController::class, 'update']);
-
-            Route::get('/links', [ProfileController::class, 'links']);
-            Route::post('/links', [ProfileController::class, 'storeLink']);
-            Route::put('/links/{id}', [ProfileController::class, 'updateLink']);
-            Route::patch('/links/{id}', [ProfileController::class, 'updateLink']);
-            Route::delete('/links/{id}', [ProfileController::class, 'destroyLink']);
-        });
+        Route::get('/profile', [ProfileController::class, 'show']);
+        Route::put('/profile', [ProfileController::class, 'update']);
+        Route::patch('/profile', [ProfileController::class, 'update']);
 
         // Members & connections
         Route::get('/members', [MemberController::class, 'index']);
