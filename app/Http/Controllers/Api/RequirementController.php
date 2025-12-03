@@ -3,68 +3,25 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Requirement\StoreRequirementRequest;
-use App\Http\Requests\Requirement\UpdateRequirementRequest;
-use App\Http\Resources\RequirementResource;
+use App\Http\Requests\Activity\StoreRequirementRequest;
 use App\Models\Requirement;
 use Illuminate\Http\Request;
+use Throwable;
 
 class RequirementController extends BaseApiController
 {
-    public function store(StoreRequirementRequest $request)
-    {
-        $authUser = $request->user();
-        $data = $request->validated();
-
-        $requirement = new Requirement();
-        $requirement->user_id = $authUser->id;
-        $requirement->subject = $data['subject'];
-        $requirement->description = $data['description'] ?? null;
-        $requirement->media = $data['media'] ?? null;
-        $requirement->region_filter = $data['region_filter'] ?? null;
-        $requirement->category_filter = $data['category_filter'] ?? null;
-        $requirement->status = 'open';
-        $requirement->save();
-
-        $requirement->refresh();
-        $requirement->load('user');
-
-        return $this->success(new RequirementResource($requirement), 'Requirement created successfully', 201);
-    }
-
     public function index(Request $request)
     {
         $authUser = $request->user();
+        $status = $request->input('status');
 
         $query = Requirement::query()
-            ->with('user')
+            ->where('user_id', $authUser->id)
+            ->where('is_deleted', false)
             ->whereNull('deleted_at');
 
-        $status = $request->input('status', 'open');
         if ($status) {
             $query->where('status', $status);
-        }
-
-        if ($request->boolean('my', false)) {
-            $query->where('user_id', $authUser->id);
-        } elseif ($ownerId = $request->input('owner_id')) {
-            $query->where('user_id', $ownerId);
-        }
-
-        if ($search = trim((string) $request->input('q', ''))) {
-            $searchLike = '%' . $search . '%';
-            $query->where(function ($q) use ($searchLike) {
-                $q->where('subject', 'ILIKE', $searchLike)
-                    ->orWhere('description', 'ILIKE', $searchLike);
-            });
-        }
-
-        if ($region = $request->input('region')) {
-            $query->whereJsonContains('region_filter', $region);
-        }
-
-        if ($category = $request->input('category')) {
-            $query->whereJsonContains('category_filter', $category);
         }
 
         $perPage = (int) $request->input('per_page', 20);
@@ -74,39 +31,57 @@ class RequirementController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        $data = [
-            'items' => RequirementResource::collection($paginator),
+        return $this->success([
+            'items' => $paginator->items(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
             ],
-        ];
+        ]);
+    }
 
-        return $this->success($data);
+    public function store(StoreRequirementRequest $request)
+    {
+        $authUser = $request->user();
+
+        $media = null;
+        if ($request->filled('media_id')) {
+            $media = [[
+                'id' => $request->input('media_id'),
+                'type' => 'image',
+            ]];
+        }
+
+        try {
+            $requirement = Requirement::create([
+                'user_id' => $authUser->id,
+                'subject' => $request->input('subject'),
+                'description' => $request->input('description'),
+                'media' => $media,
+                'region_label' => $request->input('region_label'),
+                'city_name' => $request->input('city_name'),
+                'category' => $request->input('category'),
+                'status' => $request->input('status', 'open') ?: 'open',
+                'is_deleted' => false,
+            ]);
+
+            // TODO: award coins for this activity
+
+            return $this->success($requirement, 'Requirement created successfully', 201);
+        } catch (Throwable $e) {
+            return $this->error('Something went wrong', 500);
+        }
     }
 
     public function show(Request $request, string $id)
     {
-        $requirement = Requirement::with('user')
-            ->where('id', $id)
-            ->whereNull('deleted_at')
-            ->first();
-
-        if (! $requirement) {
-            return $this->error('Requirement not found', 404);
-        }
-
-        return $this->success(new RequirementResource($requirement));
-    }
-
-    public function update(UpdateRequirementRequest $request, string $id)
-    {
         $authUser = $request->user();
-        $data = $request->validated();
 
         $requirement = Requirement::where('id', $id)
+            ->where('user_id', $authUser->id)
+            ->where('is_deleted', false)
             ->whereNull('deleted_at')
             ->first();
 
@@ -114,16 +89,6 @@ class RequirementController extends BaseApiController
             return $this->error('Requirement not found', 404);
         }
 
-        if ($requirement->user_id !== $authUser->id) {
-            // TODO: allow admins to edit any requirement via gate/middleware
-            return $this->error('You are not allowed to update this requirement', 403);
-        }
-
-        $requirement->fill($data);
-        $requirement->save();
-
-        $requirement->load('user');
-
-        return $this->success(new RequirementResource($requirement), 'Requirement updated successfully');
+        return $this->success($requirement);
     }
 }
