@@ -11,6 +11,16 @@ class UserProfileResource extends JsonResource
      */
     public function toArray($request): array
     {
+        // Normalise skills & interests
+        $skills = is_array($this->skills) ? $this->skills : [];
+        $interests = is_array($this->interests) ? $this->interests : [];
+
+        // Normalise social_links into an object with fixed keys
+        $links = $this->social_links ?? [];
+        if (!is_array($links)) {
+            $links = [];
+        }
+
         return [
             'id'                 => $this->id,
             'first_name'         => $this->first_name,
@@ -22,7 +32,7 @@ class UserProfileResource extends JsonResource
             'company_name'       => $this->company_name,
             'designation'        => $this->designation,
 
-            // DB column short_bio is exposed as "about" in API
+            // DB: short_bio → API: about
             'about'              => $this->short_bio,
 
             'gender'             => $this->gender,
@@ -31,8 +41,11 @@ class UserProfileResource extends JsonResource
             'experience_years'   => $this->experience_years,
             'experience_summary' => $this->experience_summary,
 
-            // city_id is editable; city relation is optional/read-only
+            // city_id (fk) + city_name (text column)
             'city_id'            => $this->city_id,
+            'city_name'          => $this->city, // <-- text field from users table
+
+            // city object from relation (if loaded)
             'city'               => $this->whenLoaded('city', function () {
                 return [
                     'id'      => $this->city->id,
@@ -42,21 +55,19 @@ class UserProfileResource extends JsonResource
                 ];
             }),
 
-            'skills'             => $this->skills ?? [],
-            'interests'          => $this->interests ?? [],
+            'skills'             => $skills,
+            'interests'          => $interests,
 
-            // JSON object with social links
-            'social_links'       => $this->social_links ?? [
-                'linkedin'  => null,
-                'facebook'  => null,
-                'instagram' => null,
-                'website'   => null,
+            'social_links'       => [
+                'linkedin'  => $links['linkedin']  ?? null,
+                'facebook'  => $links['facebook']  ?? null,
+                'instagram' => $links['instagram'] ?? null,
+                'website'   => $links['website']   ?? null,
             ],
 
             'profile_photo_id'   => $this->profile_photo_file_id,
             'cover_photo_id'     => $this->cover_photo_file_id,
 
-            // URLs built from related File models if they are loaded
             'profile_photo_url'  => optional($this->profilePhotoFile)->public_url ?? null,
             'cover_photo_url'    => optional($this->coverPhotoFile)->public_url ?? null,
 
