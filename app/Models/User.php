@@ -33,7 +33,6 @@ class User extends Authenticatable
         'password_hash',
         'company_name',
         'designation',
-        'about',
         'gender',
         'dob',
         'experience_years',
