@@ -9,6 +9,8 @@ use App\Http\Requests\Profile\UpdateUserLinkRequest;
 use App\Http\Resources\UserLinkResource;
 use App\Http\Resources\UserProfileResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends BaseApiController
 {
@@ -28,32 +30,44 @@ class ProfileController extends BaseApiController
         $user = $request->user();
         $data = $request->validated();
 
-        $user->forceFill([
-            'first_name'            => $data['first_name'] ?? $user->first_name,
-            'last_name'             => $data['last_name'] ?? $user->last_name,
-            'company_name'          => $data['company_name'] ?? $user->company_name,
-            'designation'           => $data['designation'] ?? $user->designation,
-            'short_bio'             => array_key_exists('about', $data) ? $data['about'] : $user->short_bio,
-            'gender'                => $data['gender'] ?? $user->gender,
-            'dob'                   => $data['dob'] ?? $user->dob,
-            'experience_years'      => $data['experience_years'] ?? $user->experience_years,
-            'experience_summary'    => $data['experience_summary'] ?? $user->experience_summary,
-            'city_id'               => array_key_exists('city_id', $data) ? $data['city_id'] : $user->city_id,
-            'city'                  => $data['city'] ?? $user->city,
-            'skills'                => $data['skills'] ?? $user->skills ?? [],
-            'interests'             => $data['interests'] ?? $user->interests ?? [],
-            'social_links'          => $data['social_links'] ?? $user->social_links ?? [],
-            'profile_photo_file_id' => array_key_exists('profile_photo_id', $data) ? $data['profile_photo_id'] : $user->profile_photo_file_id,
-            'cover_photo_file_id'   => array_key_exists('cover_photo_id', $data) ? $data['cover_photo_id'] : $user->cover_photo_file_id,
-        ]);
+        $mapped = [];
 
-        if (array_key_exists('first_name', $data) || array_key_exists('last_name', $data)) {
-            $user->display_name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: $user->email;
+        $fields = [
+            'first_name' => 'first_name',
+            'last_name' => 'last_name',
+            'company_name' => 'company_name',
+            'designation' => 'designation',
+            'about' => 'short_bio',
+            'gender' => 'gender',
+            'dob' => 'dob',
+            'experience_years' => 'experience_years',
+            'experience_summary' => 'experience_summary',
+            'city_id' => 'city_id',
+            'city' => 'city',
+            'skills' => 'skills',
+            'interests' => 'interests',
+            'social_links' => 'social_links',
+            'profile_photo_id' => 'profile_photo_file_id',
+            'cover_photo_id' => 'cover_photo_file_id',
+        ];
+
+        foreach ($fields as $input => $column) {
+            if (Arr::exists($data, $input)) {
+                $mapped[$column] = $data[$input];
+            }
         }
 
-        $user->saveOrFail();
+        if (Arr::exists($mapped, 'first_name') || Arr::exists($mapped, 'last_name')) {
+            $mapped['display_name'] = trim(($mapped['first_name'] ?? $user->first_name ?? '') . ' ' . ($mapped['last_name'] ?? $user->last_name ?? ''))
+                ?: $user->email;
+        }
 
-        $user->load(['profilePhotoFile', 'coverPhotoFile', 'userLinks']);
+        DB::transaction(function () use ($user, $mapped): void {
+            $user->forceFill($mapped);
+            $user->saveOrFail();
+        });
+
+        $user->refresh()->load(['profilePhotoFile', 'coverPhotoFile', 'userLinks']);
 
         return $this->success(new UserProfileResource($user), 'Profile updated successfully');
     }
