@@ -16,7 +16,7 @@ class StoreRequirementRequest extends FormRequest
         return [
             'subject' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'media_id' => ['nullable', 'uuid', 'exists:uploads,id'],
+            'media_id' => ['nullable', 'uuid'],
             'region_label' => ['required', 'string', 'max:50'],
             'city_name' => ['required', 'string', 'max:100'],
             'category' => ['required', 'string', 'max:100'],
