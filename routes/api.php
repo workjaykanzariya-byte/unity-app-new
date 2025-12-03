@@ -1,21 +1,21 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ActivityController;
+use App\Http\Controllers\Api\AdsController;
 use App\Http\Controllers\Api\AdminActivityController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\FeedbackController;
+use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PostController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\ReferralController;
-use App\Http\Controllers\Api\AdsController;
-use App\Http\Controllers\Api\FeedbackController;
-use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,17 +35,9 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::prefix('profile')->group(function () {
-            Route::get('/', [ProfileController::class, 'show']);
-            Route::put('/', [ProfileController::class, 'update']);
-            Route::patch('/', [ProfileController::class, 'update']);
-
-            Route::get('/links', [ProfileController::class, 'links']);
-            Route::post('/links', [ProfileController::class, 'storeLink']);
-            Route::put('/links/{id}', [ProfileController::class, 'updateLink']);
-            Route::patch('/links/{id}', [ProfileController::class, 'updateLink']);
-            Route::delete('/links/{id}', [ProfileController::class, 'destroyLink']);
-        });
+        Route::get('/profile', [ProfileController::class, 'show']);
+        Route::put('/profile', [ProfileController::class, 'update']);
+        Route::patch('/profile', [ProfileController::class, 'update']);
 
         // Members & connections
         Route::get('/members', [MemberController::class, 'index']);
