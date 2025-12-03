@@ -3,20 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Activity\StoreReferralRequest;
-use App\Models\Referral;
+use App\Http\Requests\Activity\StoreTestimonialRequest;
+use App\Models\Testimonial;
 use Illuminate\Http\Request;
 use Throwable;
 
-class ReferralController extends BaseApiController
+class TestimonialController extends BaseApiController
 {
     public function index(Request $request)
     {
         $authUser = $request->user();
         $filter = $request->input('filter', 'given');
-        $referralType = $request->input('referral_type');
 
-        $query = Referral::query()
+        $query = Testimonial::query()
             ->where('is_deleted', false)
             ->whereNull('deleted_at');
 
@@ -31,15 +30,10 @@ class ReferralController extends BaseApiController
             $query->where('from_user_id', $authUser->id);
         }
 
-        if ($referralType) {
-            $query->where('referral_type', $referralType);
-        }
-
         $perPage = (int) $request->input('per_page', 20);
         $perPage = max(1, min($perPage, 100));
 
         $paginator = $query
-            ->orderBy('referral_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -54,28 +48,30 @@ class ReferralController extends BaseApiController
         ]);
     }
 
-    public function store(StoreReferralRequest $request)
+    public function store(StoreTestimonialRequest $request)
     {
         $authUser = $request->user();
 
+        $media = null;
+        if ($request->filled('media_id')) {
+            $media = [[
+                'id' => $request->input('media_id'),
+                'type' => 'image',
+            ]];
+        }
+
         try {
-            $referral = Referral::create([
+            $testimonial = Testimonial::create([
                 'from_user_id' => $authUser->id,
                 'to_user_id' => $request->input('to_user_id'),
-                'referral_type' => $request->input('referral_type'),
-                'referral_date' => $request->input('referral_date'),
-                'referral_of' => $request->input('referral_of'),
-                'phone' => $request->input('phone'),
-                'email' => $request->input('email'),
-                'address' => $request->input('address'),
-                'hot_value' => $request->input('hot_value'),
-                'remarks' => $request->input('remarks'),
+                'content' => $request->input('content'),
+                'media' => $media,
                 'is_deleted' => false,
             ]);
 
             // TODO: award coins for this activity
 
-            return $this->success($referral, 'Referral saved successfully', 201);
+            return $this->success($testimonial, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
@@ -85,7 +81,7 @@ class ReferralController extends BaseApiController
     {
         $authUser = $request->user();
 
-        $referral = Referral::where('id', $id)
+        $testimonial = Testimonial::where('id', $id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
             ->where(function ($q) use ($authUser) {
@@ -94,10 +90,10 @@ class ReferralController extends BaseApiController
             })
             ->first();
 
-        if (! $referral) {
-            return $this->error('Referral not found', 404);
+        if (! $testimonial) {
+            return $this->error('Testimonial not found', 404);
         }
 
-        return $this->success($referral);
+        return $this->success($testimonial);
     }
 }

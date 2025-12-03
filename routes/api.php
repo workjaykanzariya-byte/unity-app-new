@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Activities\RequirementController as ActivitiesRequirementController;
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AdsController;
 use App\Http\Controllers\Api\AdminActivityController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\EventController;
@@ -11,11 +13,13 @@ use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -87,6 +91,33 @@ Route::prefix('v1')->group(function () {
         Route::get('/activities/my', [ActivityController::class, 'myActivities']);
         Route::get('/activities/my/coins-summary', [ActivityController::class, 'myCoinsSummary']);
         Route::get('/activities/my/coins-ledger', [ActivityController::class, 'myCoinsLedger']);
+
+        Route::prefix('activities')->group(function () {
+            // P2P Meetings
+            Route::get('p2p-meetings', [P2pMeetingController::class, 'index']);
+            Route::post('p2p-meetings', [P2pMeetingController::class, 'store']);
+            Route::get('p2p-meetings/{id}', [P2pMeetingController::class, 'show']);
+
+            // Requirements
+            Route::get('requirements', [ActivitiesRequirementController::class, 'index']);
+            Route::post('requirements', [ActivitiesRequirementController::class, 'store']);
+            Route::get('requirements/{id}', [ActivitiesRequirementController::class, 'show']);
+
+            // Referrals
+            Route::get('referrals', [ReferralController::class, 'index']);
+            Route::post('referrals', [ReferralController::class, 'store']);
+            Route::get('referrals/{id}', [ReferralController::class, 'show']);
+
+            // Business Deals
+            Route::get('business-deals', [BusinessDealController::class, 'index']);
+            Route::post('business-deals', [BusinessDealController::class, 'store']);
+            Route::get('business-deals/{id}', [BusinessDealController::class, 'show']);
+
+            // Testimonials
+            Route::get('testimonials', [TestimonialController::class, 'index']);
+            Route::post('testimonials', [TestimonialController::class, 'store']);
+            Route::get('testimonials/{id}', [TestimonialController::class, 'show']);
+        });
 
         // Admin Activities
         Route::get('/admin/activities', [AdminActivityController::class, 'index']);

@@ -8,32 +8,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class Requirement extends Model
+class P2pMeeting extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'requirements';
+    protected $table = 'p2p_meetings';
+
+    protected $primaryKey = 'id';
 
     protected $keyType = 'string';
 
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
-        'user_id',
-        'subject',
-        'description',
-        'media',
-        'region_filter',
-        'category_filter',
-        'status',
+        'initiator_user_id',
+        'peer_user_id',
+        'meeting_date',
+        'meeting_place',
+        'remarks',
     ];
 
     protected $casts = [
-        'media' => 'array',
-        'region_filter' => 'array',
-        'category_filter' => 'array',
+        'is_deleted' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -45,8 +42,13 @@ class Requirement extends Model
         });
     }
 
-    public function user(): BelongsTo
+    public function initiator(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'initiator_user_id');
+    }
+
+    public function peer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'peer_user_id');
     }
 }

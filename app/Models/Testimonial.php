@@ -8,32 +8,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class Requirement extends Model
+class Testimonial extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'requirements';
+    protected $table = 'testimonials';
+
+    protected $primaryKey = 'id';
 
     protected $keyType = 'string';
 
     public $incrementing = false;
 
     protected $fillable = [
-        'id',
-        'user_id',
-        'subject',
-        'description',
+        'from_user_id',
+        'to_user_id',
+        'content',
         'media',
-        'region_filter',
-        'category_filter',
-        'status',
     ];
 
     protected $casts = [
         'media' => 'array',
-        'region_filter' => 'array',
-        'category_filter' => 'array',
+        'is_deleted' => 'boolean',
     ];
 
     protected static function booted(): void
@@ -45,8 +42,13 @@ class Requirement extends Model
         });
     }
 
-    public function user(): BelongsTo
+    public function fromUser(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'from_user_id');
+    }
+
+    public function toUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'to_user_id');
     }
 }

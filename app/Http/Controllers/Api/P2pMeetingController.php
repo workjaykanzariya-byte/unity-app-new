@@ -3,43 +3,38 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Activity\StoreReferralRequest;
-use App\Models\Referral;
+use App\Http\Requests\Activity\StoreP2pMeetingRequest;
+use App\Models\P2pMeeting;
 use Illuminate\Http\Request;
 use Throwable;
 
-class ReferralController extends BaseApiController
+class P2pMeetingController extends BaseApiController
 {
     public function index(Request $request)
     {
         $authUser = $request->user();
-        $filter = $request->input('filter', 'given');
-        $referralType = $request->input('referral_type');
+        $filter = $request->input('filter', 'initiated');
 
-        $query = Referral::query()
+        $query = P2pMeeting::query()
             ->where('is_deleted', false)
             ->whereNull('deleted_at');
 
         if ($filter === 'received') {
-            $query->where('to_user_id', $authUser->id);
+            $query->where('peer_user_id', $authUser->id);
         } elseif ($filter === 'all') {
             $query->where(function ($q) use ($authUser) {
-                $q->where('from_user_id', $authUser->id)
-                    ->orWhere('to_user_id', $authUser->id);
+                $q->where('initiator_user_id', $authUser->id)
+                    ->orWhere('peer_user_id', $authUser->id);
             });
         } else {
-            $query->where('from_user_id', $authUser->id);
-        }
-
-        if ($referralType) {
-            $query->where('referral_type', $referralType);
+            $query->where('initiator_user_id', $authUser->id);
         }
 
         $perPage = (int) $request->input('per_page', 20);
         $perPage = max(1, min($perPage, 100));
 
         $paginator = $query
-            ->orderBy('referral_date', 'desc')
+            ->orderBy('meeting_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -54,28 +49,23 @@ class ReferralController extends BaseApiController
         ]);
     }
 
-    public function store(StoreReferralRequest $request)
+    public function store(StoreP2pMeetingRequest $request)
     {
         $authUser = $request->user();
 
         try {
-            $referral = Referral::create([
-                'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'referral_type' => $request->input('referral_type'),
-                'referral_date' => $request->input('referral_date'),
-                'referral_of' => $request->input('referral_of'),
-                'phone' => $request->input('phone'),
-                'email' => $request->input('email'),
-                'address' => $request->input('address'),
-                'hot_value' => $request->input('hot_value'),
+            $meeting = P2pMeeting::create([
+                'initiator_user_id' => $authUser->id,
+                'peer_user_id' => $request->input('peer_user_id'),
+                'meeting_date' => $request->input('meeting_date'),
+                'meeting_place' => $request->input('meeting_place'),
                 'remarks' => $request->input('remarks'),
                 'is_deleted' => false,
             ]);
 
             // TODO: award coins for this activity
 
-            return $this->success($referral, 'Referral saved successfully', 201);
+            return $this->success($meeting, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
@@ -85,19 +75,19 @@ class ReferralController extends BaseApiController
     {
         $authUser = $request->user();
 
-        $referral = Referral::where('id', $id)
+        $meeting = P2pMeeting::where('id', $id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
             ->where(function ($q) use ($authUser) {
-                $q->where('from_user_id', $authUser->id)
-                    ->orWhere('to_user_id', $authUser->id);
+                $q->where('initiator_user_id', $authUser->id)
+                    ->orWhere('peer_user_id', $authUser->id);
             })
             ->first();
 
-        if (! $referral) {
-            return $this->error('Referral not found', 404);
+        if (! $meeting) {
+            return $this->error('P2P meeting not found', 404);
         }
 
-        return $this->success($referral);
+        return $this->success($meeting);
     }
 }
