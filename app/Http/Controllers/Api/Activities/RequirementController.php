@@ -52,7 +52,7 @@ class RequirementController extends BaseApiController
                 $user,
                 $requirement->id,
                 'requirements',
-                5
+                3000
             );
 
             $payload = [

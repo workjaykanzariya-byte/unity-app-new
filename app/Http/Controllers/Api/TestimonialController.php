@@ -77,7 +77,7 @@ class TestimonialController extends BaseApiController
                 $authUser,
                 $testimonial->id,
                 'testimonials',
-                10
+                5000
             );
 
             $payload = $testimonial->toArray();

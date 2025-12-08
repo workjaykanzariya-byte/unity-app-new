@@ -77,7 +77,7 @@ class BusinessDealController extends BaseApiController
                 $authUser,
                 $businessDeal->id,
                 'business_deals',
-                25
+                15000
             );
 
             $payload = $businessDeal->toArray();

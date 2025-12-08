@@ -75,7 +75,7 @@ class RequirementController extends BaseApiController
                 $authUser,
                 $requirement->id,
                 'requirements',
-                5
+                3000
             );
 
             $payload = $requirement->toArray();

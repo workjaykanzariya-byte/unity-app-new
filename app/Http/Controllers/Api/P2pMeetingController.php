@@ -71,7 +71,7 @@ class P2pMeetingController extends BaseApiController
                 $authUser,
                 $meeting->id,
                 'p2p_meetings',
-                10
+                1000
             );
 
             $payload = $meeting->toArray();

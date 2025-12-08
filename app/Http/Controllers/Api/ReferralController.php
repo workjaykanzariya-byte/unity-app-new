@@ -81,7 +81,7 @@ class ReferralController extends BaseApiController
                 $authUser,
                 $referral->id,
                 'referrals',
-                15
+                3000
             );
 
             $payload = $referral->toArray();
