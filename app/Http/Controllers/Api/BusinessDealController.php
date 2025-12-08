@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreBusinessDealRequest;
 use App\Models\BusinessDeal;
+use App\Services\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
 class BusinessDealController extends BaseApiController
 {
+    public function __construct(private CoinsService $coinsService)
+    {
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -69,9 +74,18 @@ class BusinessDealController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coins = $this->coinsService->credit(
+                userId: $authUser->id,
+                activityId: $businessDeal->id,
+                reference: 'business_deals',
+                coins: 25,
+            );
 
-            return $this->success($businessDeal, 'Business deal saved successfully', 201);
+            $payload = $businessDeal->toArray();
+            $payload['coins_earned'] = $coins['coins_earned'];
+            $payload['total_coins'] = $coins['total_coins'];
+
+            return $this->success($payload, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

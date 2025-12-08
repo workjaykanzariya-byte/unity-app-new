@@ -6,12 +6,17 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
 use App\Http\Resources\RequirementResource;
 use App\Models\Requirement;
+use App\Services\CoinsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RequirementController extends BaseApiController
 {
+    public function __construct(private CoinsService $coinsService)
+    {
+    }
+
     public function store(StoreRequirementRequest $request)
     {
         $user = $request->user();
@@ -45,8 +50,21 @@ class RequirementController extends BaseApiController
                 'status' => $data['status'] ?? 'open',
             ]);
 
+            $coins = $this->coinsService->credit(
+                userId: $user->id,
+                activityId: $requirement->id,
+                reference: 'requirements',
+                coins: 5,
+            );
+
+            $payload = [
+                'requirement' => new RequirementResource($requirement),
+                'coins_earned' => $coins['coins_earned'],
+                'total_coins' => $coins['total_coins'],
+            ];
+
             return $this->success(
-                new RequirementResource($requirement),
+                $payload,
                 'Requirement created successfully',
                 201
             );

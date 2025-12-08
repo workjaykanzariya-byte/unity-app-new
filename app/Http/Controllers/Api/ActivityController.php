@@ -7,7 +7,7 @@ use App\Http\Requests\Activity\StoreActivityRequest;
 use App\Http\Resources\ActivityResource;
 use App\Http\Resources\CoinLedgerResource;
 use App\Models\Activity;
-use App\Models\CoinLedger;
+use App\Models\CoinsLedger;
 use Illuminate\Http\Request;
 
 class ActivityController extends BaseApiController
@@ -70,7 +70,7 @@ class ActivityController extends BaseApiController
 
         $coinsBalance = (int) $authUser->coins_balance;
 
-        $stats = CoinLedger::where('user_id', $authUser->id)
+        $stats = CoinsLedger::where('user_id', $authUser->id)
             ->selectRaw("
                 COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) as total_earned,
                 COALESCE(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END), 0) as total_spent,
@@ -93,7 +93,7 @@ class ActivityController extends BaseApiController
         $perPage = (int) $request->input('per_page', 20);
         $perPage = max(1, min($perPage, 100));
 
-        $paginator = CoinLedger::where('user_id', $authUser->id)
+        $paginator = CoinsLedger::where('user_id', $authUser->id)
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 

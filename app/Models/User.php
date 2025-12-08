@@ -207,7 +207,7 @@ class User extends Authenticatable
 
     public function coinLedgers(): HasMany
     {
-        return $this->hasMany(CoinLedger::class);
+        return $this->hasMany(CoinsLedger::class);
     }
 
     public function walletTransactions(): HasMany

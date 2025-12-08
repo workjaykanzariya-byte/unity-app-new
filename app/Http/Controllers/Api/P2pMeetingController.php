@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
+use App\Services\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
 class P2pMeetingController extends BaseApiController
 {
+    public function __construct(private CoinsService $coinsService)
+    {
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -63,9 +68,18 @@ class P2pMeetingController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coins = $this->coinsService->credit(
+                userId: $authUser->id,
+                activityId: $meeting->id,
+                reference: 'p2p_meetings',
+                coins: 10,
+            );
 
-            return $this->success($meeting, 'P2P meeting saved successfully', 201);
+            $payload = $meeting->toArray();
+            $payload['coins_earned'] = $coins['coins_earned'];
+            $payload['total_coins'] = $coins['total_coins'];
+
+            return $this->success($payload, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

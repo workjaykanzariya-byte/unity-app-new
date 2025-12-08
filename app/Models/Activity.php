@@ -62,6 +62,6 @@ class Activity extends Model
 
     public function coinLedger(): BelongsTo
     {
-        return $this->belongsTo(CoinLedger::class, 'coins_ledger_id');
+        return $this->belongsTo(CoinsLedger::class, 'coins_ledger_id');
     }
 }

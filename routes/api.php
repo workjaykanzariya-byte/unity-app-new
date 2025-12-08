@@ -127,6 +127,8 @@ Route::prefix('v1')->group(function () {
         Route::patch('/admin/activities/{activity}/reject', [AdminActivityController::class, 'reject']);
 
         // Wallet
+        Route::get('/wallet/summary', [WalletController::class, 'summary']);
+        Route::get('/wallet/ledger', [WalletController::class, 'ledger']);
         Route::get('/wallet/transactions', [WalletController::class, 'myTransactions']);
         Route::post('/wallet/topup', [WalletController::class, 'topup']);
 

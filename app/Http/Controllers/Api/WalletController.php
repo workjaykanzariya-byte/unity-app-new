@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Wallet\WalletTopupRequest;
 use App\Http\Resources\WalletTransactionResource;
+use App\Models\CoinsLedger;
 use App\Models\WalletTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,34 @@ use Illuminate\Support\Str;
 
 class WalletController extends BaseApiController
 {
+    public function summary(Request $request)
+    {
+        $authUser = $request->user();
+
+        return $this->success([
+            'total_coins' => (int) $authUser->coins_balance,
+        ]);
+    }
+
+    public function ledger(Request $request)
+    {
+        $authUser = $request->user();
+
+        $paginator = CoinsLedger::where('user_id', $authUser->id)
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        return $this->success([
+            'items' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
     public function myTransactions(Request $request)
     {
         $authUser = $request->user();

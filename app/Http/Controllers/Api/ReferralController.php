@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Models\Referral;
+use App\Services\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
 class ReferralController extends BaseApiController
 {
+    public function __construct(private CoinsService $coinsService)
+    {
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -73,9 +78,18 @@ class ReferralController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coins = $this->coinsService->credit(
+                userId: $authUser->id,
+                activityId: $referral->id,
+                reference: 'referrals',
+                coins: 15,
+            );
 
-            return $this->success($referral, 'Referral saved successfully', 201);
+            $payload = $referral->toArray();
+            $payload['coins_earned'] = $coins['coins_earned'];
+            $payload['total_coins'] = $coins['total_coins'];
+
+            return $this->success($payload, 'Referral saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

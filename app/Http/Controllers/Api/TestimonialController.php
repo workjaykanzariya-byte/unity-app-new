@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
 use App\Models\Testimonial;
+use App\Services\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
 class TestimonialController extends BaseApiController
 {
+    public function __construct(private CoinsService $coinsService)
+    {
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -69,9 +74,18 @@ class TestimonialController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coins = $this->coinsService->credit(
+                userId: $authUser->id,
+                activityId: $testimonial->id,
+                reference: 'testimonials',
+                coins: 10,
+            );
 
-            return $this->success($testimonial, 'Testimonial saved successfully', 201);
+            $payload = $testimonial->toArray();
+            $payload['coins_earned'] = $coins['coins_earned'];
+            $payload['total_coins'] = $coins['total_coins'];
+
+            return $this->success($payload, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
