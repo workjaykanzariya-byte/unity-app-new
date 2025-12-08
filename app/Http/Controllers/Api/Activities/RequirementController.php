@@ -6,13 +6,15 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
 use App\Http\Resources\RequirementResource;
 use App\Models\Requirement;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class RequirementController extends BaseApiController
 {
-    public function store(StoreRequirementRequest $request)
+    public function store(StoreRequirementRequest $request, CoinsService $coinsService)
     {
         $user = $request->user();
         $data = $request->validated();
@@ -26,27 +28,36 @@ class RequirementController extends BaseApiController
         }
 
         try {
-            $regionFilter = [
-                'region_label' => $data['region_label'],
-                'city_name' => $data['city_name'],
-            ];
+            [$requirement, $newBalance] = DB::transaction(function () use ($data, $media, $user, $coinsService) {
+                $regionFilter = [
+                    'region_label' => $data['region_label'],
+                    'city_name' => $data['city_name'],
+                ];
 
-            $categoryFilter = [
-                'category' => $data['category'],
-            ];
+                $categoryFilter = [
+                    'category' => $data['category'],
+                ];
 
-            $requirement = Requirement::create([
-                'user_id' => $user->id,
-                'subject' => $data['subject'],
-                'description' => $data['description'],
-                'media' => $media,
-                'region_filter' => $regionFilter,
-                'category_filter' => $categoryFilter,
-                'status' => $data['status'] ?? 'open',
-            ]);
+                $createdRequirement = Requirement::create([
+                    'user_id' => $user->id,
+                    'subject' => $data['subject'],
+                    'description' => $data['description'],
+                    'media' => $media,
+                    'region_filter' => $regionFilter,
+                    'category_filter' => $categoryFilter,
+                    'status' => $data['status'] ?? 'open',
+                ]);
+
+                $balance = $coinsService->awardForActivity($user, 'requirements', (string) $createdRequirement->id);
+
+                return [$createdRequirement, $balance];
+            });
 
             return $this->success(
-                new RequirementResource($requirement),
+                [
+                    'requirement' => new RequirementResource($requirement),
+                    'coins_balance' => $newBalance,
+                ],
                 'Requirement created successfully',
                 201
             );

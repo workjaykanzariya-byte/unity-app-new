@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
+use App\Services\Coins\CoinsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -49,23 +51,31 @@ class P2pMeetingController extends BaseApiController
         ]);
     }
 
-    public function store(StoreP2pMeetingRequest $request)
+    public function store(StoreP2pMeetingRequest $request, CoinsService $coinsService)
     {
         $authUser = $request->user();
 
         try {
-            $meeting = P2pMeeting::create([
-                'initiator_user_id' => $authUser->id,
-                'peer_user_id' => $request->input('peer_user_id'),
-                'meeting_date' => $request->input('meeting_date'),
-                'meeting_place' => $request->input('meeting_place'),
-                'remarks' => $request->input('remarks'),
-                'is_deleted' => false,
-            ]);
+            [$meeting, $newBalance] = DB::transaction(function () use ($request, $authUser, $coinsService) {
+                $createdMeeting = P2pMeeting::create([
+                    'initiator_user_id' => $authUser->id,
+                    'peer_user_id' => $request->input('peer_user_id'),
+                    'meeting_date' => $request->input('meeting_date'),
+                    'meeting_place' => $request->input('meeting_place'),
+                    'remarks' => $request->input('remarks'),
+                    'is_deleted' => false,
+                ]);
 
-            // TODO: award coins for this activity
+                $balance = $coinsService->awardForActivity($authUser, 'p2p-meetings', (string) $createdMeeting->id);
 
-            return $this->success($meeting, 'P2P meeting saved successfully', 201);
+                return [$createdMeeting, $balance];
+            });
+
+            return $this->success(
+                array_merge($meeting->toArray(), ['coins_balance' => $newBalance]),
+                'P2P meeting saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

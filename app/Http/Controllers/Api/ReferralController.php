@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Models\Referral;
+use App\Services\Coins\CoinsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -54,28 +56,36 @@ class ReferralController extends BaseApiController
         ]);
     }
 
-    public function store(StoreReferralRequest $request)
+    public function store(StoreReferralRequest $request, CoinsService $coinsService)
     {
         $authUser = $request->user();
 
         try {
-            $referral = Referral::create([
-                'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'referral_type' => $request->input('referral_type'),
-                'referral_date' => $request->input('referral_date'),
-                'referral_of' => $request->input('referral_of'),
-                'phone' => $request->input('phone'),
-                'email' => $request->input('email'),
-                'address' => $request->input('address'),
-                'hot_value' => $request->input('hot_value'),
-                'remarks' => $request->input('remarks'),
-                'is_deleted' => false,
-            ]);
+            [$referral, $newBalance] = DB::transaction(function () use ($request, $authUser, $coinsService) {
+                $createdReferral = Referral::create([
+                    'from_user_id' => $authUser->id,
+                    'to_user_id' => $request->input('to_user_id'),
+                    'referral_type' => $request->input('referral_type'),
+                    'referral_date' => $request->input('referral_date'),
+                    'referral_of' => $request->input('referral_of'),
+                    'phone' => $request->input('phone'),
+                    'email' => $request->input('email'),
+                    'address' => $request->input('address'),
+                    'hot_value' => $request->input('hot_value'),
+                    'remarks' => $request->input('remarks'),
+                    'is_deleted' => false,
+                ]);
 
-            // TODO: award coins for this activity
+                $balance = $coinsService->awardForActivity($authUser, 'referrals', (string) $createdReferral->id);
 
-            return $this->success($referral, 'Referral saved successfully', 201);
+                return [$createdReferral, $balance];
+            });
+
+            return $this->success(
+                array_merge($referral->toArray(), ['coins_balance' => $newBalance]),
+                'Referral saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
 use App\Models\Testimonial;
+use App\Services\Coins\CoinsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -48,7 +50,7 @@ class TestimonialController extends BaseApiController
         ]);
     }
 
-    public function store(StoreTestimonialRequest $request)
+    public function store(StoreTestimonialRequest $request, CoinsService $coinsService)
     {
         $authUser = $request->user();
 
@@ -61,17 +63,25 @@ class TestimonialController extends BaseApiController
         }
 
         try {
-            $testimonial = Testimonial::create([
-                'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'content' => $request->input('content'),
-                'media' => $media,
-                'is_deleted' => false,
-            ]);
+            [$testimonial, $newBalance] = DB::transaction(function () use ($request, $authUser, $media, $coinsService) {
+                $createdTestimonial = Testimonial::create([
+                    'from_user_id' => $authUser->id,
+                    'to_user_id' => $request->input('to_user_id'),
+                    'content' => $request->input('content'),
+                    'media' => $media,
+                    'is_deleted' => false,
+                ]);
 
-            // TODO: award coins for this activity
+                $balance = $coinsService->awardForActivity($authUser, 'testimonials', (string) $createdTestimonial->id);
 
-            return $this->success($testimonial, 'Testimonial saved successfully', 201);
+                return [$createdTestimonial, $balance];
+            });
+
+            return $this->success(
+                array_merge($testimonial->toArray(), ['coins_balance' => $newBalance]),
+                'Testimonial saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }

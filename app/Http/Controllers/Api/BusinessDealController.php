@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreBusinessDealRequest;
 use App\Models\BusinessDeal;
+use App\Services\Coins\CoinsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -54,24 +56,32 @@ class BusinessDealController extends BaseApiController
         ]);
     }
 
-    public function store(StoreBusinessDealRequest $request)
+    public function store(StoreBusinessDealRequest $request, CoinsService $coinsService)
     {
         $authUser = $request->user();
 
         try {
-            $businessDeal = BusinessDeal::create([
-                'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'deal_date' => $request->input('deal_date'),
-                'deal_amount' => $request->input('deal_amount'),
-                'business_type' => $request->input('business_type'),
-                'comment' => $request->input('comment'),
-                'is_deleted' => false,
-            ]);
+            [$businessDeal, $newBalance] = DB::transaction(function () use ($request, $authUser, $coinsService) {
+                $createdDeal = BusinessDeal::create([
+                    'from_user_id' => $authUser->id,
+                    'to_user_id' => $request->input('to_user_id'),
+                    'deal_date' => $request->input('deal_date'),
+                    'deal_amount' => $request->input('deal_amount'),
+                    'business_type' => $request->input('business_type'),
+                    'comment' => $request->input('comment'),
+                    'is_deleted' => false,
+                ]);
 
-            // TODO: award coins for this activity
+                $balance = $coinsService->awardForActivity($authUser, 'business-deals', (string) $createdDeal->id);
 
-            return $this->success($businessDeal, 'Business deal saved successfully', 201);
+                return [$createdDeal, $balance];
+            });
+
+            return $this->success(
+                array_merge($businessDeal->toArray(), ['coins_balance' => $newBalance]),
+                'Business deal saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
