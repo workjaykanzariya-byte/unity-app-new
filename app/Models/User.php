@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -29,7 +30,6 @@ class User extends Authenticatable
         'display_name',
         'email',
         'phone',
-        'password',
         'password_hash',
         'company_name',
         'designation',
@@ -72,7 +72,6 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password',
         'password_hash',
         'remember_token',
     ];
@@ -134,6 +133,11 @@ class User extends Authenticatable
     public function links(): HasMany
     {
         return $this->hasMany(UserLink::class);
+    }
+
+    public function setPasswordHashAttribute($value): void
+    {
+        $this->attributes['password_hash'] = Hash::make($value);
     }
 
     public function userLinks(): HasMany

@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 class PasswordResetOtpController extends BaseApiController
@@ -64,9 +63,7 @@ class PasswordResetOtpController extends BaseApiController
             ], 422);
         }
 
-        $hashedPassword = Hash::make($data['password']);
-        $user->password = $hashedPassword;
-        $user->password_hash = $hashedPassword;
+        $user->password_hash = $data['password'];
         $user->save();
 
         $this->otpService->invalidateAll('password_reset', $user);

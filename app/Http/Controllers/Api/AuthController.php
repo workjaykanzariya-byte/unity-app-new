@@ -47,8 +47,8 @@ class AuthController extends BaseApiController
         $user->membership_status  = $user->membership_status ?? 'visitor';
         $user->coins_balance      = $user->coins_balance ?? 0;
 
-        // Password: stored as password_hash column
-        $user->password_hash = Hash::make($data['password']);
+        // Password: stored as password_hash column via mutator
+        $user->password_hash = $data['password'];
 
         // Public profile slug, e.g. "usera-1"
         if (empty($user->public_profile_slug)) {
@@ -209,7 +209,7 @@ class AuthController extends BaseApiController
             return $this->error('User not found', 404);
         }
 
-        $user->password_hash = Hash::make($request->password);
+        $user->password_hash = $request->password;
         $user->save();
 
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
