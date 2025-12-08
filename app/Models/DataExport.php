@@ -39,6 +39,6 @@ class DataExport extends Model
 
     public function file(): BelongsTo
     {
-        return $this->belongsTo(FileModel::class, 'file_id');
+        return $this->belongsTo(File::class, 'file_id');
     }
 }

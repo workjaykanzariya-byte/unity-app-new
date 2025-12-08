@@ -37,8 +37,21 @@ class UserProfileResource extends JsonResource
             'profile_photo_id'   => $this->profile_photo_file_id,
             'cover_photo_id'     => $this->cover_photo_file_id,
 
-            'profile_photo_url'  => optional($this->profilePhotoFile)->public_url,
-            'cover_photo_url'    => optional($this->coverPhotoFile)->public_url,
+            'profile_photo'      => $this->whenLoaded('profilePhotoFile', function ($file) {
+                return [
+                    'id' => $file->id,
+                    'url' => $file->url,
+                ];
+            }),
+            'cover_photo'        => $this->whenLoaded('coverPhotoFile', function ($file) {
+                return [
+                    'id' => $file->id,
+                    'url' => $file->url,
+                ];
+            }),
+
+            'profile_photo_url'  => optional($this->profilePhotoFile)->url,
+            'cover_photo_url'    => optional($this->coverPhotoFile)->url,
 
             'created_at'         => $this->created_at,
             'updated_at'         => $this->updated_at,

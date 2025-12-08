@@ -247,7 +247,7 @@ class User extends Authenticatable
 
     public function uploadedFiles(): HasMany
     {
-        return $this->hasMany(FileModel::class, 'uploader_user_id');
+        return $this->hasMany(File::class, 'uploader_user_id');
     }
 
     public function adminAuditLogs(): HasMany

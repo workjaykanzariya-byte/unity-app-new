@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\FileResource;
-use App\Models\FileModel;
+use App\Models\File;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class FileController extends BaseApiController
@@ -19,23 +18,20 @@ class FileController extends BaseApiController
             'file' => ['required', 'file', 'max:10240'],
         ]);
 
-        $file = $request->file('file');
-        $disk = config('filesystems.default', 'public');
+        $uploadedFile = $request->file('file');
+        $disk = 'public';
 
-        $folder = 'uploads/' . now()->format('Y/m/d');
-        $filename = (string) Str::uuid() . '_' . preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
+        $path = $uploadedFile->store('uploads', $disk);
 
-        $path = $file->storeAs($folder, $filename, $disk);
-
-        $mimeType = $file->getClientMimeType();
-        $sizeBytes = $file->getSize();
+        $mimeType = $uploadedFile->getClientMimeType();
+        $sizeBytes = $uploadedFile->getSize();
         $width = null;
         $height = null;
         $duration = null;
 
         if (str_starts_with((string) $mimeType, 'image/')) {
             try {
-                $imageSize = getimagesize($file->getRealPath());
+                $imageSize = getimagesize($uploadedFile->getRealPath());
                 if ($imageSize) {
                     $width = $imageSize[0] ?? null;
                     $height = $imageSize[1] ?? null;
@@ -45,15 +41,20 @@ class FileController extends BaseApiController
             }
         }
 
-        $model = new FileModel();
-        $model->uploader_user_id = $user ? $user->id : null;
-        $model->s3_key = $path;
-        $model->mime_type = $mimeType;
-        $model->size_bytes = $sizeBytes;
-        $model->width = $width;
-        $model->height = $height;
-        $model->duration = $duration;
-        $model->save();
+        $model = File::create([
+            'id' => (string) Str::uuid(),
+            'uploader_user_id' => $user ? $user->id : null,
+            'disk' => $disk,
+            'path' => $path,
+            'original_name' => $uploadedFile->getClientOriginalName(),
+            'mime_type' => $mimeType,
+            'size' => $sizeBytes,
+            'width' => $width,
+            'height' => $height,
+            'duration' => $duration,
+            's3_key' => $path,
+            'size_bytes' => $sizeBytes,
+        ]);
 
         $model->refresh();
 

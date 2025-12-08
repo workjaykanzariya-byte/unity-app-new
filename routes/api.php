@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\V1\FileController as V1FileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -167,6 +168,9 @@ Route::prefix('v1')->group(function () {
         // Files
         Route::post('/files/upload', [FileController::class, 'upload']);
     });
+
+    Route::get('files/{id}', [V1FileController::class, 'show'])
+        ->name('files.show');
 
     // Wallet payment webhook (called by payment gateway)
     Route::post('/wallet/webhook', [WalletController::class, 'paymentWebhook']);
