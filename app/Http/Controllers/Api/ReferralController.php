@@ -7,6 +7,7 @@ use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Models\Referral;
 use App\Services\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ReferralController extends BaseApiController
@@ -91,6 +92,8 @@ class ReferralController extends BaseApiController
 
             return $this->success($payload, 'Referral saved successfully', 201);
         } catch (Throwable $e) {
+            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return $this->error('Something went wrong', 500);
         }
     }

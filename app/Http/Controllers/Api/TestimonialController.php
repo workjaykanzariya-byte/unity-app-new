@@ -7,6 +7,7 @@ use App\Http\Requests\Activity\StoreTestimonialRequest;
 use App\Models\Testimonial;
 use App\Services\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class TestimonialController extends BaseApiController
@@ -87,6 +88,8 @@ class TestimonialController extends BaseApiController
 
             return $this->success($payload, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
+            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return $this->error('Something went wrong', 500);
         }
     }

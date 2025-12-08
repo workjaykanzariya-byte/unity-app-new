@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\V1\WalletController as WalletV1Controller;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -127,8 +128,8 @@ Route::prefix('v1')->group(function () {
         Route::patch('/admin/activities/{activity}/reject', [AdminActivityController::class, 'reject']);
 
         // Wallet
-        Route::get('/wallet/summary', [WalletController::class, 'summary']);
-        Route::get('/wallet/ledger', [WalletController::class, 'ledger']);
+        Route::get('/wallet/summary', [WalletV1Controller::class, 'summary']);
+        Route::get('/wallet/ledger', [WalletV1Controller::class, 'ledger']);
         Route::get('/wallet/transactions', [WalletController::class, 'myTransactions']);
         Route::post('/wallet/topup', [WalletController::class, 'topup']);
 

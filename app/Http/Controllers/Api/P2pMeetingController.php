@@ -7,6 +7,7 @@ use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
 use App\Services\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class P2pMeetingController extends BaseApiController
@@ -81,6 +82,8 @@ class P2pMeetingController extends BaseApiController
 
             return $this->success($payload, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {
+            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return $this->error('Something went wrong', 500);
         }
     }

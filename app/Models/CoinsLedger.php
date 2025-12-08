@@ -21,6 +21,7 @@ class CoinsLedger extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'transaction_id',
         'user_id',
         'amount',
         'balance_after',
@@ -30,17 +31,8 @@ class CoinsLedger extends Model
         'created_at',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function activity(): BelongsTo
-    {
-        return $this->belongsTo(Activity::class, 'activity_id');
     }
 }

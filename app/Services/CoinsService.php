@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\CoinsLedger;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class CoinsService
 {
@@ -15,32 +17,41 @@ class CoinsService
         string $reference,
         int $coins
     ): array {
-        return DB::transaction(function () use ($userId, $activityId, $reference, $coins) {
-            $user = User::where('id', $userId)->lockForUpdate()->firstOrFail();
+        try {
+            return DB::transaction(function () use ($userId, $activityId, $reference, $coins) {
+                $user = User::where('id', $userId)->lockForUpdate()->firstOrFail();
 
-            $currentBalance = (int) $user->coins_balance;
-            $newBalance = $currentBalance + $coins;
+                $newBalance = (int) $user->coins_balance + $coins;
 
-            $ledger = new CoinsLedger([
+                CoinsLedger::create([
+                    'transaction_id' => Str::uuid()->toString(),
+                    'user_id' => $userId,
+                    'amount' => $coins,
+                    'balance_after' => $newBalance,
+                    'activity_id' => $activityId,
+                    'reference' => $reference,
+                    'created_by' => $userId,
+                    'created_at' => now(),
+                ]);
+
+                $user->coins_balance = $newBalance;
+                $user->save();
+
+                return [
+                    'coins_earned' => $coins,
+                    'total_coins' => $newBalance,
+                ];
+            });
+        } catch (Throwable $e) {
+            Log::error('Coins credit failed', [
                 'user_id' => $userId,
-                'amount' => $coins,
-                'balance_after' => $newBalance,
                 'activity_id' => $activityId,
                 'reference' => $reference,
-                'created_by' => $userId,
-                'created_at' => now(),
+                'coins' => $coins,
+                'error' => $e->getMessage(),
             ]);
 
-            $ledger->transaction_id = (string) Str::uuid();
-            $ledger->save();
-
-            $user->coins_balance = $newBalance;
-            $user->save();
-
-            return [
-                'coins_earned' => $coins,
-                'total_coins' => $newBalance,
-            ];
-        });
+            throw $e;
+        }
     }
 }

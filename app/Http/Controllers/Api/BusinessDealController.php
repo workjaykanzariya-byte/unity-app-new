@@ -7,6 +7,7 @@ use App\Http\Requests\Activity\StoreBusinessDealRequest;
 use App\Models\BusinessDeal;
 use App\Services\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class BusinessDealController extends BaseApiController
@@ -87,6 +88,8 @@ class BusinessDealController extends BaseApiController
 
             return $this->success($payload, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
+            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return $this->error('Something went wrong', 500);
         }
     }
