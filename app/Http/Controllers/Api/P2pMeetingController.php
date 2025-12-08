@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -63,7 +64,20 @@ class P2pMeetingController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $authUser,
+                'p2p_meeting',
+                null,
+                'Activity: p2p_meeting',
+                $authUser->id
+            );
+
+            if ($coinsLedger) {
+                $meeting->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success($meeting, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {

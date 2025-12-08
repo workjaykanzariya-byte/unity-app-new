@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreRequirementRequest;
 use App\Models\Requirement;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -67,7 +68,20 @@ class RequirementController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $authUser,
+                'requirement',
+                null,
+                'Activity: requirement',
+                $authUser->id
+            );
+
+            if ($coinsLedger) {
+                $requirement->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success($requirement, 'Requirement created successfully', 201);
         } catch (Throwable $e) {

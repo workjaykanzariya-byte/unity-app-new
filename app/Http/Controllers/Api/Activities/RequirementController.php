@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
 use App\Http\Resources\RequirementResource;
 use App\Models\Requirement;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -44,6 +45,21 @@ class RequirementController extends BaseApiController
                 'category_filter' => $categoryFilter,
                 'status' => $data['status'] ?? 'open',
             ]);
+
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $user,
+                'requirement',
+                null,
+                'Activity: requirement',
+                $user->id
+            );
+
+            if ($coinsLedger) {
+                $requirement->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success(
                 new RequirementResource($requirement),

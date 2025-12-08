@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Models\Referral;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -73,7 +74,20 @@ class ReferralController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $authUser,
+                'referral',
+                null,
+                'Activity: referral',
+                $authUser->id
+            );
+
+            if ($coinsLedger) {
+                $referral->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success($referral, 'Referral saved successfully', 201);
         } catch (Throwable $e) {

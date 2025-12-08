@@ -92,6 +92,7 @@ class User extends Authenticatable
         'skills' => 'array',
         'interests' => 'array',
         'social_links' => 'array',
+        'coins_balance' => 'integer',
     ];
 
     protected static function booted(): void
@@ -208,6 +209,11 @@ class User extends Authenticatable
     public function coinLedgers(): HasMany
     {
         return $this->hasMany(CoinLedger::class);
+    }
+
+    public function coinsLedger(): HasMany
+    {
+        return $this->hasMany(CoinsLedger::class, 'user_id');
     }
 
     public function walletTransactions(): HasMany
