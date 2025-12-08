@@ -5,15 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
 use App\Models\Testimonial;
-use App\Traits\HandlesCoins;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class TestimonialController extends BaseApiController
 {
-    use HandlesCoins;
-
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -73,16 +72,58 @@ class TestimonialController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            $coins = $this->creditCoinsForActivity(
-                $authUser,
-                $testimonial->id,
-                'testimonials',
-                5000
-            );
+            $coinMap = [
+                'p2p_meetings' => 1000,
+                'requirements' => 3000,
+                'referrals' => 3000,
+                'business_deals' => 15000,
+                'testimonials' => 5000,
+            ];
+
+            $reference = 'testimonials';
+            $coins = $coinMap[$reference];
+            $newBalance = $authUser->coins_balance;
+
+            DB::beginTransaction();
+
+            try {
+                DB::table('users')
+                    ->where('id', $authUser->id)
+                    ->update([
+                        'coins_balance' => DB::raw("coins_balance + {$coins}"),
+                    ]);
+
+                $updated = DB::table('users')->where('id', $authUser->id)->first();
+                $newBalance = $updated->coins_balance;
+
+                DB::table('coins_ledger')->insert([
+                    'transaction_id' => Str::uuid()->toString(),
+                    'user_id' => $authUser->id,
+                    'amount' => $coins,
+                    'balance_after' => $newBalance,
+                    'activity_id' => $testimonial->id,
+                    'reference' => $reference,
+                    'created_by' => $authUser->id,
+                    'created_at' => now(),
+                ]);
+
+                DB::commit();
+            } catch (Throwable $e) {
+                DB::rollBack();
+                Log::error('COIN CREDIT FAILED', [
+                    'error' => $e->getMessage(),
+                    'reference' => $reference,
+                    'activity_id' => $testimonial->id,
+                    'user_id' => $authUser->id,
+                ]);
+
+                $coins = 0;
+                $newBalance = $authUser->coins_balance;
+            }
 
             $payload = $testimonial->toArray();
-            $payload['coins_earned'] = $coins['coins_earned'];
-            $payload['total_coins'] = $coins['total_coins'];
+            $payload['coins_earned'] = $coins;
+            $payload['total_coins'] = $newBalance;
 
             return $this->success($payload, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
