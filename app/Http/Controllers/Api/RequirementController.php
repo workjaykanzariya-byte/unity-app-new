@@ -80,34 +80,40 @@ class RequirementController extends BaseApiController
 
             $reference = 'requirements';
             $coins = $coinMap[$reference];
+            $coinsEarned = $coins;
             $newBalance = $authUser->coins_balance;
 
-            DB::beginTransaction();
-
             try {
-                DB::table('users')
-                    ->where('id', $authUser->id)
-                    ->update([
-                        'coins_balance' => DB::raw("coins_balance + {$coins}"),
+                DB::transaction(function () use ($authUser, $requirement, $reference, $coins, &$newBalance) {
+                    $userRow = DB::table('users')
+                        ->where('id', $authUser->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $userRow) {
+                        throw new \RuntimeException('User not found during coin credit');
+                    }
+
+                    $newBalance = (int) $userRow->coins_balance + (int) $coins;
+
+                    DB::table('users')
+                        ->where('id', $authUser->id)
+                        ->update([
+                            'coins_balance' => $newBalance,
+                        ]);
+
+                    DB::table('coins_ledger')->insert([
+                        'transaction_id' => Str::uuid()->toString(),
+                        'user_id' => $authUser->id,
+                        'amount' => $coins,
+                        'balance_after' => $newBalance,
+                        'activity_id' => $requirement->id,
+                        'reference' => $reference,
+                        'created_by' => $authUser->id,
+                        'created_at' => now(),
                     ]);
-
-                $updated = DB::table('users')->where('id', $authUser->id)->first();
-                $newBalance = $updated->coins_balance;
-
-                DB::table('coins_ledger')->insert([
-                    'transaction_id' => Str::uuid()->toString(),
-                    'user_id' => $authUser->id,
-                    'amount' => $coins,
-                    'balance_after' => $newBalance,
-                    'activity_id' => $requirement->id,
-                    'reference' => $reference,
-                    'created_by' => $authUser->id,
-                    'created_at' => now(),
-                ]);
-
-                DB::commit();
+                });
             } catch (Throwable $e) {
-                DB::rollBack();
                 Log::error('COIN CREDIT FAILED', [
                     'error' => $e->getMessage(),
                     'reference' => $reference,
@@ -115,12 +121,12 @@ class RequirementController extends BaseApiController
                     'user_id' => $authUser->id,
                 ]);
 
-                $coins = 0;
+                $coinsEarned = 0;
                 $newBalance = $authUser->coins_balance;
             }
 
             $payload = $requirement->toArray();
-            $payload['coins_earned'] = $coins;
+            $payload['coins_earned'] = $coinsEarned;
             $payload['total_coins'] = $newBalance;
 
             return $this->success($payload, 'Requirement created successfully', 201);
