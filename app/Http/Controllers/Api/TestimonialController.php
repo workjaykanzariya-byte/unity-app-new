@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
 use App\Models\Testimonial;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -69,7 +70,20 @@ class TestimonialController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $authUser,
+                'testimonial',
+                $testimonial->id ?? null,
+                'Activity: testimonial',
+                $authUser->id
+            );
+
+            if ($coinsLedger) {
+                $testimonial->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success($testimonial, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {

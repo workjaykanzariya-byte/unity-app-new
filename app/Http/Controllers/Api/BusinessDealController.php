@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreBusinessDealRequest;
 use App\Models\BusinessDeal;
+use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -69,7 +70,20 @@ class BusinessDealController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                $authUser,
+                'business_deal',
+                $businessDeal->id ?? null,
+                'Activity: business_deal',
+                $authUser->id
+            );
+
+            if ($coinsLedger) {
+                $businessDeal->setAttribute('coins', [
+                    'earned' => $coinsLedger->amount,
+                    'balance_after' => $coinsLedger->balance_after,
+                ]);
+            }
 
             return $this->success($businessDeal, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
