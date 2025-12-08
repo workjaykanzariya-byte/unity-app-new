@@ -73,7 +73,7 @@ class TestimonialController extends BaseApiController
             $coinsLedger = app(CoinsService::class)->rewardForActivity(
                 $authUser,
                 'testimonial',
-                $testimonial->id ?? null,
+                null,
                 'Activity: testimonial',
                 $authUser->id
             );

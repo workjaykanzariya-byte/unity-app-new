@@ -31,16 +31,17 @@ class CoinsService
                 'coins_balance' => $newBalance,
             ]);
 
-            return CoinsLedger::create([
+            $ledgerData = [
                 'transaction_id' => Str::uuid()->toString(),
                 'user_id' => $user->id,
                 'amount' => $amount,
                 'balance_after' => $newBalance,
-                'activity_id' => $activityId,
                 'reference' => $reference ?? ucfirst(str_replace('_', ' ', $activityType)) . ' reward',
                 'created_by' => $createdBy ?? $user->id,
                 'created_at' => now(),
-            ]);
+            ];
+
+            return CoinsLedger::create($ledgerData);
         });
     }
 }

@@ -71,7 +71,7 @@ class RequirementController extends BaseApiController
             $coinsLedger = app(CoinsService::class)->rewardForActivity(
                 $authUser,
                 'requirement',
-                $requirement->id ?? null,
+                null,
                 'Activity: requirement',
                 $authUser->id
             );

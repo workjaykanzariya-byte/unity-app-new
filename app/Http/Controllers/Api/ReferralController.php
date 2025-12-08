@@ -77,7 +77,7 @@ class ReferralController extends BaseApiController
             $coinsLedger = app(CoinsService::class)->rewardForActivity(
                 $authUser,
                 'referral',
-                $referral->id ?? null,
+                null,
                 'Activity: referral',
                 $authUser->id
             );

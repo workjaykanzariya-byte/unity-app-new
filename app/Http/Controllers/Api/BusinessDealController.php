@@ -73,7 +73,7 @@ class BusinessDealController extends BaseApiController
             $coinsLedger = app(CoinsService::class)->rewardForActivity(
                 $authUser,
                 'business_deal',
-                $businessDeal->id ?? null,
+                null,
                 'Activity: business_deal',
                 $authUser->id
             );

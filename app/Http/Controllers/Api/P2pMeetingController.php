@@ -67,7 +67,7 @@ class P2pMeetingController extends BaseApiController
             $coinsLedger = app(CoinsService::class)->rewardForActivity(
                 $authUser,
                 'p2p_meeting',
-                $meeting->id ?? null,
+                null,
                 'Activity: p2p_meeting',
                 $authUser->id
             );
