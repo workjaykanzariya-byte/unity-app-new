@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\Activities\RequirementController as ActivitiesRequi
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AdsController;
 use App\Http\Controllers\Api\AdminActivityController;
+use App\Http\Controllers\Api\Auth\LoginOtpController;
+use App\Http\Controllers\Api\Auth\PasswordResetOtpController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
@@ -28,10 +30,10 @@ Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
-        Route::post('request-otp', [AuthController::class, 'requestOtp']);
-        Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('login/request-otp', [LoginOtpController::class, 'requestOtp']);
+        Route::post('login/verify-otp', [LoginOtpController::class, 'verifyOtp']);
+        Route::post('forgot-password', [PasswordResetOtpController::class, 'sendOtp']);
+        Route::post('reset-password', [PasswordResetOtpController::class, 'resetWithOtp']);
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
