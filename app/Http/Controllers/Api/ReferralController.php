@@ -5,16 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Models\Referral;
-use App\Services\CoinsService;
+use App\Traits\HandlesCoins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ReferralController extends BaseApiController
 {
-    public function __construct(private CoinsService $coinsService)
-    {
-    }
+    use HandlesCoins;
 
     public function index(Request $request)
     {
@@ -79,11 +77,11 @@ class ReferralController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            $coins = $this->coinsService->credit(
-                userId: $authUser->id,
-                activityId: $referral->id,
-                reference: 'referrals',
-                coins: 15,
+            $coins = $this->creditCoinsForActivity(
+                $authUser,
+                $referral->id,
+                'referrals',
+                15
             );
 
             $payload = $referral->toArray();
@@ -92,7 +90,11 @@ class ReferralController extends BaseApiController
 
             return $this->success($payload, 'Referral saved successfully', 201);
         } catch (Throwable $e) {
-            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('Referral store error', [
+                'user_id' => $authUser->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return $this->error('Something went wrong', 500);
         }

@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreRequirementRequest;
 use App\Models\Requirement;
+use App\Traits\HandlesCoins;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RequirementController extends BaseApiController
 {
+    use HandlesCoins;
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -67,10 +71,25 @@ class RequirementController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            // TODO: award coins for this activity
+            $coins = $this->creditCoinsForActivity(
+                $authUser,
+                $requirement->id,
+                'requirements',
+                5
+            );
 
-            return $this->success($requirement, 'Requirement created successfully', 201);
+            $payload = $requirement->toArray();
+            $payload['coins_earned'] = $coins['coins_earned'];
+            $payload['total_coins'] = $coins['total_coins'];
+
+            return $this->success($payload, 'Requirement created successfully', 201);
         } catch (Throwable $e) {
+            Log::error('Requirement store error', [
+                'user_id' => $authUser->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return $this->error('Something went wrong', 500);
         }
     }

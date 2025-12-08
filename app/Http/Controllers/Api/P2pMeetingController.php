@@ -5,16 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
-use App\Services\CoinsService;
+use App\Traits\HandlesCoins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class P2pMeetingController extends BaseApiController
 {
-    public function __construct(private CoinsService $coinsService)
-    {
-    }
+    use HandlesCoins;
 
     public function index(Request $request)
     {
@@ -69,11 +67,11 @@ class P2pMeetingController extends BaseApiController
                 'is_deleted' => false,
             ]);
 
-            $coins = $this->coinsService->credit(
-                userId: $authUser->id,
-                activityId: $meeting->id,
-                reference: 'p2p_meetings',
-                coins: 10,
+            $coins = $this->creditCoinsForActivity(
+                $authUser,
+                $meeting->id,
+                'p2p_meetings',
+                10
             );
 
             $payload = $meeting->toArray();
@@ -82,7 +80,11 @@ class P2pMeetingController extends BaseApiController
 
             return $this->success($payload, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {
-            Log::error('Activity error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('P2P meeting store error', [
+                'user_id' => $authUser->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return $this->error('Something went wrong', 500);
         }
