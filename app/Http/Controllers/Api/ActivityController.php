@@ -8,6 +8,7 @@ use App\Http\Resources\ActivityResource;
 use App\Http\Resources\CoinLedgerResource;
 use App\Models\Activity;
 use App\Models\CoinLedger;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class ActivityController extends BaseApiController
@@ -17,22 +18,33 @@ class ActivityController extends BaseApiController
         $authUser = $request->user();
         $data = $request->validated();
 
-        $activity = new Activity();
-        $activity->user_id = $authUser->id;
-        $activity->related_user_id = $data['related_user_id'] ?? null;
-        $activity->circle_id = $data['circle_id'] ?? null;
-        $activity->event_id = $data['event_id'] ?? null;
-        $activity->type = $data['type'];
-        $activity->description = $data['description'] ?? null;
-        $activity->status = 'pending';
-        $activity->requires_verification = true;
-        $activity->coins_awarded = 0;
-        $activity->coins_ledger_id = null;
-        $activity->save();
+        $responseData = DB::transaction(function () use ($authUser, $data) {
+            $activity = new Activity();
+            $activity->user_id = $authUser->id;
+            $activity->related_user_id = $data['related_user_id'] ?? null;
+            $activity->circle_id = $data['circle_id'] ?? null;
+            $activity->event_id = $data['event_id'] ?? null;
+            $activity->type = $data['type'];
+            $activity->description = $data['description'] ?? null;
+            $activity->status = 'pending';
+            $activity->requires_verification = true;
+            $activity->coins_awarded = 0;
+            $activity->coins_ledger_id = null;
+            $activity->save();
 
-        $activity->load(['circle', 'event']);
+            $coinsToAdd = 10;
+            $authUser->coins_balance = (int) $authUser->coins_balance + $coinsToAdd;
+            $authUser->save();
 
-        return $this->success(new ActivityResource($activity), 'Activity submitted for review', 201);
+            $activity->load(['circle', 'event']);
+
+            return [
+                'activity' => new ActivityResource($activity),
+                'coins_balance' => (int) $authUser->coins_balance,
+            ];
+        });
+
+        return $this->success($responseData, 'Activity submitted for review', 201);
     }
 
     public function myActivities(Request $request)

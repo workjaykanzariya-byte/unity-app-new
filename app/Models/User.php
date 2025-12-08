@@ -46,7 +46,6 @@ class User extends Authenticatable
         'cover_photo_id',
         'membership_status',
         'membership_expiry',
-        'coins_balance',
         'profile_photo_url',
         'short_bio',
         'long_bio_html',
@@ -92,6 +91,7 @@ class User extends Authenticatable
         'skills' => 'array',
         'interests' => 'array',
         'social_links' => 'array',
+        'coins_balance' => 'integer',
     ];
 
     protected static function booted(): void

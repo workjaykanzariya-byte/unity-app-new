@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CircleController;
+use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\FileController;
@@ -91,6 +92,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/activities/my', [ActivityController::class, 'myActivities']);
         Route::get('/activities/my/coins-summary', [ActivityController::class, 'myCoinsSummary']);
         Route::get('/activities/my/coins-ledger', [ActivityController::class, 'myCoinsLedger']);
+        Route::get('/me/coins', [CoinsController::class, 'me']);
+        Route::get('/users/{id}/coins', [CoinsController::class, 'show']);
 
         Route::prefix('activities')->group(function () {
             // P2P Meetings
