@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\LoginOtpMail;
 use App\Mail\PasswordResetOtpMail;
+use App\Models\OtpCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -117,23 +118,26 @@ class AuthController extends BaseApiController
             ], 404);
         }
 
-        if ($user) {
-            $otp = (string) random_int(1000, 9999);
+        $otp = (string) random_int(1000, 9999);
 
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $user->email],
-                [
-                    'token'      => Hash::make($otp),
-                    'created_at' => now(),
-                ]
-            );
+        OtpCode::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'purpose' => 'login_otp',
+            ],
+            [
+                'email'      => $user->email,
+                'code'       => Hash::make($otp),
+                'expires_at' => now()->addMinutes(5),
+                'used_at'    => null,
+            ]
+        );
 
-            Mail::to($user->email)->send(new LoginOtpMail($otp, $user));
-        }
+        Mail::to($user->email)->send(new LoginOtpMail($otp, $user));
 
         return response()->json([
             'success' => true,
-            'message' => 'If your email is registered, an OTP has been sent.',
+            'message' => 'OTP sent successfully.',
             'data'    => null,
         ]);
     }
@@ -150,26 +154,44 @@ class AuthController extends BaseApiController
         if (! $user) {
             return response()->json([
                 'success' => false,
+                'message' => 'You are not a registered user.',
+                'data'    => null,
+            ], 404);
+        }
+
+        $otpRecord = OtpCode::where('user_id', $user->id)
+            ->where('purpose', 'login_otp')
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $otpRecord) {
+            return response()->json([
+                'success' => false,
                 'message' => 'Invalid OTP.',
                 'data'    => null,
             ], 422);
         }
 
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $user->email)
-            ->first();
-
-        $isExpired = $record ? now()->diffInMinutes($record->created_at) > 15 : true;
-
-        if (! $record || $isExpired || ! Hash::check($data['otp'], $record->token)) {
+        if (now()->greaterThan($otpRecord->expires_at)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired OTP.',
+                'message' => 'OTP has expired.',
                 'data'    => null,
             ], 422);
         }
 
-        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+        if (! Hash::check($data['otp'], $otpRecord->code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $otpRecord->used_at = now();
+        $otpRecord->save();
 
         if ($user->membership_status === 'suspended') {
             return $this->error('Account is suspended', 403);
@@ -203,19 +225,22 @@ class AuthController extends BaseApiController
             ], 404);
         }
 
-        if ($user) {
-            $otp = (string) random_int(1000, 9999);
+        $otp = (string) random_int(1000, 9999);
 
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $user->email],
-                [
-                    'token'      => Hash::make($otp),
-                    'created_at' => now(),
-                ]
-            );
+        OtpCode::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'purpose' => 'password_reset_otp',
+            ],
+            [
+                'email'      => $user->email,
+                'code'       => Hash::make($otp),
+                'expires_at' => now()->addMinutes(5),
+                'used_at'    => null,
+            ]
+        );
 
-            Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user));
-        }
+        Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user));
 
         return response()->json([
             'success' => true,
@@ -237,29 +262,47 @@ class AuthController extends BaseApiController
         if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired OTP.',
+                'message' => 'You are not a registered user.',
                 'data'    => null,
-            ], 422);
+            ], 404);
         }
 
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $user->email)
+        $otpRecord = OtpCode::where('user_id', $user->id)
+            ->where('purpose', 'password_reset_otp')
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->orderByDesc('created_at')
             ->first();
 
-        $isExpired = $record ? now()->diffInMinutes($record->created_at) > 15 : true;
-
-        if (! $record || $isExpired || ! Hash::check($data['otp'], $record->token)) {
+        if (! $otpRecord) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired OTP.',
+                'message' => 'Invalid OTP.',
                 'data'    => null,
             ], 422);
         }
+
+        if (now()->greaterThan($otpRecord->expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (! Hash::check($data['otp'], $otpRecord->code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $otpRecord->used_at = now();
+        $otpRecord->save();
 
         $user->password_hash = Hash::make($data['password']);
         $user->save();
-
-        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         return response()->json([
             'success' => true,
