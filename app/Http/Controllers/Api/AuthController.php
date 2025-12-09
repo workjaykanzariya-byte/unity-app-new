@@ -230,7 +230,7 @@ class AuthController extends BaseApiController
         OtpCode::updateOrCreate(
             [
                 'user_id' => $user->id,
-                'purpose' => 'password_reset_otp',
+                'purpose' => 'password_reset',
             ],
             [
                 'email'      => $user->email,
@@ -268,9 +268,8 @@ class AuthController extends BaseApiController
         }
 
         $otpRecord = OtpCode::where('user_id', $user->id)
-            ->where('purpose', 'password_reset_otp')
+            ->where('purpose', 'password_reset')
             ->whereNull('used_at')
-            ->where('expires_at', '>', now())
             ->orderByDesc('created_at')
             ->first();
 
