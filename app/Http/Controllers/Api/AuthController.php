@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\LoginOtpMail;
@@ -78,28 +77,45 @@ class AuthController extends BaseApiController
         ], 'Registration successful');
     }
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(Request $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-        if (! $user || ! Hash::check($request->password, $user->password_hash)) {
-            return $this->error('Invalid credentials', 401);
+        // Find user by email
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials.',
+                'data'    => null,
+            ], 401);
         }
 
-        if ($user->membership_status === 'suspended') {
-            return $this->error('Account is suspended', 403);
+        // IMPORTANT: use password_hash column
+        if (! Hash::check($credentials['password'], $user->password_hash)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials.',
+                'data'    => null,
+            ], 401);
         }
 
-        $user->last_login_at = now();
-        $user->save();
-        $user->refresh();
+        // Create Sanctum token
+        $token = $user->createToken('auth_token')->plainTextToken;
 
-        $token = $user->createToken('api')->plainTextToken;
-
-        return $this->success([
-            'user' => new UserResource($user->load('city')),
-            'token' => $token,
-        ], 'Login successful');
+        // If you already have a UserResource, you can use it here instead of returning $user directly
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful.',
+            'data'    => [
+                'token' => $token,
+                'user'  => $user,
+            ],
+        ]);
     }
 
     public function requestOtp(Request $request): JsonResponse
