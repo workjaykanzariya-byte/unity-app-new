@@ -76,6 +76,20 @@ class MemberController extends BaseApiController
         return $this->success($data);
     }
 
+    public function names()
+    {
+        $members = User::query()
+            ->select('id', 'display_name')
+            ->whereNull('deleted_at')
+            ->orderBy('display_name', 'asc')
+            ->get();
+
+        return $this->success(
+            $members,
+            'Member names fetched successfully.'
+        );
+    }
+
     public function show(Request $request, string $id)
     {
         $user = User::with('city')->find($id);
