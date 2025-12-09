@@ -120,18 +120,14 @@ class AuthController extends BaseApiController
 
         $otp = (string) random_int(1000, 9999);
 
-        OtpCode::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'purpose' => 'login_otp',
-            ],
-            [
-                'email'      => $user->email,
-                'code'       => Hash::make($otp),
-                'expires_at' => now()->addMinutes(5),
-                'used_at'    => null,
-            ]
-        );
+        OtpCode::create([
+            'user_id'    => $user->id,
+            'email'      => $user->email,
+            'purpose'    => 'login_otp',
+            'code'       => Hash::make($otp),
+            'expires_at' => now()->addMinutes(5),
+            'used_at'    => null,
+        ]);
 
         Mail::to($user->email)->send(new LoginOtpMail($otp, $user));
 
@@ -162,7 +158,6 @@ class AuthController extends BaseApiController
         $otpRecord = OtpCode::where('user_id', $user->id)
             ->where('purpose', 'login_otp')
             ->whereNull('used_at')
-            ->where('expires_at', '>', now())
             ->orderByDesc('created_at')
             ->first();
 
@@ -227,18 +222,14 @@ class AuthController extends BaseApiController
 
         $otp = (string) random_int(1000, 9999);
 
-        OtpCode::updateOrCreate(
-            [
-                'user_id' => $user->id,
-                'purpose' => 'password_reset',
-            ],
-            [
-                'email'      => $user->email,
-                'code'       => Hash::make($otp),
-                'expires_at' => now()->addMinutes(5),
-                'used_at'    => null,
-            ]
-        );
+        OtpCode::create([
+            'user_id'    => $user->id,
+            'email'      => $user->email,
+            'purpose'    => 'password_reset',
+            'code'       => Hash::make($otp),
+            'expires_at' => now()->addMinutes(5),
+            'used_at'    => null,
+        ]);
 
         Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user));
 
