@@ -85,8 +85,8 @@ class MemberController extends BaseApiController
             ->get();
 
         return $this->success(
-            'Member names fetched successfully.',
-            $members
+            $members,
+            'Member names fetched successfully.'
         );
     }
 
