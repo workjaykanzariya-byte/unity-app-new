@@ -45,8 +45,11 @@ Route::prefix('v1')->group(function () {
         Route::patch('/profile', [ProfileController::class, 'update']);
 
         // Members & connections
-        Route::get('/members', [MemberController::class, 'index']);
-        Route::get('/members/{id}', [MemberController::class, 'show']);
+        Route::get('members/names', [MemberController::class, 'names']);
+
+        Route::apiResource('members', MemberController::class)
+            ->only(['index', 'show']);
+
         Route::get('/members/public/{slug}', [MemberController::class, 'publicProfileBySlug']);
 
         Route::post('/members/{id}/connections', [MemberController::class, 'sendConnectionRequest']);
