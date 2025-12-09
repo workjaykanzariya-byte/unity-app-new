@@ -176,6 +176,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/files/upload', [FileController::class, 'upload']);
     });
 
+    Route::get('/files/{id}', [FileController::class, 'show']);
+
     // Wallet payment webhook (called by payment gateway)
     Route::post('/wallet/webhook', [WalletController::class, 'paymentWebhook']);
 

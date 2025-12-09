@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\FileResource;
+use App\Models\File;
 use App\Models\FileModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,33 @@ use Illuminate\Support\Str;
 
 class FileController extends BaseApiController
 {
+    /**
+     * Serve a file by its UUID.
+     */
+    public function show(string $id)
+    {
+        $file = File::findOrFail($id);
+
+        $disk = config('filesystems.default', 'public');
+
+        if (! $file->s3_key || ! Storage::disk($disk)->exists($file->s3_key)) {
+            abort(404, 'File not found');
+        }
+
+        $mime = $file->mime_type
+            ?: Storage::disk($disk)->mimeType($file->s3_key)
+            ?: 'application/octet-stream';
+
+        return Storage::disk($disk)->response(
+            $file->s3_key,
+            null,
+            [
+                'Content-Type'  => $mime,
+                'Cache-Control' => 'public, max-age=31536000',
+            ]
+        );
+    }
+
     public function upload(Request $request)
     {
         $user = $request->user();
