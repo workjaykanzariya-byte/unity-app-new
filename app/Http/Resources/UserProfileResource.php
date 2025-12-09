@@ -37,8 +37,12 @@ class UserProfileResource extends JsonResource
             'profile_photo_id'   => $this->profile_photo_file_id,
             'cover_photo_id'     => $this->cover_photo_file_id,
 
-            'profile_photo_url'  => optional($this->profilePhotoFile)->public_url,
-            'cover_photo_url'    => optional($this->coverPhotoFile)->public_url,
+            'profile_photo_url'  => $this->profile_photo_file_id
+                ? url("/api/v1/files/{$this->profile_photo_file_id}")
+                : null,
+            'cover_photo_url'    => $this->cover_photo_file_id
+                ? url("/api/v1/files/{$this->cover_photo_file_id}")
+                : null,
 
             'created_at'         => $this->created_at,
             'updated_at'         => $this->updated_at,
