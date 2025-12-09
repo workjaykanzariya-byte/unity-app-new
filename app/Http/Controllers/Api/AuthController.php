@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use App\Http\Requests\Auth\RequestOtpRequest;
-use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Http\Resources\UserResource;
-use App\Models\EmailLog;
+use App\Mail\LoginOtpMail;
+use App\Mail\PasswordResetOtpMail;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -105,116 +101,155 @@ class AuthController extends BaseApiController
         ], 'Login successful');
     }
 
-    public function requestOtp(RequestOtpRequest $request): JsonResponse
+    public function requestOtp(Request $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
 
         if ($user) {
-            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put('otp_' . $request->email, $otp, now()->addMinutes(10));
+            $otp = (string) random_int(1000, 9999);
 
-            Mail::raw("Your Peers Global Unity login OTP is: {$otp}", function ($message) use ($request) {
-                $message->to($request->email)->subject('Your Login OTP');
-            });
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                [
+                    'token'      => Hash::make($otp),
+                    'created_at' => now(),
+                ]
+            );
 
-            EmailLog::create([
-                'to_email' => $request->email,
-                'template_key' => 'auth_otp',
-                'payload' => ['otp' => $otp],
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
+            Mail::to($user->email)->send(new LoginOtpMail($otp, $user));
         }
 
-        return $this->success(null, 'If your email is registered, an OTP has been sent.');
+        return response()->json([
+            'success' => true,
+            'message' => 'If your email is registered, an OTP has been sent.',
+            'data'    => null,
+        ]);
     }
 
-    public function verifyOtp(VerifyOtpRequest $request): JsonResponse
+    public function verifyOtp(Request $request): JsonResponse
     {
-        $cachedOtp = Cache::get('otp_' . $request->email);
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'otp'   => ['required', 'digits:4'],
+        ]);
 
-        if (empty($cachedOtp) || $cachedOtp !== $request->otp) {
-            return $this->error('Invalid or expired OTP', 400);
-        }
-
-        Cache::forget('otp_' . $request->email);
-
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $data['email'])->first();
 
         if (! $user) {
-            return $this->error('User not found', 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
         }
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $user->email)
+            ->first();
+
+        $isExpired = $record ? now()->diffInMinutes($record->created_at) > 15 : true;
+
+        if (! $record || $isExpired || ! Hash::check($data['otp'], $record->token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         if ($user->membership_status === 'suspended') {
             return $this->error('Account is suspended', 403);
         }
+
+        $user->last_login_at = now();
+        $user->save();
+        $user->refresh();
 
         $token = $user->createToken('api')->plainTextToken;
 
         return $this->success([
             'user' => new UserResource($user->load('city')),
             'token' => $token,
-        ], 'OTP verified');
+        ], 'Login successful');
     }
 
-    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    public function forgotPassword(Request $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
 
         if ($user) {
-            $token = Str::random(64);
+            $otp = (string) random_int(1000, 9999);
 
             DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $request->email],
+                ['email' => $user->email],
                 [
-                    'token' => Hash::make($token),
+                    'token'      => Hash::make($otp),
                     'created_at' => now(),
                 ]
             );
 
-            $frontendUrl = Config::get('app.frontend_url', 'https://app.peersglobal.com');
-            $resetUrl = $frontendUrl . '/?reset_token=' . $token . '&email=' . $request->email;
-
-            Mail::raw("Reset your password using this link: {$resetUrl}", function ($message) use ($request) {
-                $message->to($request->email)->subject('Reset your password');
-            });
-
-            EmailLog::create([
-                'to_email' => $request->email,
-                'template_key' => 'forgot_password',
-                'payload' => ['reset_url' => $resetUrl],
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
+            Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user));
         }
 
-        return $this->success(null, 'If your email is registered, a reset link has been sent.');
+        return response()->json([
+            'success' => true,
+            'message' => 'If your email is registered, a password reset OTP has been sent.',
+            'data'    => null,
+        ]);
     }
 
-    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    public function resetPassword(Request $request): JsonResponse
     {
-        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
+        $data = $request->validate([
+            'email'                 => ['required', 'email'],
+            'otp'                   => ['required', 'digits:4'],
+            'password'              => ['required', 'min:8', 'confirmed'],
+        ]);
 
-        if (! $record) {
-            return $this->error('Invalid password reset token', 400);
-        }
-
-        if (! Hash::check($request->token, $record->token)) {
-            return $this->error('Invalid password reset token', 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $data['email'])->first();
 
         if (! $user) {
-            return $this->error('User not found', 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP.',
+                'data'    => null,
+            ], 422);
         }
 
-        $user->password_hash = Hash::make($request->password);
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $user->email)
+            ->first();
+
+        $isExpired = $record ? now()->diffInMinutes($record->created_at) > 15 : true;
+
+        if (! $record || $isExpired || ! Hash::check($data['otp'], $record->token)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $user->password_hash = Hash::make($data['password']);
         $user->save();
 
-        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
-        return $this->success(null, 'Password reset successful');
+        return response()->json([
+            'success' => true,
+            'message' => 'Password reset successfully.',
+            'data'    => null,
+        ]);
     }
 
     public function logout(): JsonResponse
