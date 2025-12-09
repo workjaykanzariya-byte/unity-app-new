@@ -109,6 +109,14 @@ class AuthController extends BaseApiController
 
         $user = User::where('email', $data['email'])->first();
 
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data' => null,
+            ], 404);
+        }
+
         if ($user) {
             $otp = (string) random_int(1000, 9999);
 
@@ -186,6 +194,14 @@ class AuthController extends BaseApiController
         ]);
 
         $user = User::where('email', $data['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data' => null,
+            ], 404);
+        }
 
         if ($user) {
             $otp = (string) random_int(1000, 9999);
