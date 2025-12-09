@@ -45,8 +45,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('/profile', [ProfileController::class, 'update']);
 
         // Members & connections
+        // Specific route FIRST
         Route::get('members/names', [MemberController::class, 'names']);
 
+        // Generic resource routes AFTER
         Route::apiResource('members', MemberController::class)
             ->only(['index', 'show']);
 
