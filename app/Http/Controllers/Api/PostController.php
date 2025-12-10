@@ -36,7 +36,7 @@ class PostController extends BaseApiController
         $items = $paginator->getCollection()->map(function (Post $post) {
             return [
                 'id'                => $post->id,
-                'content'           => $post->content_text,
+                'content_text'      => $post->content_text,
                 'media'             => $post->media ?? [],
                 'tags'              => $post->tags ?? [],
                 'visibility'        => $post->visibility,
@@ -76,7 +76,7 @@ class PostController extends BaseApiController
         $user = Auth::user();
 
         $data = $request->validate([
-            'content'        => ['required', 'string', 'max:5000'],
+            'content_text'   => ['required', 'string', 'max:5000'],
             'media'          => ['nullable', 'array'],
             'media.*.id'     => ['required_with:media', 'uuid', 'exists:files,id'],
             'media.*.type'   => ['required_with:media', 'string', 'max:50'],
@@ -110,7 +110,7 @@ class PostController extends BaseApiController
         $post = Post::create([
             'user_id'           => $user->id,
             'circle_id'         => $data['circle_id'] ?? null,
-            'content_text'      => $data['content'],
+            'content_text'      => $data['content_text'],
             'media'             => $mediaItems ?: [],
             'tags'              => $data['tags'] ?? [],
             'visibility'        => $data['visibility'],
@@ -151,7 +151,7 @@ class PostController extends BaseApiController
 
         return $this->success([
             'id'                => $post->id,
-            'content'           => $post->content_text,
+            'content_text'      => $post->content_text,
             'media'             => $post->media ?? [],
             'tags'              => $post->tags ?? [],
             'visibility'        => $post->visibility,
