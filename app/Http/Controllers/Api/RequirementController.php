@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreRequirementRequest;
+use App\Models\File;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -33,7 +34,9 @@ class RequirementController extends BaseApiController
             ->paginate($perPage);
 
         return $this->success([
-            'items' => $paginator->items(),
+            'items' => collect($paginator->items())
+                ->map(fn (Requirement $requirement) => $this->formatRequirement($requirement))
+                ->all(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -83,7 +86,11 @@ class RequirementController extends BaseApiController
                 ]);
             }
 
-            return $this->success($requirement, 'Requirement created successfully', 201);
+            return $this->success(
+                $this->formatRequirement($requirement),
+                'Requirement created successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
@@ -103,6 +110,64 @@ class RequirementController extends BaseApiController
             return $this->error('Requirement not found', 404);
         }
 
-        return $this->success($requirement);
+        return $this->success($this->formatRequirement($requirement));
+    }
+
+    protected function enrichMediaWithUrls(?array $media): array
+    {
+        if (empty($media)) {
+            return [];
+        }
+
+        $fileIds = collect($media)
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($fileIds)) {
+            return [];
+        }
+
+        $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
+
+        return collect($media)->map(function ($item) use ($files) {
+            $id = $item['id'] ?? null;
+            $type = $item['type'] ?? 'image';
+
+            $file = $id ? $files->get($id) : null;
+
+            return [
+                'id' => $id,
+                'type' => $type,
+                'url' => $file ? $file->url : null,
+            ];
+        })->all();
+    }
+
+    protected function formatRequirement(Requirement $requirement): array
+    {
+        $data = [
+            'id' => $requirement->id,
+            'user_id' => $requirement->user_id,
+            'subject' => $requirement->subject,
+            'description' => $requirement->description,
+            'media' => $this->enrichMediaWithUrls($requirement->media),
+            'region_filter' => $requirement->region_filter,
+            'category_filter' => $requirement->category_filter ?? null,
+            'region_label' => $requirement->region_label ?? ($requirement->region_filter['region_label'] ?? null),
+            'city_name' => $requirement->city_name ?? ($requirement->region_filter['city_name'] ?? null),
+            'category' => $requirement->category ?? ($requirement->category_filter['category'] ?? null),
+            'status' => $requirement->status,
+            'created_at' => $requirement->created_at,
+            'updated_at' => $requirement->updated_at,
+        ];
+
+        if ($requirement->getAttribute('coins')) {
+            $data['coins'] = $requirement->getAttribute('coins');
+        }
+
+        return $data;
     }
 }

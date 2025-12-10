@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
+use App\Models\File;
 use App\Models\Testimonial;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -39,7 +40,9 @@ class TestimonialController extends BaseApiController
             ->paginate($perPage);
 
         return $this->success([
-            'items' => $paginator->items(),
+            'items' => collect($paginator->items())
+                ->map(fn (Testimonial $testimonial) => $this->formatTestimonial($testimonial))
+                ->all(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -85,7 +88,11 @@ class TestimonialController extends BaseApiController
                 ]);
             }
 
-            return $this->success($testimonial, 'Testimonial saved successfully', 201);
+            return $this->success(
+                $this->formatTestimonial($testimonial),
+                'Testimonial saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
@@ -108,6 +115,64 @@ class TestimonialController extends BaseApiController
             return $this->error('Testimonial not found', 404);
         }
 
-        return $this->success($testimonial);
+        return $this->success($this->formatTestimonial($testimonial));
+    }
+
+    protected function enrichMediaWithUrls(?array $media): array
+    {
+        if (empty($media)) {
+            return [];
+        }
+
+        $fileIds = collect($media)
+            ->pluck('id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($fileIds)) {
+            return [];
+        }
+
+        $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
+
+        return collect($media)->map(function ($item) use ($files) {
+            $id = $item['id'] ?? null;
+            $type = $item['type'] ?? 'image';
+
+            $file = $id ? $files->get($id) : null;
+
+            return [
+                'id' => $id,
+                'type' => $type,
+                'url' => $file ? $file->url : null,
+            ];
+        })->all();
+    }
+
+    protected function formatTestimonial(Testimonial $testimonial): array
+    {
+        $rawMedia = $testimonial->media ?? (
+            $testimonial->media_id
+                ? [['id' => $testimonial->media_id, 'type' => 'image']]
+                : []
+        );
+
+        $data = [
+            'from_user_id' => $testimonial->from_user_id,
+            'to_user_id' => $testimonial->to_user_id,
+            'content' => $testimonial->content,
+            'media' => $this->enrichMediaWithUrls($rawMedia),
+            'id' => $testimonial->id,
+            'updated_at' => $testimonial->updated_at,
+            'created_at' => $testimonial->created_at,
+        ];
+
+        if ($testimonial->getAttribute('coins')) {
+            $data['coins'] = $testimonial->getAttribute('coins');
+        }
+
+        return $data;
     }
 }
