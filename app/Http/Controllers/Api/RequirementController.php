@@ -13,29 +13,23 @@ class RequirementController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $authUser = $request->user();
-        $status = $request->input('status');
+        $perPage = (int) $request->input('per_page', 20);
+        $page = (int) $request->input('page', 1);
 
         $query = Requirement::query()
-            ->where('user_id', $authUser->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at');
 
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        $perPage = (int) $request->input('per_page', 20);
-        $perPage = max(1, min($perPage, 100));
-
         $paginator = $query
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+            ->orderByDesc('created_at')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $items = collect($paginator->items())
+            ->map(fn (Requirement $requirement) => $this->formatRequirement($requirement))
+            ->all();
 
         return $this->success([
-            'items' => collect($paginator->items())
-                ->map(fn (Requirement $requirement) => $this->formatRequirement($requirement))
-                ->all(),
+            'items' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
