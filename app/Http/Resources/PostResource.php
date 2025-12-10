@@ -12,7 +12,23 @@ class PostResource extends JsonResource
             'id' => $this->id,
 
             'content'        => $this->content_text,
-            'media'          => $this->media,
+            'media'          => $this->media
+                ? collect($this->media)->map(function ($item) {
+                    if (!is_array($item)) {
+                        return null;
+                    }
+
+                    $id = $item['id'] ?? null;
+
+                    return [
+                        'id'   => $id,
+                        'type' => $item['type'] ?? null,
+                        'url'  => $id
+                            ? url("/api/v1/files/{$id}")
+                            : null,
+                    ];
+                })->filter()->values()->all()
+                : null,
             'tags'           => $this->tags,
             'visibility'     => $this->visibility,
             'moderation_status' => $this->moderation_status ?? null,
