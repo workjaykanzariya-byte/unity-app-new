@@ -5,15 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\Post\StorePostCommentRequest;
 use App\Http\Requests\Post\StorePostRequest;
 use App\Http\Resources\PostCommentResource;
-use App\Http\Resources\PostResource;
 use App\Models\CircleMember;
 use App\Models\Connection;
+use App\Models\File;
 use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class PostController extends BaseApiController
 {
@@ -34,8 +33,35 @@ class PostController extends BaseApiController
 
         $paginator = $query->paginate(20);
 
+        $items = $paginator->getCollection()->map(function (Post $post) {
+            return [
+                'id'                => $post->id,
+                'content'           => $post->content_text,
+                'media'             => $post->media ?? [],
+                'tags'              => $post->tags ?? [],
+                'visibility'        => $post->visibility,
+                'moderation_status' => $post->moderation_status,
+                'author'            => $post->relationLoaded('author') && $post->author ? [
+                    'id'               => $post->author->id,
+                    'display_name'     => $post->author->display_name,
+                    'first_name'       => $post->author->first_name,
+                    'last_name'        => $post->author->last_name,
+                    'profile_photo_url'=> $post->author->profile_photo_url,
+                ] : null,
+                'circle'            => $post->relationLoaded('circle') && $post->circle ? [
+                    'id'   => $post->circle->id,
+                    'name' => $post->circle->name,
+                ] : null,
+                'likes_count'       => isset($post->likes_count) ? (int) $post->likes_count : 0,
+                'comments_count'    => isset($post->comments_count) ? (int) $post->comments_count : 0,
+                'is_liked_by_me'    => (bool) ($post->is_liked_by_me ?? false),
+                'created_at'        => $post->created_at,
+                'updated_at'        => $post->updated_at,
+            ];
+        });
+
         return $this->success([
-            'items' => PostResource::collection($paginator),
+            'items' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -49,26 +75,48 @@ class PostController extends BaseApiController
     {
         $user = Auth::user();
 
-        $media = null;
+        $data = $request->validate([
+            'content'        => ['required', 'string', 'max:5000'],
+            'media'          => ['nullable', 'array'],
+            'media.*.id'     => ['required_with:media', 'uuid', 'exists:files,id'],
+            'media.*.type'   => ['required_with:media', 'string', 'max:50'],
+            'tags'           => ['nullable', 'array'],
+            'tags.*'         => ['string', 'max:100'],
+            'visibility'     => ['required', 'in:public,connections,private'],
+            'circle_id'      => ['nullable', 'uuid'],
+        ]);
 
-        if ($request->filled('image_id')) {
-            $media = [[
-                'id' => $request->image_id,
-                'type' => 'image',
-            ]];
+        $mediaItems = [];
+
+        if (! empty($data['media'])) {
+            $fileIds = collect($data['media'])->pluck('id')->all();
+
+            $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
+
+            foreach ($data['media'] as $item) {
+                $file = $files->get($item['id']);
+                if (! $file) {
+                    continue;
+                }
+
+                $mediaItems[] = [
+                    'id'   => $file->id,
+                    'type' => $item['type'],
+                    'url'  => url("/api/v1/files/{$file->id}"),
+                ];
+            }
         }
 
         $post = Post::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'circle_id' => $request->input('circle_id'),
-            'content_text' => $request->input('content_text'),
-            'media' => $media,
-            'tags' => $request->input('tags', []),
-            'visibility' => $request->input('visibility', 'public'),
-            'moderation_status' => $request->input('moderation_status', 'pending'),
-            'sponsored' => $request->boolean('sponsored', false),
-            'is_deleted' => false,
+            'user_id'           => $user->id,
+            'circle_id'         => $data['circle_id'] ?? null,
+            'content_text'      => $data['content'],
+            'media'             => $mediaItems ?: [],
+            'tags'              => $data['tags'] ?? [],
+            'visibility'        => $data['visibility'],
+            'moderation_status' => 'pending',
+            'sponsored'         => false,
+            'is_deleted'        => false,
         ]);
 
         return response()->json([
@@ -79,13 +127,14 @@ class PostController extends BaseApiController
                 'user_id' => $post->user_id,
                 'circle_id' => $post->circle_id,
                 'content_text' => $post->content_text,
-                'media' => $post->media,
-                'tags' => $post->tags,
+                'media' => $post->media ?? [],
+                'tags' => $post->tags ?? [],
                 'visibility' => $post->visibility,
                 'moderation_status' => $post->moderation_status,
                 'sponsored' => $post->sponsored,
                 'is_deleted' => $post->is_deleted,
                 'created_at' => $post->created_at,
+                'updated_at' => $post->updated_at,
             ],
         ]);
     }
@@ -100,7 +149,30 @@ class PostController extends BaseApiController
             return $this->error('Post not found', 404);
         }
 
-        return $this->success(new PostResource($post));
+        return $this->success([
+            'id'                => $post->id,
+            'content'           => $post->content_text,
+            'media'             => $post->media ?? [],
+            'tags'              => $post->tags ?? [],
+            'visibility'        => $post->visibility,
+            'moderation_status' => $post->moderation_status,
+            'author'            => $post->relationLoaded('user') && $post->user ? [
+                'id'               => $post->user->id,
+                'display_name'     => $post->user->display_name,
+                'first_name'       => $post->user->first_name,
+                'last_name'        => $post->user->last_name,
+                'profile_photo_url'=> $post->user->profile_photo_url,
+            ] : null,
+            'circle'            => $post->relationLoaded('circle') && $post->circle ? [
+                'id'   => $post->circle->id,
+                'name' => $post->circle->name,
+            ] : null,
+            'likes_count'       => isset($post->likes_count) ? (int) $post->likes_count : 0,
+            'comments_count'    => isset($post->comments_count) ? (int) $post->comments_count : 0,
+            'is_liked_by_me'    => (bool) ($post->is_liked_by_me ?? false),
+            'created_at'        => $post->created_at,
+            'updated_at'        => $post->updated_at,
+        ]);
     }
 
     public function destroy(Request $request, string $id)
