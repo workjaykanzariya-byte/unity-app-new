@@ -15,8 +15,11 @@ class StoreTestimonialRequest extends FormRequest
     {
         return [
             'to_user_id' => ['required', 'uuid', 'exists:users,id'],
-            'content' => ['required', 'string'],
-            'media_id' => ['nullable', 'uuid'],
+            'content' => ['required', 'string', 'max:2000'],
+            'media' => ['nullable', 'array'],
+            'media.*.id' => ['required_with:media', 'uuid', 'exists:files,id'],
+            'media.*.type' => ['required_with:media', 'string', 'max:50'],
+            'media_id' => ['nullable', 'uuid', 'exists:files,id'],
         ];
     }
 }

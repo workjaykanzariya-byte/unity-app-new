@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Activity\StoreTestimonialRequest;
+use App\Models\File;
 use App\Models\Testimonial;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -38,8 +38,12 @@ class TestimonialController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
+        $items = collect($paginator->items())
+            ->map(fn (Testimonial $testimonial) => $this->transformTestimonial($testimonial))
+            ->values();
+
         return $this->success([
-            'items' => $paginator->items(),
+            'items' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -49,24 +53,21 @@ class TestimonialController extends BaseApiController
         ]);
     }
 
-    public function store(StoreTestimonialRequest $request)
+    public function store(Request $request)
     {
         $authUser = $request->user();
+        $data = $this->validateTestimonial($request);
 
-        $media = null;
-        if ($request->filled('media_id')) {
-            $media = [[
-                'id' => $request->input('media_id'),
-                'type' => 'image',
-            ]];
-        }
+        $mediaItems = $this->buildMediaItems($data);
+        $firstMediaId = $mediaItems[0]['id'] ?? null;
 
         try {
             $testimonial = Testimonial::create([
                 'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'content' => $request->input('content'),
-                'media' => $media,
+                'to_user_id' => $data['to_user_id'],
+                'content' => $data['content'],
+                'media_id' => $firstMediaId,
+                'media' => $mediaItems ?: [],
                 'is_deleted' => false,
             ]);
 
@@ -85,7 +86,11 @@ class TestimonialController extends BaseApiController
                 ]);
             }
 
-            return $this->success($testimonial, 'Testimonial saved successfully', 201);
+            return $this->success(
+                $this->transformTestimonial($testimonial),
+                'Testimonial saved successfully',
+                201
+            );
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
@@ -108,6 +113,67 @@ class TestimonialController extends BaseApiController
             return $this->error('Testimonial not found', 404);
         }
 
-        return $this->success($testimonial);
+        return $this->success($this->transformTestimonial($testimonial));
+    }
+
+    private function validateTestimonial(Request $request): array
+    {
+        return $request->validate([
+            'to_user_id' => ['required', 'uuid', 'exists:users,id'],
+            'content' => ['required', 'string', 'max:2000'],
+            'media' => ['nullable', 'array'],
+            'media.*.id' => ['required_with:media', 'uuid', 'exists:files,id'],
+            'media.*.type' => ['required_with:media', 'string', 'max:50'],
+            'media_id' => ['nullable', 'uuid', 'exists:files,id'],
+        ]);
+    }
+
+    private function buildMediaItems(array $data): array
+    {
+        $mediaItems = [];
+
+        if (! empty($data['media'])) {
+            $fileIds = collect($data['media'])->pluck('id')->all();
+
+            $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
+
+            foreach ($data['media'] as $item) {
+                $file = $files->get($item['id']);
+                if (! $file) {
+                    continue;
+                }
+
+                $mediaItems[] = [
+                    'id' => $file->id,
+                    'type' => $item['type'],
+                    'url' => $file->url,
+                ];
+            }
+        } elseif (! empty($data['media_id'])) {
+            $file = File::find($data['media_id']);
+            if ($file) {
+                $mediaItems[] = [
+                    'id' => $file->id,
+                    'type' => 'image',
+                    'url' => $file->url,
+                ];
+            }
+        }
+
+        return $mediaItems;
+    }
+
+    private function transformTestimonial(Testimonial $testimonial): array
+    {
+        return [
+            'id' => $testimonial->id,
+            'from_user_id' => $testimonial->from_user_id,
+            'to_user_id' => $testimonial->to_user_id,
+            'content' => $testimonial->content,
+            'media_id' => $testimonial->media_id,
+            'media' => $testimonial->media ?? [],
+            'created_at' => $testimonial->created_at,
+            'updated_at' => $testimonial->updated_at,
+        ];
     }
 }

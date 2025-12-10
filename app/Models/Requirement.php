@@ -24,14 +24,23 @@ class Requirement extends Model
         'user_id',
         'subject',
         'description',
+        'region_label',
+        'city_name',
+        'category',
+        'budget',
+        'timeline',
+        'tags',
+        'visibility',
         'media',
         'region_filter',
         'category_filter',
         'status',
+        'is_deleted',
     ];
 
     protected $casts = [
         'media' => 'array',
+        'tags' => 'array',
         'region_filter' => 'array',
         'category_filter' => 'array',
     ];

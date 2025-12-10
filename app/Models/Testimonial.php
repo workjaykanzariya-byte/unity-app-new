@@ -25,7 +25,9 @@ class Testimonial extends Model
         'from_user_id',
         'to_user_id',
         'content',
+        'media_id',
         'media',
+        'is_deleted',
     ];
 
     protected $casts = [

@@ -16,11 +16,19 @@ class StoreRequirementRequest extends FormRequest
         return [
             'subject' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'media_id' => ['nullable', 'uuid'],
-            'region_label' => ['required', 'string', 'max:50'],
+            'region_label' => ['required', 'string', 'max:100'],
             'city_name' => ['required', 'string', 'max:100'],
             'category' => ['required', 'string', 'max:100'],
-            'status' => ['nullable', 'in:open,closed'],
+            'budget' => ['nullable', 'numeric'],
+            'timeline' => ['nullable', 'string', 'max:100'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:100'],
+            'visibility' => ['required', 'in:public,connections,private'],
+            'status' => ['nullable', 'in:open,in_progress,closed'],
+            'media' => ['nullable', 'array'],
+            'media.*.id' => ['required_with:media', 'uuid', 'exists:files,id'],
+            'media.*.type' => ['required_with:media', 'string', 'max:50'],
+            'media_id' => ['nullable', 'uuid', 'exists:files,id'],
         ];
     }
 }

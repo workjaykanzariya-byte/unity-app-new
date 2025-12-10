@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
 use App\Http\Resources\RequirementResource;
+use App\Models\File;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -17,14 +18,7 @@ class RequirementController extends BaseApiController
     {
         $user = $request->user();
         $data = $request->validated();
-
-        $media = null;
-        if (! empty($data['media_id'])) {
-            $media = [[
-                'id' => $data['media_id'],
-                'type' => 'image',
-            ]];
-        }
+        $mediaItems = $this->buildMediaItems($data);
 
         try {
             $regionFilter = [
@@ -40,9 +34,16 @@ class RequirementController extends BaseApiController
                 'user_id' => $user->id,
                 'subject' => $data['subject'],
                 'description' => $data['description'],
-                'media' => $media,
+                'media' => $mediaItems ?: [],
                 'region_filter' => $regionFilter,
                 'category_filter' => $categoryFilter,
+                'category' => $data['category'],
+                'region_label' => $data['region_label'],
+                'city_name' => $data['city_name'],
+                'budget' => $data['budget'] ?? null,
+                'timeline' => $data['timeline'] ?? null,
+                'tags' => $data['tags'] ?? [],
+                'visibility' => $data['visibility'],
                 'status' => $data['status'] ?? 'open',
             ]);
 
@@ -82,6 +83,41 @@ class RequirementController extends BaseApiController
 
             return $this->error('Failed to create requirement', 500);
         }
+    }
+
+    private function buildMediaItems(array $data): array
+    {
+        $mediaItems = [];
+
+        if (! empty($data['media'])) {
+            $fileIds = collect($data['media'])->pluck('id')->all();
+
+            $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
+
+            foreach ($data['media'] as $item) {
+                $file = $files->get($item['id']);
+                if (! $file) {
+                    continue;
+                }
+
+                $mediaItems[] = [
+                    'id' => $file->id,
+                    'type' => $item['type'],
+                    'url' => $file->url,
+                ];
+            }
+        } elseif (! empty($data['media_id'])) {
+            $file = File::find($data['media_id']);
+            if ($file) {
+                $mediaItems[] = [
+                    'id' => $file->id,
+                    'type' => 'image',
+                    'url' => $file->url,
+                ];
+            }
+        }
+
+        return $mediaItems;
     }
 
     public function index(Request $request)
