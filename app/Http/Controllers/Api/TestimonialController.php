@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
-use App\Models\File;
 use App\Models\Testimonial;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -118,35 +117,20 @@ class TestimonialController extends BaseApiController
         return $this->success($this->formatTestimonial($testimonial));
     }
 
-    protected function enrichMediaWithUrls(?array $media): array
+    protected function addUrlsToMedia(?array $media): array
     {
         if (empty($media)) {
             return [];
         }
 
-        $fileIds = collect($media)
-            ->pluck('id')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        if (empty($fileIds)) {
-            return [];
-        }
-
-        $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
-
-        return collect($media)->map(function ($item) use ($files) {
+        return collect($media)->map(function ($item) {
             $id = $item['id'] ?? null;
             $type = $item['type'] ?? 'image';
-
-            $file = $id ? $files->get($id) : null;
 
             return [
                 'id' => $id,
                 'type' => $type,
-                'url' => $file ? $file->url : null,
+                'url' => $id ? url('/api/v1/files/' . $id) : null,
             ];
         })->all();
     }
@@ -163,7 +147,7 @@ class TestimonialController extends BaseApiController
             'from_user_id' => $testimonial->from_user_id,
             'to_user_id' => $testimonial->to_user_id,
             'content' => $testimonial->content,
-            'media' => $this->enrichMediaWithUrls($rawMedia),
+            'media' => $this->addUrlsToMedia($rawMedia),
             'id' => $testimonial->id,
             'updated_at' => $testimonial->updated_at,
             'created_at' => $testimonial->created_at,

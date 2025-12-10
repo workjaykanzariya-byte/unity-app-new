@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreRequirementRequest;
-use App\Models\File;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -113,35 +112,20 @@ class RequirementController extends BaseApiController
         return $this->success($this->formatRequirement($requirement));
     }
 
-    protected function enrichMediaWithUrls(?array $media): array
+    protected function addUrlsToMedia(?array $media): array
     {
         if (empty($media)) {
             return [];
         }
 
-        $fileIds = collect($media)
-            ->pluck('id')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        if (empty($fileIds)) {
-            return [];
-        }
-
-        $files = File::whereIn('id', $fileIds)->get()->keyBy('id');
-
-        return collect($media)->map(function ($item) use ($files) {
+        return collect($media)->map(function ($item) {
             $id = $item['id'] ?? null;
             $type = $item['type'] ?? 'image';
-
-            $file = $id ? $files->get($id) : null;
 
             return [
                 'id' => $id,
                 'type' => $type,
-                'url' => $file ? $file->url : null,
+                'url' => $id ? url('/api/v1/files/' . $id) : null,
             ];
         })->all();
     }
@@ -153,7 +137,7 @@ class RequirementController extends BaseApiController
             'user_id' => $requirement->user_id,
             'subject' => $requirement->subject,
             'description' => $requirement->description,
-            'media' => $this->enrichMediaWithUrls($requirement->media),
+            'media' => $this->addUrlsToMedia($requirement->media),
             'region_filter' => $requirement->region_filter,
             'category_filter' => $requirement->category_filter ?? null,
             'region_label' => $requirement->region_label ?? ($requirement->region_filter['region_label'] ?? null),
