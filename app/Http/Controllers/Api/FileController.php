@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\FileResource;
 use App\Models\File;
 use App\Models\FileModel;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -41,13 +42,44 @@ class FileController extends BaseApiController
 
     public function upload(Request $request)
     {
-        $user = $request->user();
+        $filesInput = $request->file('file');
+
+        if (is_array($filesInput)) {
+            $request->validate([
+                'file' => ['required', 'array'],
+                'file.*' => ['file', 'max:10240'],
+            ]);
+
+            $uploaded = [];
+
+            foreach ($filesInput as $file) {
+                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                    continue;
+                }
+
+                $model = $this->storeUploadedFile($file, $request->user());
+
+                $uploaded[] = new FileResource($model);
+            }
+
+            return $this->success($uploaded, 'Files uploaded successfully.', 201);
+        }
 
         $request->validate([
             'file' => ['required', 'file', 'max:10240'],
         ]);
 
-        $file = $request->file('file');
+        if (! $filesInput instanceof UploadedFile) {
+            return $this->error('Invalid file uploaded.', 422);
+        }
+
+        $model = $this->storeUploadedFile($filesInput, $request->user());
+
+        return $this->success(new FileResource($model), 'File uploaded successfully', 201);
+    }
+
+    private function storeUploadedFile(UploadedFile $file, $user): FileModel
+    {
         $disk = config('filesystems.default', 'public');
 
         $folder = 'uploads/' . now()->format('Y/m/d');
@@ -85,6 +117,6 @@ class FileController extends BaseApiController
 
         $model->refresh();
 
-        return $this->success(new FileResource($model), 'File uploaded successfully', 201);
+        return $model;
     }
 }
