@@ -46,12 +46,6 @@ class AuthController extends BaseApiController
             $user->password = null;
         }
 
-        // Public profile slug, e.g. "usera-1"
-        if (empty($user->public_profile_slug)) {
-            $baseSlug = Str::slug($displayName ?: $data['first_name'] ?: 'user');
-            $user->public_profile_slug = $baseSlug;
-        }
-
         $user->save();
 
         $token = $user->createToken('auth_token')->plainTextToken;
