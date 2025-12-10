@@ -106,15 +106,6 @@ class RequirementController extends BaseApiController
                     'url' => $file->url,
                 ];
             }
-        } elseif (! empty($data['media_id'])) {
-            $file = File::find($data['media_id']);
-            if ($file) {
-                $mediaItems[] = [
-                    'id' => $file->id,
-                    'type' => 'image',
-                    'url' => $file->url,
-                ];
-            }
         }
 
         return $mediaItems;

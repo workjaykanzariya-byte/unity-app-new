@@ -7,6 +7,7 @@ use App\Models\File;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class RequirementController extends BaseApiController
@@ -99,6 +100,11 @@ class RequirementController extends BaseApiController
                 201
             );
         } catch (Throwable $e) {
+            Log::error('Failed to create requirement', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return $this->error('Something went wrong', 500);
         }
     }
@@ -161,6 +167,12 @@ class RequirementController extends BaseApiController
 
             return $this->success($this->transformRequirement($requirement->refresh()));
         } catch (Throwable $e) {
+            Log::error('Failed to update requirement', [
+                'requirement_id' => $requirement->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return $this->error('Something went wrong', 500);
         }
     }
@@ -182,7 +194,6 @@ class RequirementController extends BaseApiController
             'media' => ['nullable', 'array'],
             'media.*.id' => ['required_with:media', 'uuid', 'exists:files,id'],
             'media.*.type' => ['required_with:media', 'string', 'max:50'],
-            'media_id' => ['nullable', 'uuid', 'exists:files,id'],
         ];
 
         return $request->validate($rules);
@@ -206,15 +217,6 @@ class RequirementController extends BaseApiController
                 $mediaItems[] = [
                     'id' => $file->id,
                     'type' => $item['type'],
-                    'url' => $file->url,
-                ];
-            }
-        } elseif (! empty($data['media_id'])) {
-            $file = File::find($data['media_id']);
-            if ($file) {
-                $mediaItems[] = [
-                    'id' => $file->id,
-                    'type' => 'image',
                     'url' => $file->url,
                 ];
             }

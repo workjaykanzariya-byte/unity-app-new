@@ -7,6 +7,7 @@ use App\Models\File;
 use App\Models\Testimonial;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class TestimonialController extends BaseApiController
@@ -59,7 +60,7 @@ class TestimonialController extends BaseApiController
         $data = $this->validateTestimonial($request);
 
         $mediaItems = $this->buildMediaItems($data);
-        $firstMediaId = $mediaItems[0]['id'] ?? null;
+        $firstMediaId = $mediaItems[0]['id'] ?? ($data['media_id'] ?? null);
 
         try {
             $testimonial = Testimonial::create([
@@ -92,6 +93,11 @@ class TestimonialController extends BaseApiController
                 201
             );
         } catch (Throwable $e) {
+            Log::error('Failed to create testimonial', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return $this->error('Something went wrong', 500);
         }
     }
