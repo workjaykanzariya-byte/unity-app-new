@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Activities;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
-use App\Http\Resources\RequirementResource;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -13,6 +12,24 @@ use Throwable;
 
 class RequirementController extends BaseApiController
 {
+    protected function addUrlsToMedia(?array $media): array
+    {
+        if (empty($media)) {
+            return [];
+        }
+
+        return collect($media)->map(function ($item) {
+            $id   = $item['id']   ?? null;
+            $type = $item['type'] ?? 'image';
+
+            return [
+                'id'   => $id,
+                'type' => $type,
+                'url'  => $id ? url('/api/v1/files/' . $id) : null,
+            ];
+        })->all();
+    }
+
     public function store(StoreRequirementRequest $request)
     {
         $user = $request->user();
@@ -61,11 +78,19 @@ class RequirementController extends BaseApiController
                 ]);
             }
 
-            return $this->success(
-                new RequirementResource($requirement),
-                'Requirement created successfully',
-                201
-            );
+            // Build response payload from the model
+            $data = $requirement->toArray();
+
+            // Ensure media includes URL
+            $data['media'] = $this->addUrlsToMedia($requirement->media ?? []);
+
+            // If you attach coins as a dynamic attribute like $requirement->coins,
+            // keep that as is:
+            if ($requirement->getAttribute('coins')) {
+                $data['coins'] = $requirement->getAttribute('coins');
+            }
+
+            return $this->success($data, 'Requirement created successfully', 201);
         } catch (Throwable $e) {
             Log::error('Create requirement failed', [
                 'error' => $e->getMessage(),
@@ -100,8 +125,15 @@ class RequirementController extends BaseApiController
 
         $paginator = $query->paginate($perPage);
 
+        $items = collect($paginator->items())->map(function (Requirement $requirement) {
+            $row = $requirement->toArray();
+            $row['media'] = $this->addUrlsToMedia($requirement->media ?? []);
+
+            return $row;
+        });
+
         return $this->success([
-            'items' => RequirementResource::collection($paginator),
+            'items' => $items,
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
@@ -123,6 +155,9 @@ class RequirementController extends BaseApiController
             return $this->error('Requirement not found', 404);
         }
 
-        return $this->success(new RequirementResource($requirement));
+        $data = $requirement->toArray();
+        $data['media'] = $this->addUrlsToMedia($requirement->media ?? []);
+
+        return $this->success($data);
     }
 }
