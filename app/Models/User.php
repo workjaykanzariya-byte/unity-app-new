@@ -95,6 +95,11 @@ class User extends Authenticatable
         'coins_balance' => 'integer',
     ];
 
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
+
     protected static function booted(): void
     {
         static::creating(function (self $user): void {

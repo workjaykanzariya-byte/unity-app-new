@@ -2,19 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Auth\ForgotPasswordRequest;
-use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use App\Http\Requests\Auth\RequestOtpRequest;
-use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Http\Resources\UserResource;
-use App\Models\EmailLog;
+use App\Mail\LoginOtpMail;
+use App\Mail\PasswordResetOtpMail;
+use App\Models\OtpCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -29,26 +25,26 @@ class AuthController extends BaseApiController
         // Build a display name from first + last name
         $displayName = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
 
-        $user           = new User();
-        $user->id       = Str::uuid();
-        $user->first_name   = $data['first_name'];
-        $user->last_name    = $data['last_name'] ?? null;
-        $user->display_name = $displayName;
+        $user                 = new User();
+        $user->id             = Str::uuid();
+        $user->first_name     = $data['first_name'];
+        $user->last_name      = $data['last_name'] ?? null;
+        $user->display_name   = $displayName;
+        $user->email          = $data['email'];
+        $user->phone          = $data['phone'] ?? null;
+        $user->company_name   = $data['company_name'] ?? null;
+        $user->designation    = $data['designation'] ?? null;
+        $user->city_id        = $user->city_id ?? null;
+        $user->membership_status = $user->membership_status ?? 'visitor';
+        $user->coins_balance  = $user->coins_balance ?? 0;
 
-        $user->email        = $data['email'];
-        $user->phone        = $data['phone'];
-
-        // NEW FIELDS
-        $user->company_name = $data['company_name'] ?? null;
-        $user->designation  = $data['designation'] ?? null;
-
-        // Set defaults as per existing schema / logic
-        $user->city_id            = $user->city_id ?? null;
-        $user->membership_status  = $user->membership_status ?? 'visitor';
-        $user->coins_balance      = $user->coins_balance ?? 0;
-
-        // Password: stored as password_hash column
+        // Store the hashed password in password_hash (not password)
         $user->password_hash = Hash::make($data['password']);
+
+        // Ensure any legacy password attribute isn't used
+        if (isset($user->password)) {
+            $user->password = null;
+        }
 
         // Public profile slug, e.g. "usera-1"
         if (empty($user->public_profile_slug)) {
@@ -58,36 +54,144 @@ class AuthController extends BaseApiController
 
         $user->save();
 
-        // Create auth token (use whatever you already use: Sanctum / Passport / JWT)
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return $this->success([
-            'user' => [
-                'id'              => $user->id,
-                'first_name'      => $user->first_name,
-                'last_name'       => $user->last_name,
-                'display_name'    => $user->display_name,
-                'email'           => $user->email,
-                'phone'           => $user->phone,
-                'company_name'    => $user->company_name,
-                'designation'     => $user->designation,
-                'profile_photo_url' => $user->profile_photo_url,
-                'created_at'      => $user->created_at,
+        return response()->json([
+            'success' => true,
+            'message' => 'Registration successful.',
+            'data'    => [
+                'token' => $token,
+                'user'  => $user,
             ],
-            'token' => [
-                'access_token' => $token,
-                'token_type'   => 'Bearer',
-            ],
-        ], 'Registration successful');
+        ], 201);
     }
 
-    public function login(LoginRequest $request): JsonResponse
+    public function login(Request $request)
     {
-        $user = User::where('email', $request->email)->first();
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-        if (! $user || ! Hash::check($request->password, $user->password_hash)) {
-            return $this->error('Invalid credentials', 401);
+        // Find user by email
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials.',
+                'data'    => null,
+            ], 401);
         }
+
+        // IMPORTANT: use password_hash column
+        if (! Hash::check($credentials['password'], $user->password_hash)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials.',
+                'data'    => null,
+            ], 401);
+        }
+
+        // Create Sanctum token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // If you already have a UserResource, you can use it here instead of returning $user directly
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful.',
+            'data'    => [
+                'token' => $token,
+                'user'  => $user,
+            ],
+        ]);
+    }
+
+    public function requestOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data' => null,
+            ], 404);
+        }
+
+        $otp = (string) random_int(1000, 9999);
+
+        OtpCode::create([
+            'user_id'    => $user->id,
+            'email'      => $user->email,
+            'purpose'    => 'login_otp',
+            'code'       => Hash::make($otp),
+            'expires_at' => now()->addMinutes(5),
+            'used_at'    => null,
+        ]);
+
+        Mail::to($user->email)->send(new LoginOtpMail($otp, $user));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'OTP sent successfully.',
+            'data'    => null,
+        ]);
+    }
+
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'otp'   => ['required', 'digits:4'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data'    => null,
+            ], 404);
+        }
+
+        $otpRecord = OtpCode::where('user_id', $user->id)
+            ->where('purpose', 'login_otp')
+            ->whereNull('used_at')
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $otpRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (now()->greaterThan($otpRecord->expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (! Hash::check($data['otp'], $otpRecord->code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $otpRecord->used_at = now();
+        $otpRecord->save();
 
         if ($user->membership_status === 'suspended') {
             return $this->error('Account is suspended', 403);
@@ -105,116 +209,101 @@ class AuthController extends BaseApiController
         ], 'Login successful');
     }
 
-    public function requestOtp(RequestOtpRequest $request): JsonResponse
+    public function forgotPassword(Request $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
 
-        if ($user) {
-            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            Cache::put('otp_' . $request->email, $otp, now()->addMinutes(10));
-
-            Mail::raw("Your Peers Global Unity login OTP is: {$otp}", function ($message) use ($request) {
-                $message->to($request->email)->subject('Your Login OTP');
-            });
-
-            EmailLog::create([
-                'to_email' => $request->email,
-                'template_key' => 'auth_otp',
-                'payload' => ['otp' => $otp],
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
-        }
-
-        return $this->success(null, 'If your email is registered, an OTP has been sent.');
-    }
-
-    public function verifyOtp(VerifyOtpRequest $request): JsonResponse
-    {
-        $cachedOtp = Cache::get('otp_' . $request->email);
-
-        if (empty($cachedOtp) || $cachedOtp !== $request->otp) {
-            return $this->error('Invalid or expired OTP', 400);
-        }
-
-        Cache::forget('otp_' . $request->email);
-
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $data['email'])->first();
 
         if (! $user) {
-            return $this->error('User not found', 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data' => null,
+            ], 404);
         }
 
-        if ($user->membership_status === 'suspended') {
-            return $this->error('Account is suspended', 403);
-        }
+        $otp = (string) random_int(1000, 9999);
 
-        $token = $user->createToken('api')->plainTextToken;
+        OtpCode::create([
+            'user_id'    => $user->id,
+            'email'      => $user->email,
+            'purpose'    => 'password_reset',
+            'code'       => Hash::make($otp),
+            'expires_at' => now()->addMinutes(5),
+            'used_at'    => null,
+        ]);
 
-        return $this->success([
-            'user' => new UserResource($user->load('city')),
-            'token' => $token,
-        ], 'OTP verified');
+        Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'If your email is registered, a password reset OTP has been sent.',
+            'data'    => null,
+        ]);
     }
 
-    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    public function resetPassword(Request $request): JsonResponse
     {
-        $user = User::where('email', $request->email)->first();
+        $data = $request->validate([
+            'email'                 => ['required', 'email'],
+            'otp'                   => ['required', 'digits:4'],
+            'password'              => ['required', 'min:8', 'confirmed'],
+        ]);
 
-        if ($user) {
-            $token = Str::random(64);
-
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $request->email],
-                [
-                    'token' => Hash::make($token),
-                    'created_at' => now(),
-                ]
-            );
-
-            $frontendUrl = Config::get('app.frontend_url', 'https://app.peersglobal.com');
-            $resetUrl = $frontendUrl . '/?reset_token=' . $token . '&email=' . $request->email;
-
-            Mail::raw("Reset your password using this link: {$resetUrl}", function ($message) use ($request) {
-                $message->to($request->email)->subject('Reset your password');
-            });
-
-            EmailLog::create([
-                'to_email' => $request->email,
-                'template_key' => 'forgot_password',
-                'payload' => ['reset_url' => $resetUrl],
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
-        }
-
-        return $this->success(null, 'If your email is registered, a reset link has been sent.');
-    }
-
-    public function resetPassword(ResetPasswordRequest $request): JsonResponse
-    {
-        $record = DB::table('password_reset_tokens')->where('email', $request->email)->first();
-
-        if (! $record) {
-            return $this->error('Invalid password reset token', 400);
-        }
-
-        if (! Hash::check($request->token, $record->token)) {
-            return $this->error('Invalid password reset token', 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $data['email'])->first();
 
         if (! $user) {
-            return $this->error('User not found', 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not a registered user.',
+                'data'    => null,
+            ], 404);
         }
 
-        $user->password_hash = Hash::make($request->password);
+        $otpRecord = OtpCode::where('user_id', $user->id)
+            ->where('purpose', 'password_reset')
+            ->whereNull('used_at')
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $otpRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (now()->greaterThan($otpRecord->expires_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired.',
+                'data'    => null,
+            ], 422);
+        }
+
+        if (! Hash::check($data['otp'], $otpRecord->code)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+                'data'    => null,
+            ], 422);
+        }
+
+        $otpRecord->used_at = now();
+        $otpRecord->save();
+
+        $user->password_hash = Hash::make($data['password']);
         $user->save();
 
-        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
-
-        return $this->success(null, 'Password reset successful');
+        return response()->json([
+            'success' => true,
+            'message' => 'Password reset successfully.',
+            'data'    => null,
+        ]);
     }
 
     public function logout(): JsonResponse
