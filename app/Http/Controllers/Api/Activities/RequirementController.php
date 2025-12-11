@@ -164,8 +164,13 @@ class RequirementController extends BaseApiController
                 ]);
             }
 
+            $postData = $data;
+            $postData['city_name'] = $request->input('city_name', $postData['city_name'] ?? null);
+            $postData['category'] = $request->input('category', $postData['category'] ?? null);
+            $postData['budget'] = $request->input('budget');
+
             // NEW: auto-create post (do NOT award coins again)
-            $this->createPostForRequirement($requirement, $data);
+            $this->createPostForRequirement($requirement, $postData);
 
             // Build response payload from the model
             $data = $requirement->toArray();
