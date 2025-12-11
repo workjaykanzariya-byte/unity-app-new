@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Activities;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
+use App\Models\Post;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -28,6 +29,35 @@ class RequirementController extends BaseApiController
                 'url'  => $id ? url('/api/v1/files/' . $id) : null,
             ];
         })->all();
+    }
+
+    /**
+     * Create a feed post for a newly created requirement.
+     *
+     * This must NOT throw; on failure we just log the error.
+     */
+    protected function createPostForRequirement(Requirement $requirement): void
+    {
+        try {
+            $mediaForPost = $this->addUrlsToMedia($requirement->media ?? []);
+
+            Post::create([
+                'user_id'           => $requirement->user_id,
+                'circle_id'         => null,
+                'content_text'      => trim(($requirement->subject ?? '') . ' - ' . ($requirement->description ?? '')),
+                'media'             => $mediaForPost,
+                'tags'              => $requirement->tags ?? [],
+                'visibility'        => $requirement->visibility ?? 'public',
+                'moderation_status' => 'pending',
+                'sponsored'         => false,
+                'is_deleted'        => false,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to create post for requirement', [
+                'requirement_id' => $requirement->id,
+                'error'          => $e->getMessage(),
+            ]);
+        }
     }
 
     public function store(StoreRequirementRequest $request)
@@ -77,6 +107,9 @@ class RequirementController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            // NEW: auto-create post (do NOT award coins again)
+            $this->createPostForRequirement($requirement);
 
             // Build response payload from the model
             $data = $requirement->toArray();

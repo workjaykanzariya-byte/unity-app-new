@@ -4,13 +4,74 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreBusinessDealRequest;
+use App\Models\Post;
 use App\Models\BusinessDeal;
+use App\Models\User;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class BusinessDealController extends BaseApiController
 {
+    protected function addUrlsToMedia(?array $media): array
+    {
+        if (empty($media)) {
+            return [];
+        }
+
+        return collect($media)->map(function ($item) {
+            $id   = $item['id']   ?? null;
+            $type = $item['type'] ?? 'image';
+
+            return [
+                'id'   => $id,
+                'type' => $type,
+                'url'  => $id ? url('/api/v1/files/' . $id) : null,
+            ];
+        })->all();
+    }
+
+    /**
+     * Create a feed post for a newly created business deal.
+     */
+    protected function createPostForBusinessDeal(BusinessDeal $deal): void
+    {
+        try {
+            // Right now business deals have no media; keep empty array.
+            $mediaForPost = [];
+
+            $toUser = User::find($deal->to_user_id);
+
+            $contentText = 'Closed a business deal';
+            if ($toUser) {
+                $displayName = trim($toUser->first_name . ' ' . $toUser->last_name);
+                $contentText = 'Closed a ' . ($deal->business_type ?? 'business') . ' deal with ' . $displayName
+                    . ' for amount ' . ($deal->deal_amount ?? 0)
+                    . '. ' . ($deal->comment ?? '');
+            } else {
+                $contentText = ($deal->comment ?: $contentText);
+            }
+
+            Post::create([
+                'user_id'           => $deal->from_user_id ?? $deal->user_id ?? $deal->created_by ?? $deal->to_user_id,
+                'circle_id'         => null,
+                'content_text'      => $contentText,
+                'media'             => $mediaForPost,
+                'tags'              => ['business_deal'],
+                'visibility'        => 'public',
+                'moderation_status' => 'pending',
+                'sponsored'         => false,
+                'is_deleted'        => false,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to create post for business deal', [
+                'business_deal_id' => $deal->id,
+                'error'            => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -84,6 +145,8 @@ class BusinessDealController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            $this->createPostForBusinessDeal($businessDeal);
 
             return $this->success($businessDeal, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
