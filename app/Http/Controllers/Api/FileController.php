@@ -40,14 +40,27 @@ class FileController extends BaseApiController
         );
     }
 
+    /**
+     * Upload one or many files (images or videos).
+     *
+     * - Single:   key = "file"
+     * - Multiple: key = "file[]" (Laravel still sees this as "file")
+     */
     public function upload(Request $request)
     {
         $filesInput = $request->file('file');
 
+        // MULTIPLE FILES CASE: file[]
         if (is_array($filesInput)) {
             $request->validate([
-                'file' => ['required', 'array'],
-                'file.*' => ['file', 'max:10240'],
+                'file'   => ['required', 'array'],
+                'file.*' => [
+                    'file',
+                    // 200 MB (in KB). Change if you want.
+                    'max:204800',
+                    // 👇 allow images, videos AND generic octet-stream (some clients send this)
+                    'mimetypes:image/*,video/*,application/octet-stream',
+                ],
             ]);
 
             $uploaded = [];
@@ -57,19 +70,28 @@ class FileController extends BaseApiController
                     continue;
                 }
 
-                $model = $this->storeUploadedFile($file, $request->user());
-
+                $model      = $this->storeUploadedFile($file, $request->user());
                 $uploaded[] = new FileResource($model);
+            }
+
+            if (empty($uploaded)) {
+                return $this->error('No valid files were uploaded.', 422);
             }
 
             return $this->success($uploaded, 'Files uploaded successfully.', 201);
         }
 
+        // SINGLE FILE CASE: file
         $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
+            'file' => [
+                'required',
+                'file',
+                'max:204800', // 200 MB
+                'mimetypes:image/*,video/*,application/octet-stream',
+            ],
         ]);
 
-        if (! $filesInput instanceof UploadedFile) {
+        if (! $filesInput instanceof UploadedFile || ! $filesInput->isValid()) {
             return $this->error('Invalid file uploaded.', 422);
         }
 
@@ -78,26 +100,30 @@ class FileController extends BaseApiController
         return $this->success(new FileResource($model), 'File uploaded successfully', 201);
     }
 
+    /**
+     * Store a single uploaded file on disk and in the files table.
+     */
     private function storeUploadedFile(UploadedFile $file, $user): FileModel
     {
         $disk = config('filesystems.default', 'public');
 
-        $folder = 'uploads/' . now()->format('Y/m/d');
+        $folder   = 'uploads/' . now()->format('Y/m/d');
         $filename = (string) Str::uuid() . '_' . preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
 
         $path = $file->storeAs($folder, $filename, $disk);
 
-        $mimeType = $file->getClientMimeType();
+        $mimeType  = $file->getClientMimeType();
         $sizeBytes = $file->getSize();
-        $width = null;
-        $height = null;
-        $duration = null;
+        $width     = null;
+        $height    = null;
+        $duration  = null;
 
+        // Only try to read dimensions if this is an image
         if (str_starts_with((string) $mimeType, 'image/')) {
             try {
                 $imageSize = getimagesize($file->getRealPath());
                 if ($imageSize) {
-                    $width = $imageSize[0] ?? null;
+                    $width  = $imageSize[0] ?? null;
                     $height = $imageSize[1] ?? null;
                 }
             } catch (\Throwable $e) {
@@ -105,14 +131,14 @@ class FileController extends BaseApiController
             }
         }
 
-        $model = new FileModel();
+        $model                   = new FileModel();
         $model->uploader_user_id = $user ? $user->id : null;
-        $model->s3_key = $path;
-        $model->mime_type = $mimeType;
-        $model->size_bytes = $sizeBytes;
-        $model->width = $width;
-        $model->height = $height;
-        $model->duration = $duration;
+        $model->s3_key           = $path;
+        $model->mime_type        = $mimeType;
+        $model->size_bytes       = $sizeBytes;
+        $model->width            = $width;
+        $model->height           = $height;
+        $model->duration         = $duration;
         $model->save();
 
         $model->refresh();
