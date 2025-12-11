@@ -61,6 +61,18 @@ class RequirementController extends BaseApiController
         try {
             $mediaForPost = $this->buildMediaItemsFromId($requestData['media_id'] ?? null);
 
+            $mediaForPost[] = [
+                'type'         => 'requirement_meta',
+                'subject'      => $requestData['subject'] ?? null,
+                'description'  => $requestData['description'] ?? null,
+                'region_label' => $requestData['region_label'] ?? null,
+                'city_name'    => $requestData['city_name'] ?? null,
+                'category'     => $requestData['category'] ?? null,
+                'budget'       => $requestData['budget'] ?? null,
+                'timeline'     => $requestData['timeline'] ?? null,
+                'tags'         => $requestData['tags'] ?? [],
+            ];
+
             $lines = [];
 
             if (! empty($requestData['subject'])) {
