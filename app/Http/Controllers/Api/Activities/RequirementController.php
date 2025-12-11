@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Activities;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
+use App\Models\Post;
+use App\Models\File;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -28,6 +30,90 @@ class RequirementController extends BaseApiController
                 'url'  => $id ? url('/api/v1/files/' . $id) : null,
             ];
         })->all();
+    }
+
+    protected function buildMediaItemsFromId(?string $mediaId): array
+    {
+        if (empty($mediaId)) {
+            return [];
+        }
+
+        $file = File::find($mediaId);
+
+        if (! $file) {
+            return [];
+        }
+
+        return [[
+            'id' => $file->id,
+            'type' => 'image',
+            'url' => url('/api/v1/files/' . $file->id),
+        ]];
+    }
+
+    /**
+     * Create a feed post for a newly created requirement.
+     *
+     * This must NOT throw; on failure we just log the error.
+     */
+    protected function createPostForRequirement(Requirement $requirement, array $requestData): void
+    {
+        try {
+            $mediaForPost = $this->buildMediaItemsFromId($requestData['media_id'] ?? null);
+
+            $lines = [];
+
+            if (! empty($requestData['subject'])) {
+                $lines[] = 'Requirement: ' . $requestData['subject'];
+            }
+
+            if (! empty($requestData['description'])) {
+                $lines[] = 'Description: ' . $requestData['description'];
+            }
+
+            if (! empty($requestData['region_label'])) {
+                $lines[] = 'Region: ' . $requestData['region_label'];
+            }
+
+            if (! empty($requestData['city_name'])) {
+                $lines[] = 'City: ' . $requestData['city_name'];
+            }
+
+            if (! empty($requestData['category'])) {
+                $lines[] = 'Category: ' . $requestData['category'];
+            }
+
+            if (! empty($requestData['budget'])) {
+                $lines[] = 'Budget: ' . $requestData['budget'];
+            }
+
+            if (! empty($requestData['timeline'])) {
+                $lines[] = 'Timeline: ' . $requestData['timeline'];
+            }
+
+            if (! empty($requestData['tags']) && is_array($requestData['tags'])) {
+                $lines[] = 'Tags: ' . implode(', ', $requestData['tags']);
+            }
+
+            $contentText = implode(PHP_EOL, $lines);
+
+            Post::create([
+                'user_id'           => $requirement->user_id,
+                'circle_id'         => null,
+                'content_text'      => $contentText,
+                'media'             => $mediaForPost,
+                'tags'              => $requestData['tags'] ?? [],
+                'visibility'        => $requestData['visibility'] ?? $requirement->visibility ?? 'public',
+                'moderation_status' => 'pending',
+                'sponsored'         => false,
+                'is_deleted'        => false,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to create post for requirement', [
+                'requirement_id' => $requirement->id,
+                'error'          => $e->getMessage(),
+            ]);
+        }
     }
 
     public function store(StoreRequirementRequest $request)
@@ -77,6 +163,9 @@ class RequirementController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            // NEW: auto-create post (do NOT award coins again)
+            $this->createPostForRequirement($requirement, $data);
 
             // Build response payload from the model
             $data = $requirement->toArray();

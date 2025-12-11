@@ -4,13 +4,95 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
+use App\Models\Post;
 use App\Models\Testimonial;
+use App\Models\File;
+use App\Models\User;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class TestimonialController extends BaseApiController
 {
+    protected function addUrlsToMedia(?array $media): array
+    {
+        if (empty($media)) {
+            return [];
+        }
+
+        return collect($media)->map(function ($item) {
+            $id   = $item['id']   ?? null;
+            $type = $item['type'] ?? 'image';
+
+            return [
+                'id'   => $id,
+                'type' => $type,
+                'url'  => $id ? url('/api/v1/files/' . $id) : null,
+            ];
+        })->all();
+    }
+
+    protected function buildMediaItemsFromId(?string $mediaId): array
+    {
+        if (empty($mediaId)) {
+            return [];
+        }
+
+        $file = File::find($mediaId);
+
+        if (! $file) {
+            return [];
+        }
+
+        return [[
+            'id' => $file->id,
+            'type' => 'image',
+            'url' => url('/api/v1/files/' . $file->id),
+        ]];
+    }
+
+    /**
+     * Create a feed post for a newly created testimonial.
+     */
+    protected function createPostForTestimonial(Testimonial $testimonial, ?string $mediaId = null): void
+    {
+        try {
+            $mediaForPost = $this->buildMediaItemsFromId($mediaId);
+
+            // Optionally include the receiver's name in content
+            $toUser = User::find($testimonial->to_user_id);
+
+            $contentText = 'Testimonial:';
+            if ($toUser) {
+                $displayName = trim($toUser->first_name . ' ' . $toUser->last_name);
+                $contentText = 'Testimonial for ' . $displayName . ':';
+            }
+
+            if (! empty($testimonial->content)) {
+                $contentText .= PHP_EOL . $testimonial->content;
+            }
+
+            Post::create([
+                'user_id'           => $testimonial->from_user_id ?? Auth::id(),
+                'circle_id'         => null,
+                'content_text'      => $contentText,
+                'media'             => $mediaForPost,
+                'tags'              => ['testimonial'],
+                'visibility'        => 'public',
+                'moderation_status' => 'pending',
+                'sponsored'         => false,
+                'is_deleted'        => false,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Failed to create post for testimonial', [
+                'testimonial_id' => $testimonial->id,
+                'error'          => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -85,7 +167,16 @@ class TestimonialController extends BaseApiController
                 ]);
             }
 
-            return $this->success($testimonial, 'Testimonial saved successfully', 201);
+            $this->createPostForTestimonial($testimonial, $request->input('media_id'));
+
+            $data = $testimonial->toArray();
+            $data['media'] = $this->addUrlsToMedia($testimonial->media ?? []);
+
+            if ($testimonial->getAttribute('coins')) {
+                $data['coins'] = $testimonial->getAttribute('coins');
+            }
+
+            return $this->success($data, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
         }
