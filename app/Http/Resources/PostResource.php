@@ -34,14 +34,17 @@ class PostResource extends JsonResource
             'moderation_status' => $this->moderation_status ?? null,
 
             'author' => $this->when(
-                $this->relationLoaded('user') && $this->user,
+                ($this->relationLoaded('user') && $this->user)
+                || ($this->relationLoaded('author') && $this->author),
                 function () {
+                    $author = $this->user ?? $this->author;
+
                     return [
-                        'id'               => $this->user->id,
-                        'display_name'     => $this->user->display_name,
-                        'first_name'       => $this->user->first_name,
-                        'last_name'        => $this->user->last_name,
-                        'profile_photo_url'=> $this->user->profile_photo_url,
+                        'id'               => $author?->id,
+                        'display_name'     => $author?->display_name,
+                        'first_name'       => $author?->first_name,
+                        'last_name'        => $author?->last_name,
+                        'profile_photo_url'=> $author?->profile_photo_url,
                     ];
                 }
             ),

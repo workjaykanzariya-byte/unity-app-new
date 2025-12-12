@@ -295,4 +295,13 @@ class User extends Authenticatable
     {
         return $this->belongsTo(File::class, 'cover_photo_file_id');
     }
+
+    public function getProfilePhotoUrlAttribute(): ?string
+    {
+        if (! $this->profile_photo_file_id) {
+            return null;
+        }
+
+        return url('/api/v1/files/' . $this->profile_photo_file_id);
+    }
 }

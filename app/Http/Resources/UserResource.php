@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'city'                => new CityResource($this->whenLoaded('city')),
             'membership_status'   => $this->membership_status,
             'coins_balance'       => $this->coins_balance,
+            'profile_photo_url'   => $this->profile_photo_url,
             'last_login_at'       => $this->last_login_at,
             'created_at'          => $this->created_at,
             'updated_at'          => $this->updated_at,
