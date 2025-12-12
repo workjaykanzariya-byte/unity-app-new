@@ -22,7 +22,7 @@ class PostController extends BaseApiController
 
         $query = Post::query()
             ->with([
-                'author:id,display_name,first_name,last_name,profile_photo_url',
+                'author:id,display_name,first_name,last_name,profile_photo_id',
             ])
             ->withCount(['likes', 'comments'])
             ->orderByDesc('created_at');
