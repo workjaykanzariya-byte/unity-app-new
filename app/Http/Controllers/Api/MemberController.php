@@ -13,15 +13,24 @@ class MemberController extends BaseApiController
 {
     public function index(Request $request)
     {
-        $authUser = $request->user();
-
         $query = User::query()
-            ->with('city')
-            ->where('id', '!=', $authUser->id);
-
-        if (! $request->boolean('include_suspended', false)) {
-            $query->where('membership_status', '!=', 'suspended');
-        }
+            ->select([
+                'id',
+                'public_profile_slug',
+                'first_name',
+                'last_name',
+                'display_name',
+                'email',
+                'phone',
+                'membership_status',
+                'coins_balance',
+                'last_login_at',
+                'created_at',
+                'updated_at',
+                'profile_photo_file_id',
+                'city_id',
+            ])
+            ->with('city:id,name');
 
         if ($search = trim((string) $request->input('q', ''))) {
             $query->whereRaw(
@@ -32,10 +41,6 @@ class MemberController extends BaseApiController
 
         if ($cityId = $request->input('city_id')) {
             $query->where('city_id', $cityId);
-        }
-
-        if ($status = $request->input('membership_status')) {
-            $query->where('membership_status', $status);
         }
 
         $tags = $request->input('industry_tags');
@@ -53,7 +58,10 @@ class MemberController extends BaseApiController
             }
         }
 
-        $perPage = (int) $request->input('per_page', 20);
+        $query->orderByDesc('created_at');
+
+        // Ensure pagination returns all users (previously filters/limits reduced results to 5).
+        $perPage = (int) $request->integer('per_page', 20);
         if ($perPage < 1) {
             $perPage = 20;
         }
