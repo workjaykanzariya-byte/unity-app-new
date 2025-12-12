@@ -1,0 +1,14 @@
+{
+  "name": "intervention/image",
+  "description": "Lightweight image handling package (local stub)",
+  "version": "2.7.2",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Intervention\\Image\\": "src/"
+    }
+  },
+  "require": {
+    "php": ">=8.1"
+  }
+}
