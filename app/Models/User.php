@@ -298,11 +298,10 @@ class User extends Authenticatable
 
     public function getProfilePhotoUrlAttribute(): ?string
     {
-        $id = $this->profile_photo_id ?? null;
-        if (! $id) {
+        if (! $this->profile_photo_file_id) {
             return null;
         }
 
-        return url("/api/v1/files/{$id}");
+        return url('/api/v1/files/' . $this->profile_photo_file_id);
     }
 }
