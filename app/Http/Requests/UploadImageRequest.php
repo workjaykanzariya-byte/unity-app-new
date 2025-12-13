@@ -17,6 +17,18 @@ class UploadImageRequest extends FormRequest
 
         return [
             'file' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp',
+                'max:'.$maxSizeKb,
+            ],
+            'files' => [
+                'nullable',
+                'array',
+                'min:1',
+                'max:10',
+            ],
+            'files.*' => [
                 'required',
                 'file',
                 'mimes:jpg,jpeg,png,webp',
