@@ -5,12 +5,21 @@ namespace App\Services\Media;
 use Exception;
 use Illuminate\Http\UploadedFile;
 use Intervention\Image\ImageManager;
+use RuntimeException;
 
 class ImageOptimizer
 {
-    public function __construct(
-        private readonly ImageManager $imageManager = new ImageManager()
-    ) {
+    private ImageManager $imageManager;
+
+    public function __construct()
+    {
+        if (! extension_loaded('gd') && ! extension_loaded('imagick')) {
+            throw new RuntimeException('Image processing not available. Enable GD or Imagick.', 500);
+        }
+
+        $driver = extension_loaded('imagick') ? 'imagick' : 'gd';
+
+        $this->imageManager = new ImageManager(['driver' => $driver]);
     }
 
     public function optimize(UploadedFile $file): array

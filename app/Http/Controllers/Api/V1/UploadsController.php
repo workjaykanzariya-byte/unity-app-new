@@ -33,7 +33,9 @@ class UploadsController extends BaseApiController
             try {
                 $optimized = $this->optimizer->optimize($uploadedFile);
             } catch (\Throwable $e) {
-                return $this->error($e->getMessage(), 422);
+                $status = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 422;
+
+                return $this->error($e->getMessage(), $status);
             }
 
             $disk = 'uploads';
