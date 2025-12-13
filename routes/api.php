@@ -10,7 +10,8 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
-use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\V1\FilesController as V1FilesController;
+use App\Http\Controllers\Api\V1\UploadsController;
 use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
@@ -173,10 +174,10 @@ Route::prefix('v1')->group(function () {
         Route::patch('/referrals/visitors/{id}', [ReferralController::class, 'updateVisitor']);
 
         // Files
-        Route::post('/files/upload', [FileController::class, 'upload']);
+        Route::post('/files/upload', [UploadsController::class, 'store']);
     });
 
-    Route::get('/files/{id}', [FileController::class, 'show']);
+    Route::get('/files/{id}', [V1FilesController::class, 'show'])->name('api.files.show');
 
     // Wallet payment webhook (called by payment gateway)
     Route::post('/wallet/webhook', [WalletController::class, 'paymentWebhook']);

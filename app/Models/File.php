@@ -17,21 +17,22 @@ class File extends Model
 
     public $incrementing = false;
 
-    public $timestamps = true;
-
-    public const UPDATED_AT = null;
-
     protected $fillable = [
+        'id',
         'uploader_user_id',
-        's3_key',
+        'disk',
+        'path',
         'mime_type',
         'size_bytes',
         'width',
         'height',
         'duration',
+        'original_name',
+        'status',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }
