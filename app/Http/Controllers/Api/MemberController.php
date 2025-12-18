@@ -60,25 +60,8 @@ class MemberController extends BaseApiController
 
         $query->orderByDesc('created_at');
 
-        // Ensure pagination returns all users (previously filters/limits reduced results to 5).
-        $perPage = (int) $request->integer('per_page', 20);
-        if ($perPage < 1) {
-            $perPage = 20;
-        }
-        if ($perPage > 100) {
-            $perPage = 100;
-        }
-
-        $paginator = $query->paginate($perPage);
-
         $data = [
-            'items' => UserResource::collection($paginator),
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
+            'items' => UserResource::collection($query->get()),
         ];
 
         return $this->success($data);
