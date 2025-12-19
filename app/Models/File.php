@@ -29,11 +29,9 @@ class File extends Model
         'width',
         'height',
         'duration',
-        'meta',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
-        'meta' => 'array',
     ];
 }

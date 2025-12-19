@@ -3,10 +3,8 @@
 namespace App\Services\Media;
 
 use App\Exceptions\MediaProcessingException;
-use App\Models\FileModel;
 use App\Support\Media\Probe;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 class MediaProcessor
@@ -15,67 +13,32 @@ class MediaProcessor
     {
     }
 
-    public function process(FileModel $file): FileModel
+    /**
+        * @param  string  $type  image|video
+        * @return array{path:string,mime_type:string,size_bytes:int|null,width:int|null,height:int|null,duration:int|null}
+        */
+    public function optimize(string $sourcePath, string $type, ?string $mimeType = null): array
     {
-        $disk = config('filesystems.default', 'public');
-        $path = $file->s3_key;
-
-        if (! $path || ! Storage::disk($disk)->exists($path)) {
-            throw new MediaProcessingException('File missing from storage.');
+        if ($type === 'image') {
+            return $this->processImage($sourcePath, $mimeType);
         }
 
-        $source = $this->resolveSourcePath($disk, $path);
-        $meta = $file->meta ?? [];
-        $meta['original_s3_key'] = $meta['original_s3_key'] ?? $path;
-        $meta['processing_status'] = $meta['processing_status'] ?? 'pending';
-        $meta['variants'] = $meta['variants'] ?? [];
-
-        $file->meta = $meta;
-        $file->save();
-
-        try {
-            $mime = $file->mime_type ?: $this->probe->mimeType($source['path']);
-
-            if ($this->probe->isImageMime($mime)) {
-                $result = $this->processImage($file, $disk, $source['path'], $mime);
-            } elseif ($this->probe->isVideoMime($mime)) {
-                $result = $this->processVideo($file, $disk, $source['path']);
-            } else {
-                $file->meta = $this->markCompleted($meta);
-                $file->save();
-
-                return $file->refresh();
-            }
-        } finally {
-            $this->cleanupTemporary($source);
+        if ($type === 'video') {
+            return $this->processVideo($sourcePath);
         }
 
-        $file->s3_key = $result['s3_key'];
-        $file->mime_type = $result['mime_type'];
-        $file->size_bytes = $result['size_bytes'];
-        $file->width = $result['width'];
-        $file->height = $result['height'];
-        $file->duration = $result['duration'];
-        $file->meta = $this->markCompleted(array_merge($meta, [
-            'variants' => $result['variants'],
-        ]));
-        $file->save();
-
-        $this->cleanupOriginal($disk, $meta['original_s3_key'], $result['s3_key']);
-
-        return $file->refresh();
+        throw new MediaProcessingException('Unsupported media type.');
     }
 
-    private function processImage(FileModel $file, string $disk, string $sourcePath, ?string $mime): array
+    private function processImage(string $sourcePath, ?string $mime): array
     {
         if (! $this->probe->imagickAvailable() && ! $this->probe->gdAvailable()) {
-            throw new MediaProcessingException('Image processing requires Imagick or GD extensions.');
+            throw new MediaProcessingException('Image optimization requires GD or Imagick. Upload rejected.');
         }
 
         $maxWidth = (int) config('media.image.max_width', 1600);
         $maxHeight = (int) config('media.image.max_height', 1600);
         $quality = (int) config('media.image.quality', 80);
-        $thumbMax = (int) config('media.image.thumbnail_max_width', 400);
 
         $hasAlpha = $this->imageHasAlpha($sourcePath, $mime);
         $preferred = config('media.image.format_preference', 'webp');
@@ -83,55 +46,32 @@ class MediaProcessor
 
         $targetFormat = $this->decideImageFormat($preferred, $webpSupported, $hasAlpha);
         $targetMime = $this->mimeForFormat($targetFormat);
+        $destination = $this->tempFilePath($targetFormat);
 
-        $optimizedKey = $this->buildPath($file->s3_key, 'optimized', $targetFormat);
-        $optimizedTemp = $this->tempFilePath($optimizedKey);
-        [$width, $height] = $this->resizeImage($sourcePath, $optimizedTemp, $targetFormat, $maxWidth, $maxHeight, $quality, $mime);
-
-        $thumbKey = $this->buildPath($file->s3_key, 'thumb', $targetFormat);
-        $thumbTemp = $this->tempFilePath($thumbKey);
-        $this->resizeImage($sourcePath, $thumbTemp, $targetFormat, $thumbMax, $thumbMax, $quality, $mime);
-
-        $this->putFile($disk, $optimizedKey, $optimizedTemp);
-        $this->putFile($disk, $thumbKey, $thumbTemp);
-
-        $variants = [
-            'thumbnail' => $thumbKey,
-        ];
-
-        $sizeBytes = @filesize($optimizedTemp) ?: null;
-
-        @unlink($optimizedTemp);
-        @unlink($thumbTemp);
+        [$width, $height] = $this->resizeImage($sourcePath, $destination, $targetFormat, $maxWidth, $maxHeight, $quality, $mime);
 
         return [
-            's3_key' => $optimizedKey,
+            'path' => $destination,
             'mime_type' => $targetMime,
-            'size_bytes' => $sizeBytes,
+            'size_bytes' => @filesize($destination) ?: null,
             'width' => $width,
             'height' => $height,
             'duration' => null,
-            'variants' => $variants,
         ];
     }
 
-    private function processVideo(FileModel $file, string $disk, string $sourcePath): array
+    private function processVideo(string $sourcePath): array
     {
         if (! $this->probe->ffmpegAvailable()) {
-            throw new MediaProcessingException('FFmpeg is required for video processing.');
+            throw new MediaProcessingException('Video optimization requires FFmpeg. Upload rejected.');
         }
 
         $maxWidth = (int) config('media.video.max_width', 1280);
         $crf = (string) config('media.video.crf', '28');
         $preset = (string) config('media.video.preset', 'veryfast');
         $audioBitrate = (string) config('media.video.audio_bitrate', '128k');
-        $posterWidth = (int) config('media.video.poster_max_width', 800);
-        $posterSecond = (int) config('media.video.poster_second', 1);
 
-        $targetFormat = 'mp4';
-        $optimizedKey = $this->buildPath($file->s3_key, 'optimized', $targetFormat);
-        $optimizedTemp = $this->tempFilePath($optimizedKey);
-
+        $destination = $this->tempFilePath('mp4');
         $scaleFilter = 'scale=min(' . $maxWidth . ',iw):-2';
 
         $process = new Process([
@@ -153,67 +93,27 @@ class MediaProcessor
             $audioBitrate,
             '-movflags',
             '+faststart',
-            $optimizedTemp,
+            $destination,
         ]);
 
-        $process->setTimeout((int) config('media.video.timeout', 120));
+        $process->setTimeout((int) config('media.video.timeout', 180));
         $process->run();
 
         if (! $process->isSuccessful()) {
             Log::warning('FFmpeg failed', ['output' => $process->getErrorOutput()]);
-            @unlink($optimizedTemp);
-            throw new MediaProcessingException('Video transcoding failed.');
+            @unlink($destination);
+            throw new MediaProcessingException('Video optimization failed.');
         }
 
-        // Poster image
-        $posterKey = $this->buildPath($file->s3_key, 'poster', 'jpg');
-        $posterTemp = $this->tempFilePath($posterKey);
-
-        $posterProcess = new Process([
-            'ffmpeg',
-            '-y',
-            '-i',
-            $optimizedTemp,
-            '-ss',
-            sprintf('00:00:%02d', $posterSecond),
-            '-vframes',
-            '1',
-            '-vf',
-            'scale=min(' . $posterWidth . ',iw):-2',
-            $posterTemp,
-        ]);
-
-        $posterProcess->setTimeout(20);
-        $posterProcess->run();
-
-        if (! $posterProcess->isSuccessful()) {
-            Log::warning('Poster generation failed', ['output' => $posterProcess->getErrorOutput()]);
-        }
-
-        $meta = $this->probe->videoMetadata($optimizedTemp);
-
-        $this->putFile($disk, $optimizedKey, $optimizedTemp);
-        if ($posterProcess->isSuccessful()) {
-            $this->putFile($disk, $posterKey, $posterTemp);
-        }
-
-        $variants = [
-            'poster' => $posterProcess->isSuccessful() ? $posterKey : null,
-        ];
-
-        $sizeBytes = @filesize($optimizedTemp) ?: null;
-
-        @unlink($optimizedTemp);
-        @unlink($posterTemp);
+        $meta = $this->probe->videoMetadata($destination);
 
         return [
-            's3_key' => $optimizedKey,
+            'path' => $destination,
             'mime_type' => 'video/mp4',
-            'size_bytes' => $sizeBytes,
+            'size_bytes' => @filesize($destination) ?: null,
             'width' => $meta['width'] ?? null,
             'height' => $meta['height'] ?? null,
             'duration' => $meta['duration'] ?? null,
-            'variants' => $variants,
         ];
     }
 
@@ -273,7 +173,6 @@ class MediaProcessor
 
         $resized = imagecreatetruecolor($newWidth, $newHeight);
 
-        // Preserve transparency when possible.
         if ($this->shouldKeepAlpha($format, $mime)) {
             imagealphablending($resized, false);
             imagesavealpha($resized, true);
@@ -319,35 +218,6 @@ class MediaProcessor
         return [max(1, $newWidth), max(1, $newHeight)];
     }
 
-    private function buildPath(string $originalKey, string $suffix, string $extension): string
-    {
-        $dir = pathinfo($originalKey, PATHINFO_DIRNAME);
-        $base = pathinfo($originalKey, PATHINFO_FILENAME);
-
-        return trim($dir, '/') . '/' . $base . '_' . $suffix . '.' . $extension;
-    }
-
-    private function markCompleted(array $meta): array
-    {
-        $meta['processing_status'] = 'completed';
-        $meta['processing_error'] = null;
-
-        return $meta;
-    }
-
-    private function cleanupOriginal(string $disk, ?string $originalKey, string $optimizedKey): void
-    {
-        $keepOriginal = (bool) config('media.keep_original', false);
-
-        if ($keepOriginal || ! $originalKey || $originalKey === $optimizedKey) {
-            return;
-        }
-
-        if (Storage::disk($disk)->exists($originalKey)) {
-            Storage::disk($disk)->delete($originalKey);
-        }
-    }
-
     private function decideImageFormat(string $preferred, bool $webpSupported, bool $hasAlpha): string
     {
         if ($hasAlpha && $preferred === 'webp' && $webpSupported) {
@@ -382,14 +252,6 @@ class MediaProcessor
         }
     }
 
-    private function ensureStorageDirectory(string $disk, string $key): void
-    {
-        $directory = trim(pathinfo($key, PATHINFO_DIRNAME), '/');
-        if ($directory && method_exists(Storage::disk($disk), 'makeDirectory')) {
-            Storage::disk($disk)->makeDirectory($directory);
-        }
-    }
-
     private function webpSupported(): bool
     {
         if ($this->probe->imagickAvailable()) {
@@ -420,7 +282,6 @@ class MediaProcessor
             }
         }
 
-        // Basic heuristic: PNG/WebP often support alpha
         return in_array($mime, ['image/png', 'image/webp'], true);
     }
 
@@ -433,70 +294,16 @@ class MediaProcessor
         return $mime === 'image/png';
     }
 
-    private function resolveSourcePath(string $disk, string $path): array
+    private function tempFilePath(string $extension): string
     {
-        $adapter = Storage::disk($disk);
-
-        try {
-            return [
-                'path' => $adapter->path($path),
-                'temporary' => false,
-            ];
-        } catch (\Throwable) {
-            $local = $this->tempFilePath($path);
-            $this->ensureDirectory($local);
-
-            $stream = $adapter->readStream($path);
-            if (! $stream) {
-                throw new MediaProcessingException('Unable to read file from storage.');
-            }
-
-            $destination = fopen($local, 'w+b');
-            stream_copy_to_stream($stream, $destination);
-            fclose($stream);
-            fclose($destination);
-
-            return [
-                'path' => $local,
-                'temporary' => true,
-            ];
-        }
-    }
-
-    private function cleanupTemporary(array $file): void
-    {
-        if (($file['temporary'] ?? false) && isset($file['path']) && is_file($file['path'])) {
-            @unlink($file['path']);
-        }
-    }
-
-    private function tempFilePath(string $originalKey): string
-    {
-        $dir = $this->processingTempDirectory();
-        $extension = pathinfo($originalKey, PATHINFO_EXTENSION);
-        $extension = $extension ? '.' . $extension : '';
-
-        return $dir . '/' . uniqid('media_', true) . $extension;
-    }
-
-    private function processingTempDirectory(): string
-    {
-        $dir = storage_path('app/tmp/media');
+        $dir = storage_path('app/tmp/processed');
         if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        return $dir;
-    }
+        $extension = ltrim($extension, '.');
+        $extension = $extension ? '.' . $extension : '';
 
-    private function putFile(string $disk, string $key, string $localPath): void
-    {
-        $this->ensureStorageDirectory($disk, $key);
-
-        $stream = fopen($localPath, 'r');
-        Storage::disk($disk)->put($key, $stream);
-        if (is_resource($stream)) {
-            fclose($stream);
-        }
+        return $dir . '/' . uniqid('media_', true) . $extension;
     }
 }

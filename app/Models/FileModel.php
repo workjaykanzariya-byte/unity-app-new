@@ -31,12 +31,10 @@ class FileModel extends Model
         'width',
         'height',
         'duration',
-        'meta',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
-        'meta' => 'array',
     ];
 
     public function uploader(): BelongsTo

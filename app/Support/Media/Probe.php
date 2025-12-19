@@ -9,7 +9,12 @@ class Probe
 {
     public function ffmpegAvailable(): bool
     {
-        return $this->binaryAvailable('ffmpeg');
+        // Prefer `which` on *nix, fall back to running ffmpeg directly.
+        if ($this->binaryAvailable('which', ['ffmpeg'])) {
+            return true;
+        }
+
+        return $this->binaryAvailable('ffmpeg', ['-version']);
     }
 
     public function ffprobeAvailable(): bool
@@ -106,10 +111,10 @@ class Probe
         return $mime ? Str::startsWith($mime, 'video/') : false;
     }
 
-    private function binaryAvailable(string $binary): bool
+    private function binaryAvailable(string $binary, array $arguments = []): bool
     {
         try {
-            $process = new Process([$binary, '-version']);
+            $process = new Process(array_filter([$binary, ...$arguments]));
             $process->setTimeout(5);
             $process->run();
 

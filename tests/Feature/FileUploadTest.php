@@ -38,20 +38,15 @@ class FileUploadTest extends TestCase
 
         $file = FileModel::firstOrFail();
 
-        $this->assertSame('completed', $file->meta['processing_status']);
         $this->assertNotNull($file->width);
         $this->assertNotNull($file->height);
         $this->assertLessThanOrEqual(1600, $file->width);
         $this->assertLessThanOrEqual(1600, $file->height);
         $this->assertTrue(Storage::disk('public')->exists($file->s3_key));
 
-        $thumb = $file->meta['variants']['thumbnail'] ?? null;
-        $this->assertNotNull($thumb);
-        Storage::disk('public')->assertExists($thumb);
-
-        $originalSize = Storage::disk('public')->size($file->meta['original_s3_key']);
-        $optimizedSize = Storage::disk('public')->size($file->s3_key);
-        $this->assertLessThanOrEqual($originalSize, $optimizedSize);
+        $files = Storage::disk('public')->allFiles('uploads');
+        $this->assertCount(1, $files);
+        $this->assertEquals($file->s3_key, $files[0]);
     }
 
     public function test_video_is_transcoded_and_poster_generated_when_ffmpeg_exists(): void
@@ -100,13 +95,12 @@ class FileUploadTest extends TestCase
 
         $file = FileModel::firstOrFail();
         $this->assertSame('video/mp4', $file->mime_type);
-        $this->assertSame('completed', $file->meta['processing_status']);
         $this->assertNotNull($file->duration);
         $this->assertTrue(Storage::disk('public')->exists($file->s3_key));
 
-        $poster = $file->meta['variants']['poster'] ?? null;
-        $this->assertNotNull($poster);
-        Storage::disk('public')->assertExists($poster);
+        $files = Storage::disk('public')->allFiles('uploads');
+        $this->assertCount(1, $files);
+        $this->assertEquals($file->s3_key, $files[0]);
     }
 
     private function makeUser(): User

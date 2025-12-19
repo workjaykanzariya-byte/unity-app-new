@@ -15,8 +15,6 @@ class FileResource extends JsonResource
             $url = Storage::url($this->s3_key);
         }
 
-        $meta = is_array($this->meta) ? $this->meta : [];
-
         return [
             'id' => $this->id,
             'uploader_user_id' => $this->uploader_user_id,
@@ -28,29 +26,6 @@ class FileResource extends JsonResource
             'duration' => $this->duration,
             'created_at' => $this->created_at,
             'url' => $url,
-            'variants' => $this->variantUrls($meta),
-            'processing_status' => $meta['processing_status'] ?? 'completed',
-            'processing_error' => $meta['processing_error'] ?? null,
         ];
-    }
-
-    private function variantUrls(array $meta): array
-    {
-        $variants = $meta['variants'] ?? [];
-        $resolved = [];
-
-        foreach ($variants as $key => $path) {
-            if (! $path) {
-                $resolved[$key] = null;
-                continue;
-            }
-
-            $resolved[$key] = [
-                'path' => $path,
-                'url' => Storage::url($path),
-            ];
-        }
-
-        return $resolved;
     }
 }
