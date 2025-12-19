@@ -4,15 +4,26 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\FileResource;
+use App\Jobs\ProcessUploadedFile;
 use App\Models\File;
 use App\Models\FileModel;
+use App\Services\Media\MediaProcessor;
+use App\Support\Media\Probe;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Exceptions\MediaProcessingException;
+use Illuminate\Support\Facades\Log;
 
 class FileController extends BaseApiController
 {
+    public function __construct(
+        private readonly MediaProcessor $mediaProcessor,
+        private readonly Probe $probe
+    ) {
+    }
+
     /**
      * Serve a file by its UUID.
      */
@@ -57,7 +68,15 @@ class FileController extends BaseApiController
                     continue;
                 }
 
-                $model = $this->storeUploadedFile($file, $request->user());
+                try {
+                    $model = $this->storeUploadedFile($file, $request->user());
+                } catch (MediaProcessingException $e) {
+                    return $this->error($e->getMessage(), 422);
+                } catch (\Throwable $e) {
+                    Log::error('File upload failed', ['error' => $e->getMessage()]);
+
+                    return $this->error('File upload failed. Please try again.', 500);
+                }
 
                 $uploaded[] = new FileResource($model);
             }
@@ -73,7 +92,15 @@ class FileController extends BaseApiController
             return $this->error('Invalid file uploaded.', 422);
         }
 
-        $model = $this->storeUploadedFile($filesInput, $request->user());
+        try {
+            $model = $this->storeUploadedFile($filesInput, $request->user());
+        } catch (MediaProcessingException $e) {
+            return $this->error($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            Log::error('File upload failed', ['error' => $e->getMessage()]);
+
+            return $this->error('File upload failed. Please try again.', 500);
+        }
 
         return $this->success(new FileResource($model), 'File uploaded successfully', 201);
     }
@@ -87,22 +114,23 @@ class FileController extends BaseApiController
 
         $path = $file->storeAs($folder, $filename, $disk);
 
-        $mimeType = $file->getClientMimeType();
+        $mimeType = $file->getClientMimeType() ?: $this->probe->mimeType($file->getRealPath());
         $sizeBytes = $file->getSize();
         $width = null;
         $height = null;
         $duration = null;
 
-        if (str_starts_with((string) $mimeType, 'image/')) {
-            try {
-                $imageSize = getimagesize($file->getRealPath());
-                if ($imageSize) {
-                    $width = $imageSize[0] ?? null;
-                    $height = $imageSize[1] ?? null;
-                }
-            } catch (\Throwable $e) {
-                // ignore errors reading image dimensions
-            }
+        if ($this->probe->isImageMime($mimeType)) {
+            $dimensions = $this->probe->imageDimensions($file->getRealPath());
+            $width = $dimensions['width'];
+            $height = $dimensions['height'];
+        }
+
+        if ($this->probe->isVideoMime($mimeType)) {
+            $videoMeta = $this->probe->videoMetadata($file->getRealPath());
+            $width = $videoMeta['width'];
+            $height = $videoMeta['height'];
+            $duration = $videoMeta['duration'];
         }
 
         $model = new FileModel();
@@ -113,10 +141,43 @@ class FileController extends BaseApiController
         $model->width = $width;
         $model->height = $height;
         $model->duration = $duration;
+        $model->meta = [
+            'processing_status' => 'pending',
+            'original_s3_key' => $path,
+            'variants' => [],
+        ];
         $model->save();
 
-        $model->refresh();
+        $processingMode = config('media.processing.mode', 'sync');
 
-        return $model;
+        if ($processingMode === 'queue') {
+            ProcessUploadedFile::dispatch($model->id);
+            $model->meta = array_merge($model->meta ?? [], ['processing_status' => 'queued']);
+            $model->save();
+
+            return $model->refresh();
+        }
+
+        try {
+            $processed = $this->mediaProcessor->process($model);
+        } catch (MediaProcessingException $e) {
+            $this->markProcessingFailure($model, $e->getMessage());
+            throw $e;
+        } catch (\Throwable $e) {
+            $this->markProcessingFailure($model, 'Media processing failed.');
+            Log::error('Media processing failed', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $processed->refresh();
+    }
+
+    private function markProcessingFailure(FileModel $model, string $message): void
+    {
+        $meta = $model->meta ?? [];
+        $meta['processing_status'] = 'failed';
+        $meta['processing_error'] = $message;
+        $model->meta = $meta;
+        $model->save();
     }
 }
