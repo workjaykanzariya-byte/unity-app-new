@@ -13,30 +13,29 @@ class ActivityOtherUserMail extends Mailable
     use SerializesModels;
 
     public function __construct(
-        public string $activityType,
-        public string $activityTitle,
-        public ?User $actor,
-        public ?User $otherUser,
-        public array $activityAttributes,
+        public string $activityTypeNormalized,
+        public string $activityTypeLabel,
+        public array $viewData,
     ) {
     }
 
     public function build(): self
     {
-        $actorName = $this->actor?->display_name
-            ?? trim(($this->actor?->first_name ?? '') . ' ' . ($this->actor?->last_name ?? ''))
-            ?: 'Someone';
-
-        $subject = sprintf('Peers Global Unity: %s created a %s with you', $actorName, $this->activityType);
+        $subject = sprintf('Peers Global Unity: %s created a %s with you', $this->viewData['actorName'] ?? 'Someone', $this->activityTypeLabel);
 
         return $this->subject($subject)
-            ->view('emails.activity_other_user')
-            ->with([
-                'activityType' => $this->activityType,
-                'activityTitle' => $this->activityTitle,
-                'actor' => $this->actor,
-                'otherUser' => $this->otherUser,
-                'activityAttributes' => $this->activityAttributes,
-            ]);
+            ->view($this->resolveView())
+            ->with($this->viewData);
+    }
+
+    protected function resolveView(): string
+    {
+        return match ($this->activityTypeNormalized) {
+            'p2p_meeting' => 'emails.p2p_receiver',
+            'referral' => 'emails.referral_receiver',
+            'testimonial' => 'emails.testimonial_receiver',
+            'business_deal' => 'emails.business_deal_receiver',
+            default => 'emails.p2p_receiver',
+        };
     }
 }

@@ -7,6 +7,7 @@ use App\Mail\ActivityActorMail;
 use App\Mail\ActivityAdminMail;
 use App\Mail\ActivityOtherUserMail;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -24,9 +25,11 @@ class SendActivityEmails
             $otherUser = $event->otherUserId ? User::find($event->otherUserId) : null;
             $activityAttributes = $event->activityModel->getAttributes();
             $activityTitle = $this->deriveActivityTitle($event->activityModel, $event->activityType);
+            $activityTypeNormalized = $this->normalizeActivityType($event->activityType);
+            $viewData = $this->buildViewData($activityTypeNormalized, $event->activityModel, $actor, $otherUser);
 
-            $this->sendActorEmail($event, $actor, $otherUser, $activityAttributes, $activityTitle);
-            $this->sendOtherUserEmail($event, $actor, $otherUser, $activityAttributes, $activityTitle);
+            $this->sendActorEmail($event, $actor, $otherUser, $activityAttributes, $activityTitle, $activityTypeNormalized, $viewData);
+            $this->sendOtherUserEmail($event, $actor, $otherUser, $activityAttributes, $activityTitle, $activityTypeNormalized, $viewData);
             $this->sendAdminEmail($event, $actor, $activityAttributes, $activityTitle);
         } catch (Throwable $e) {
             Log::error('Failed to dispatch activity emails', [
@@ -43,6 +46,8 @@ class SendActivityEmails
         ?User $otherUser,
         array $activityAttributes,
         string $activityTitle,
+        string $activityTypeNormalized,
+        array $viewData,
     ): void {
         if (! config('activity_emails.send_actor_copy')) {
             return;
@@ -54,11 +59,9 @@ class SendActivityEmails
 
         try {
             Mail::to($actor->email)->send(new ActivityActorMail(
+                $activityTypeNormalized,
                 $event->activityType,
-                $activityTitle,
-                $actor,
-                $otherUser,
-                $activityAttributes,
+                $viewData,
             ));
         } catch (Throwable $e) {
             Log::error('Failed to send actor activity email', [
@@ -76,6 +79,8 @@ class SendActivityEmails
         ?User $otherUser,
         array $activityAttributes,
         string $activityTitle,
+        string $activityTypeNormalized,
+        array $viewData,
     ): void {
         if (! config('activity_emails.send_other_user')) {
             return;
@@ -91,11 +96,9 @@ class SendActivityEmails
 
         try {
             Mail::to($otherUser->email)->send(new ActivityOtherUserMail(
+                $activityTypeNormalized,
                 $event->activityType,
-                $activityTitle,
-                $actor,
-                $otherUser,
-                $activityAttributes,
+                $viewData,
             ));
         } catch (Throwable $e) {
             Log::error('Failed to send other user activity email', [
@@ -151,5 +154,64 @@ class SendActivityEmails
         }
 
         return $activityType;
+    }
+
+    protected function normalizeActivityType(string $activityType): string
+    {
+        return Str::of($activityType)->lower()->replace(' ', '_')->toString();
+    }
+
+    protected function buildViewData(string $activityTypeNormalized, object $activityModel, ?User $actor, ?User $otherUser): array
+    {
+        $actorName = $this->displayName($actor);
+        $otherName = $this->displayName($otherUser);
+
+        $data = [
+            'actorName' => $actorName,
+            'otherName' => $otherName,
+            'meetingDate' => null,
+            'meetingPlace' => null,
+            'referralOf' => null,
+            'requirementSubject' => null,
+            'testimonialContent' => null,
+            'dealAmountInr' => null,
+        ];
+
+        if ($activityTypeNormalized === 'p2p_meeting') {
+            $data['meetingDate'] = $activityModel->meeting_date ?? null;
+            $data['meetingPlace'] = $activityModel->meeting_place ?? null;
+        }
+
+        if ($activityTypeNormalized === 'referral') {
+            $data['referralOf'] = $activityModel->referral_of ?? null;
+        }
+
+        if ($activityTypeNormalized === 'requirement') {
+            $data['requirementSubject'] = $activityModel->subject ?? null;
+        }
+
+        if ($activityTypeNormalized === 'testimonial') {
+            $data['testimonialContent'] = $activityModel->content ?? null;
+        }
+
+        if ($activityTypeNormalized === 'business_deal') {
+            $data['dealAmountInr'] = isset($activityModel->deal_amount)
+                ? '₹' . number_format((float) $activityModel->deal_amount, 2)
+                : null;
+        }
+
+        return $data;
+    }
+
+    protected function displayName(?User $user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+        return $user->display_name
+            ?: ($fullName !== '' ? $fullName : ($user->email ?? null));
     }
 }
