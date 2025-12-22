@@ -2,47 +2,79 @@
 
 namespace App\Http\Controllers\Api\V1\Activities;
 
-use App\Http\Resources\ActivityHistoryItemResource;
-use App\Support\ActivityHistory\HistoryQuery;
+use App\Http\Resources\TableRowResource;
+use App\Models\Testimonial;
+use App\Support\ActivityHistory\HistoryPaginator;
 use Illuminate\Http\Request;
 
 class TestimonialHistoryController extends BaseActivityHistoryController
 {
-    public function index(Request $request, HistoryQuery $historyQuery)
+    private const COLUMNS = [
+        'id',
+        'from_user_id',
+        'to_user_id',
+        'content',
+        'media',
+        'is_deleted',
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
+    public function index(Request $request)
     {
         $request->validate([
-            'filter' => 'in:given,received,all',
+            'filter' => 'nullable|in:given,received',
             'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
         ]);
 
-        $filter = $request->input('filter', 'all');
+        $filter = $request->input('filter', 'given');
+        $userId = $request->user()->id;
 
-        $model = $this->resolveModel([
-            \App\Models\Testimonial::class,
-            \App\Models\Activities\Testimonial::class,
-        ], 'testimonials');
+        $query = Testimonial::query()->select(self::COLUMNS);
 
-        $paginator = $historyQuery->paginate($model, $request, $filter);
+        $this->applyNotDeletedConstraints($query, 'testimonials');
+        $this->applyFilterGivenReceived($query, $filter, 'from_user_id', 'to_user_id', $userId);
+
+        $perPage = (int) $request->input('per_page', 20);
+        $perPage = max(1, min($perPage, 100));
+
+        if ($query->getConnection()->getSchemaBuilder()->hasColumn('testimonials', 'created_at')) {
+            $query->orderByDesc('created_at');
+        } else {
+            $query->orderByDesc('id');
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        $items = TableRowResource::collection($paginator->getCollection())->toArray($request);
 
         return $this->success([
-            'items' => $this->transformItems($paginator->items(), $request),
-            'meta' => $this->buildMeta($paginator),
+            'items' => $items,
+            'meta' => HistoryPaginator::meta($paginator),
         ]);
     }
 
-    public function show(Request $request, string $id, HistoryQuery $historyQuery)
+    public function show(Request $request, string $id)
     {
-        $model = $this->resolveModel([
-            \App\Models\Testimonial::class,
-            \App\Models\Activities\Testimonial::class,
-        ], 'testimonials');
+        $userId = $request->user()->id;
 
-        $record = $historyQuery->findForUser($model, $id);
+        $query = Testimonial::query()
+            ->select(self::COLUMNS)
+            ->where(function ($q) use ($userId) {
+                $q->where('from_user_id', $userId)
+                    ->orWhere('to_user_id', $userId);
+            });
+
+        $this->applyNotDeletedConstraints($query, 'testimonials');
+
+        $record = $query->where('id', $id)->first();
 
         if (! $record) {
             return $this->error('Testimonial not found', 404);
         }
 
-        return $this->success((new ActivityHistoryItemResource($record))->toArray($request));
+        return $this->success((new TableRowResource($record))->toArray($request));
     }
 }

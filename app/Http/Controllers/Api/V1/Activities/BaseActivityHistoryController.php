@@ -3,56 +3,30 @@
 namespace App\Http\Controllers\Api\V1\Activities;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Resources\ActivityHistoryItemResource;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
 
 abstract class BaseActivityHistoryController extends BaseApiController
 {
-    protected function resolveModel(array $candidates, string $fallbackTable): Model
+    protected function applyFilterGivenReceived(Builder $query, string $filter, string $givenColumn, string $receivedColumn, string $userId): void
     {
-        foreach ($candidates as $candidate) {
-            if (class_exists($candidate)) {
-                return app($candidate);
-            }
+        if ($filter === 'received') {
+            $query->where($receivedColumn, $userId);
+
+            return;
         }
 
-        $model = new class extends Model {
-            use \Illuminate\Database\Eloquent\Concerns\HasUuids;
+        $query->where($givenColumn, $userId);
+    }
 
-            protected $guarded = [];
-
-            public $timestamps = false;
-
-            protected $keyType = 'string';
-
-            public $incrementing = false;
-        };
-
-        $model->setTable($fallbackTable);
-
-        if (Schema::hasColumn($fallbackTable, 'created_at') && Schema::hasColumn($fallbackTable, 'updated_at')) {
-            $model->timestamps = true;
+    protected function applyNotDeletedConstraints(Builder $query, string $table): void
+    {
+        if (Schema::hasColumn($table, 'is_deleted')) {
+            $query->where('is_deleted', false);
         }
 
-        return $model;
-    }
-
-    protected function transformItems(array $items, Request $request): array
-    {
-        return collect($items)
-            ->map(fn ($item) => (new ActivityHistoryItemResource($item))->toArray($request))
-            ->all();
-    }
-
-    protected function buildMeta($paginator): array
-    {
-        return [
-            'page' => $paginator->currentPage(),
-            'per_page' => $paginator->perPage(),
-            'total' => $paginator->total(),
-            'last_page' => $paginator->lastPage(),
-        ];
+        if (Schema::hasColumn($table, 'deleted_at')) {
+            $query->whereNull('deleted_at');
+        }
     }
 }
