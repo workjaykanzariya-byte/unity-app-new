@@ -56,13 +56,15 @@ class ReferralHistoryController extends BaseApiController
         $otherUserIds = $items->map(fn (Referral $referral): ?string => $this->resolveOtherUserId($referral, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (Referral $referral) use ($nameMap, $authUserId) {
-            $attributes = $referral->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($referral, $authUserId);
-            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+        $items = TableRowResource::collection(
+            $items->map(function (Referral $referral) use ($nameMap, $authUserId) {
+                $attributes = $referral->getAttributes();
+                $otherUserId = $this->resolveOtherUserId($referral, $authUserId);
+                $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
-            return $attributes;
-        });
+                return $attributes;
+            })
+        );
 
         $response = [
             'items' => $items,

@@ -50,13 +50,15 @@ class P2pMeetingHistoryController extends BaseApiController
         $otherUserIds = $items->map(fn (P2pMeeting $meeting): ?string => $this->resolveOtherUserId($meeting, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (P2pMeeting $meeting) use ($nameMap, $authUserId) {
-            $attributes = $meeting->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($meeting, $authUserId);
-            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+        $items = TableRowResource::collection(
+            $items->map(function (P2pMeeting $meeting) use ($nameMap, $authUserId) {
+                $attributes = $meeting->getAttributes();
+                $otherUserId = $this->resolveOtherUserId($meeting, $authUserId);
+                $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
-            return $attributes;
-        });
+                return $attributes;
+            })
+        );
 
         $response = [
             'items' => $items,

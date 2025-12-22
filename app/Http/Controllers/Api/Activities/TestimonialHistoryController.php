@@ -49,13 +49,15 @@ class TestimonialHistoryController extends BaseApiController
         $otherUserIds = $items->map(fn (Testimonial $testimonial): ?string => $this->resolveOtherUserId($testimonial, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (Testimonial $testimonial) use ($nameMap, $authUserId) {
-            $attributes = $testimonial->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($testimonial, $authUserId);
-            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+        $items = TableRowResource::collection(
+            $items->map(function (Testimonial $testimonial) use ($nameMap, $authUserId) {
+                $attributes = $testimonial->getAttributes();
+                $otherUserId = $this->resolveOtherUserId($testimonial, $authUserId);
+                $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
-            return $attributes;
-        });
+                return $attributes;
+            })
+        );
 
         $response = [
             'items' => $items,
