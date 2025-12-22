@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Activities;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activities\StoreRequirementRequest;
+use App\Events\ActivityCreated;
 use App\Models\Post;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
@@ -110,6 +111,13 @@ class RequirementController extends BaseApiController
 
             // NEW: auto-create post (do NOT award coins again)
             $this->createPostForRequirement($requirement);
+
+            event(new ActivityCreated(
+                'Requirement',
+                $requirement,
+                (string) $user->id,
+                null
+            ));
 
             // Build response payload from the model
             $data = $requirement->toArray();

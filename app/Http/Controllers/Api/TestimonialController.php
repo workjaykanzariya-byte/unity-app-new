@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreTestimonialRequest;
+use App\Events\ActivityCreated;
 use App\Models\Post;
 use App\Models\Testimonial;
 use App\Models\User;
@@ -145,6 +146,13 @@ class TestimonialController extends BaseApiController
             }
 
             $this->createPostForTestimonial($testimonial);
+
+            event(new ActivityCreated(
+                'Testimonial',
+                $testimonial,
+                (string) $authUser->id,
+                $testimonial->to_user_id ? (string) $testimonial->to_user_id : null
+            ));
 
             $data = $testimonial->toArray();
             $data['media'] = $this->addUrlsToMedia($testimonial->media ?? []);

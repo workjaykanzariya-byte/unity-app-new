@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
+use App\Events\ActivityCreated;
 use App\Models\Referral;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -88,6 +89,13 @@ class ReferralController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            event(new ActivityCreated(
+                'Referral',
+                $referral,
+                (string) $authUser->id,
+                $referral->to_user_id ? (string) $referral->to_user_id : null
+            ));
 
             return $this->success($referral, 'Referral saved successfully', 201);
         } catch (Throwable $e) {

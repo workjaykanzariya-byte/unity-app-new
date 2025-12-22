@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreRequirementRequest;
+use App\Events\ActivityCreated;
 use App\Models\Requirement;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
@@ -82,6 +83,13 @@ class RequirementController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            event(new ActivityCreated(
+                'Requirement',
+                $requirement,
+                (string) $authUser->id,
+                null
+            ));
 
             return $this->success($requirement, 'Requirement created successfully', 201);
         } catch (Throwable $e) {
