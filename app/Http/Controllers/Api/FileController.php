@@ -6,13 +6,23 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\FileResource;
 use App\Models\File;
 use App\Models\FileModel;
+use App\Services\Media\MediaProcessor;
+use App\Support\Media\Probe;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Exceptions\MediaProcessingException;
+use Illuminate\Support\Facades\Log;
 
 class FileController extends BaseApiController
 {
+    public function __construct(
+        private readonly MediaProcessor $mediaProcessor,
+        private readonly Probe $probe
+    ) {
+    }
+
     /**
      * Serve a file by its UUID.
      */
@@ -57,9 +67,13 @@ class FileController extends BaseApiController
                     continue;
                 }
 
-                $model = $this->storeUploadedFile($file, $request->user());
+                $result = $this->processSingleUpload($file, $request);
 
-                $uploaded[] = new FileResource($model);
+                if ($result instanceof \Illuminate\Http\JsonResponse) {
+                    return $result;
+                }
+
+                $uploaded[] = $result;
             }
 
             return $this->success($uploaded, 'Files uploaded successfully.', 201);
@@ -73,50 +87,114 @@ class FileController extends BaseApiController
             return $this->error('Invalid file uploaded.', 422);
         }
 
-        $model = $this->storeUploadedFile($filesInput, $request->user());
+        $resource = $this->processSingleUpload($filesInput, $request);
 
-        return $this->success(new FileResource($model), 'File uploaded successfully', 201);
+        return $this->success($resource, 'File uploaded successfully', 201);
+    }
+
+    private function processSingleUpload(UploadedFile $file, Request $request)
+    {
+        try {
+            $model = $this->storeUploadedFile($file, $request->user());
+        } catch (MediaProcessingException $e) {
+            return $this->error($e->getMessage(), 422);
+        } catch (\Throwable $e) {
+            Log::error('File upload failed', ['error' => $e->getMessage()]);
+
+            return $this->error('File upload failed. Please try again.', 500);
+        }
+
+        return new FileResource($model);
     }
 
     private function storeUploadedFile(UploadedFile $file, $user): FileModel
     {
         $disk = config('filesystems.default', 'public');
+        $tempOriginal = $this->storeTemporary($file);
+        $optimizedTemp = null;
+        $type = null;
 
-        $folder = 'uploads/' . now()->format('Y/m/d');
-        $filename = (string) Str::uuid() . '_' . preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
+        try {
+            $mimeType = $this->probe->mimeType($tempOriginal) ?: $file->getClientMimeType();
 
-        $path = $file->storeAs($folder, $filename, $disk);
-
-        $mimeType = $file->getClientMimeType();
-        $sizeBytes = $file->getSize();
-        $width = null;
-        $height = null;
-        $duration = null;
-
-        if (str_starts_with((string) $mimeType, 'image/')) {
-            try {
-                $imageSize = getimagesize($file->getRealPath());
-                if ($imageSize) {
-                    $width = $imageSize[0] ?? null;
-                    $height = $imageSize[1] ?? null;
+            if ($this->probe->isImageMime($mimeType)) {
+                $type = 'image';
+                if (! $this->probe->imagickAvailable() && ! $this->probe->gdAvailable()) {
+                    throw new MediaProcessingException('Image optimization requires GD or Imagick. Upload rejected.');
                 }
-            } catch (\Throwable $e) {
-                // ignore errors reading image dimensions
+            } elseif ($this->probe->isVideoMime($mimeType)) {
+                $type = 'video';
+                if (! $this->probe->ffmpegAvailable()) {
+                    throw new MediaProcessingException('Video optimization requires FFmpeg. Upload rejected.');
+                }
+            }
+
+            if (! $type) {
+                throw new MediaProcessingException('Unsupported file type.');
+            }
+
+            $optimized = $this->mediaProcessor->optimize($tempOriginal, $type, $mimeType);
+            $optimizedTemp = $optimized['path'];
+
+            $finalPath = $this->storeOptimized($optimizedTemp, $disk);
+
+            $model = new FileModel();
+            $model->uploader_user_id = $user ? $user->id : null;
+            $model->s3_key = $finalPath;
+            $model->mime_type = $optimized['mime_type'];
+            $model->size_bytes = $optimized['size_bytes'];
+            $model->width = $optimized['width'] ?? null;
+            $model->height = $optimized['height'] ?? null;
+            $model->duration = $optimized['duration'] ?? null;
+            $model->save();
+
+            return $model->refresh();
+        } finally {
+            $this->cleanupTemp($tempOriginal);
+            if ($optimizedTemp && file_exists($optimizedTemp)) {
+                @unlink($optimizedTemp);
             }
         }
+    }
 
-        $model = new FileModel();
-        $model->uploader_user_id = $user ? $user->id : null;
-        $model->s3_key = $path;
-        $model->mime_type = $mimeType;
-        $model->size_bytes = $sizeBytes;
-        $model->width = $width;
-        $model->height = $height;
-        $model->duration = $duration;
-        $model->save();
+    private function storeTemporary(UploadedFile $file): string
+    {
+        $tempDir = storage_path('app/tmp/uploads/' . now()->format('Y/m/d'));
+        if (! is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
 
-        $model->refresh();
+        $filename = (string) Str::uuid() . '_' . preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
+        $path = $tempDir . '/' . $filename;
+        $file->move($tempDir, $filename);
 
-        return $model;
+        return $path;
+    }
+
+    private function storeOptimized(string $optimizedTempPath, string $disk): string
+    {
+        $folder = 'uploads/' . now()->format('Y/m/d');
+        $extension = pathinfo($optimizedTempPath, PATHINFO_EXTENSION);
+        $filename = (string) Str::uuid() . ($extension ? '.' . $extension : '');
+        $finalPath = $folder . '/' . $filename;
+
+        $stream = fopen($optimizedTempPath, 'r');
+        $stored = Storage::disk($disk)->put($finalPath, $stream);
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
+
+        if (! $stored) {
+            throw new MediaProcessingException('Failed to store optimized file.');
+        }
+
+        return $finalPath;
+    }
+
+    private function cleanupTemp(string $path): void
+    {
+        if (is_file($path)) {
+            @unlink($path);
+        }
     }
 }
