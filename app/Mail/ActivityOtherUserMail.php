@@ -12,20 +12,46 @@ class ActivityOtherUserMail extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(
-        public string $activityTypeNormalized,
-        public string $activityTypeLabel,
-        public array $viewData,
-    ) {
+    public string $activityTypeNormalized;
+    public string $activityTypeLabel;
+    public string $viewName;
+    public string $subjectLine;
+
+    public string $actorName;
+    public ?string $otherName;
+    public ?string $meetingDate;
+    public ?string $meetingPlace;
+    public ?string $referralOf;
+    public ?string $requirementSubject;
+    public ?string $testimonialContent;
+    public ?string $dealAmountInr;
+
+    public function __construct(string $activityTypeNormalized, string $activityTypeLabel, array $data)
+    {
+        $this->activityTypeNormalized = $activityTypeNormalized;
+        $this->activityTypeLabel = $activityTypeLabel;
+        $this->viewName = $this->resolveView();
+
+        $this->actorName = $data['actorName'] ?? 'Someone';
+        $this->otherName = $data['otherName'] ?? null;
+        $this->meetingDate = $data['meetingDate'] ?? null;
+        $this->meetingPlace = $data['meetingPlace'] ?? null;
+        $this->referralOf = $data['referralOf'] ?? null;
+        $this->requirementSubject = $data['requirementSubject'] ?? null;
+        $this->testimonialContent = $data['testimonialContent'] ?? null;
+        $this->dealAmountInr = $data['dealAmountInr'] ?? null;
+
+        $this->subjectLine = sprintf(
+            'Peers Global Unity: %s created a %s with you',
+            $this->actorName ?: 'Someone',
+            $this->activityTypeLabel
+        );
     }
 
     public function build(): self
     {
-        $subject = sprintf('Peers Global Unity: %s created a %s with you', $this->viewData['actorName'] ?? 'Someone', $this->activityTypeLabel);
-
-        return $this->subject($subject)
-            ->view($this->resolveView())
-            ->with($this->viewData);
+        return $this->subject($this->subjectLine)
+            ->view($this->viewName);
     }
 
     protected function resolveView(): string

@@ -12,12 +12,17 @@ class ActivityAdminMail extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(
-        public string $activityType,
-        public string $activityTitle,
-        public ?User $actor,
-        public array $activityAttributes,
-    ) {
+    public string $activityType;
+    public string $activityTitle;
+    public ?User $actor;
+    public array $activityAttributes;
+
+    public function __construct(string $activityType, string $activityTitle, ?User $actor, array $activityAttributes)
+    {
+        $this->activityType = $activityType;
+        $this->activityTitle = $activityTitle;
+        $this->actor = $actor;
+        $this->activityAttributes = $activityAttributes;
     }
 
     public function build(): self
@@ -25,12 +30,6 @@ class ActivityAdminMail extends Mailable
         $subject = 'Peers Global Unity: New Requirement submitted';
 
         return $this->subject($subject)
-            ->view('emails.activity_admin')
-            ->with([
-                'activityType' => $this->activityType,
-                'activityTitle' => $this->activityTitle,
-                'actor' => $this->actor,
-                'activityAttributes' => $this->activityAttributes,
-            ]);
+            ->view('emails.activity_admin');
     }
 }
