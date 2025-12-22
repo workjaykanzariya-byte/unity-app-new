@@ -46,12 +46,12 @@ class TestimonialHistoryController extends BaseApiController
 
         $nameResolver = app(OtherUserNameResolver::class);
 
-        $otherUserIds = $items->map(fn (Testimonial $testimonial): ?string => $this->resolveOtherUserId($testimonial, $filter, $authUserId));
+        $otherUserIds = $items->map(fn (Testimonial $testimonial): ?string => $this->resolveOtherUserId($testimonial, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (Testimonial $testimonial) use ($nameMap, $filter, $authUserId) {
+        $items = $items->map(function (Testimonial $testimonial) use ($nameMap, $authUserId) {
             $attributes = $testimonial->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($testimonial, $filter, $authUserId);
+            $otherUserId = $this->resolveOtherUserId($testimonial, $authUserId);
             $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
             return $attributes;
@@ -109,7 +109,7 @@ class TestimonialHistoryController extends BaseApiController
         }
 
         $nameResolver = app(OtherUserNameResolver::class);
-        $otherUserId = $this->resolveOtherUserId($testimonial, $filterUsed, $authUserId);
+        $otherUserId = $this->resolveOtherUserId($testimonial, $authUserId);
         $nameMap = $nameResolver->mapNames(collect([$otherUserId]));
 
         $response = $testimonial->getAttributes();
@@ -129,16 +129,8 @@ class TestimonialHistoryController extends BaseApiController
         return $this->success($response);
     }
 
-    private function resolveOtherUserId(Testimonial $testimonial, ?string $filter, string $authUserId): ?string
+    private function resolveOtherUserId(Testimonial $testimonial, string $authUserId): ?string
     {
-        if ($filter === 'received') {
-            return $testimonial->from_user_id;
-        }
-
-        if ($filter === 'given') {
-            return $testimonial->to_user_id;
-        }
-
         if ($testimonial->from_user_id === $authUserId) {
             return $testimonial->to_user_id;
         }

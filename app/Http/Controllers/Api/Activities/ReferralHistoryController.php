@@ -53,12 +53,12 @@ class ReferralHistoryController extends BaseApiController
 
         $nameResolver = app(OtherUserNameResolver::class);
 
-        $otherUserIds = $items->map(fn (Referral $referral): ?string => $this->resolveOtherUserId($referral, $filter, $authUserId));
+        $otherUserIds = $items->map(fn (Referral $referral): ?string => $this->resolveOtherUserId($referral, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (Referral $referral) use ($nameMap, $filter, $authUserId) {
+        $items = $items->map(function (Referral $referral) use ($nameMap, $authUserId) {
             $attributes = $referral->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($referral, $filter, $authUserId);
+            $otherUserId = $this->resolveOtherUserId($referral, $authUserId);
             $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
             return $attributes;
@@ -79,16 +79,8 @@ class ReferralHistoryController extends BaseApiController
         return $this->success($response);
     }
 
-    private function resolveOtherUserId(Referral $referral, string $filter, string $authUserId): ?string
+    private function resolveOtherUserId(Referral $referral, string $authUserId): ?string
     {
-        if ($filter === 'given') {
-            return $referral->to_user_id;
-        }
-
-        if ($filter === 'received') {
-            return $referral->from_user_id;
-        }
-
         if ($referral->from_user_id === $authUserId) {
             return $referral->to_user_id;
         }

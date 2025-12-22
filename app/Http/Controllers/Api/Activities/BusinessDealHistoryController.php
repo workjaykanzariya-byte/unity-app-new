@@ -46,12 +46,12 @@ class BusinessDealHistoryController extends BaseApiController
 
         $nameResolver = app(OtherUserNameResolver::class);
 
-        $otherUserIds = $items->map(fn (BusinessDeal $deal): ?string => $this->resolveOtherUserId($deal, $filter, $authUserId));
+        $otherUserIds = $items->map(fn (BusinessDeal $deal): ?string => $this->resolveOtherUserId($deal, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (BusinessDeal $deal) use ($nameMap, $filter, $authUserId) {
+        $items = $items->map(function (BusinessDeal $deal) use ($nameMap, $authUserId) {
             $attributes = $deal->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($deal, $filter, $authUserId);
+            $otherUserId = $this->resolveOtherUserId($deal, $authUserId);
             $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
             return $attributes;
@@ -108,7 +108,7 @@ class BusinessDealHistoryController extends BaseApiController
         }
 
         $nameResolver = app(OtherUserNameResolver::class);
-        $otherUserId = $this->resolveOtherUserId($businessDeal, $filterUsed, $authUserId);
+        $otherUserId = $this->resolveOtherUserId($businessDeal, $authUserId);
         $nameMap = $nameResolver->mapNames(collect([$otherUserId]));
 
         $response = $businessDeal->getAttributes();
@@ -128,16 +128,8 @@ class BusinessDealHistoryController extends BaseApiController
         return $this->success($response);
     }
 
-    private function resolveOtherUserId(BusinessDeal $deal, ?string $filter, string $authUserId): ?string
+    private function resolveOtherUserId(BusinessDeal $deal, string $authUserId): ?string
     {
-        if ($filter === 'received') {
-            return $deal->from_user_id;
-        }
-
-        if ($filter === 'given') {
-            return $deal->to_user_id;
-        }
-
         if ($deal->from_user_id === $authUserId) {
             return $deal->to_user_id;
         }

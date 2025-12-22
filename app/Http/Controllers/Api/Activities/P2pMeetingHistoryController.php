@@ -47,12 +47,12 @@ class P2pMeetingHistoryController extends BaseApiController
 
         $nameResolver = app(OtherUserNameResolver::class);
 
-        $otherUserIds = $items->map(fn (P2pMeeting $meeting): ?string => $this->resolveOtherUserId($meeting, $filter, $authUserId));
+        $otherUserIds = $items->map(fn (P2pMeeting $meeting): ?string => $this->resolveOtherUserId($meeting, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (P2pMeeting $meeting) use ($nameMap, $filter, $authUserId) {
+        $items = $items->map(function (P2pMeeting $meeting) use ($nameMap, $authUserId) {
             $attributes = $meeting->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($meeting, $filter, $authUserId);
+            $otherUserId = $this->resolveOtherUserId($meeting, $authUserId);
             $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
             return $attributes;
@@ -73,12 +73,12 @@ class P2pMeetingHistoryController extends BaseApiController
         return $this->success($response);
     }
 
-    private function resolveOtherUserId(P2pMeeting $meeting, string $filter, string $authUserId): ?string
+    private function resolveOtherUserId(P2pMeeting $meeting, string $authUserId): ?string
     {
-        if ($filter === 'received') {
-            return $meeting->initiator_user_id;
+        if ($meeting->initiator_user_id === $authUserId) {
+            return $meeting->peer_user_id;
         }
 
-        return $meeting->peer_user_id;
+        return $meeting->initiator_user_id;
     }
 }
