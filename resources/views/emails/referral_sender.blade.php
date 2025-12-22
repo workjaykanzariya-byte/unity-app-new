@@ -9,15 +9,26 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear <strong>{{ $actorName ?? '' }}</strong>,
-We’ve received your referral for <strong>{{ $otherName ?? '' }}</strong>.Every referral strengthens our network and creates opportunities for meaningful collaborations.
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
 
-You can track the status of your referral anytime on Unity.
+  <p style="margin: 0 0 12px 0;">
+    We’ve received your referral for <strong>{{ $otherName ?? '' }}</strong>.Every referral strengthens our network and creates opportunities for meaningful collaborations.
+  </p>
 
-Thank you for being a proactive connector in our community.
+  <p style="margin: 0 0 12px 0;">
+    You can track the status of your referral anytime on Unity.
+  </p>
 
-Kind regards,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0 0 12px 0;">
+    Thank you for being a proactive connector in our community.
+  </p>
+
+  <p style="margin: 0;">
+    Kind regards,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>

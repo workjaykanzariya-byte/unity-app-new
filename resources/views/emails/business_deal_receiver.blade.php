@@ -9,13 +9,21 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear {{ $otherName ?? '' }},
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear {{ $otherName ?? '' }},</p>
 
-Congratulations! You’ve just <strong>received a business deal</strong> from {{ $actorName ?? '' }} worth ₹{{ $dealAmountInr ?? '' }}.
+  <p style="margin: 0 0 12px 0;">
+    Congratulations! You’ve just <strong>received a business deal</strong> from {{ $actorName ?? '' }} worth ₹{{ $dealAmountInr ?? '' }}.
+  </p>
 
-This deal is a testimony to the trust, collaboration, and opportunities created within Peers Global.Keep engaging, keep sharing, and continue growing stronger with every connection.Wishing you continued success,
+  <p style="margin: 0 0 12px 0;">
+    This deal is a testimony to the trust, collaboration, and opportunities created within Peers Global.Keep engaging, keep sharing, and continue growing stronger with every connection.Wishing you continued success,
+  </p>
 
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0;">
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>

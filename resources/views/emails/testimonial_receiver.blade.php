@@ -9,19 +9,31 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear {{ $otherName ?? '' }}
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear {{ $otherName ?? '' }}</p>
 
-Great news! You’ve just <strong>received a testimonial</strong> from {{ $actorName ?? '' }}.
+  <p style="margin: 0 0 12px 0;">
+    Great news! You’ve just <strong>received a testimonial</strong> from {{ $actorName ?? '' }}.
+  </p>
 
-Here’s what they shared about you:
-<em>"{{ $testimonialContent ?? '' }}"</em>
+  <p style="margin: 0 0 12px 0;">
+    Here’s what they shared about you:<br />
+    <em>"{{ $testimonialContent ?? '' }}"</em>
+  </p>
 
-Testimonials are proof of the impact you’re creating in the community — keep shining and inspiring others.
+  <p style="margin: 0 0 12px 0;">
+    Testimonials are proof of the impact you’re creating in the community — keep shining and inspiring others.
+  </p>
 
-You can view and showcase this testimonial anytime from your Unity dashboard.
+  <p style="margin: 0 0 12px 0;">
+    You can view and showcase this testimonial anytime from your Unity dashboard.
+  </p>
 
-With appreciation,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0;">
+    With appreciation,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>

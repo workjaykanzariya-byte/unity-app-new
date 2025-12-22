@@ -9,16 +9,26 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear <strong>{{ $actorName ?? '' }}</strong>,
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
 
-Congratulations on recording your business deal worth ₹<strong>{{ $dealAmountInr ?? '' }}</strong> on Unity!
+  <p style="margin: 0 0 12px 0;">
+    Congratulations on recording your business deal worth ₹<strong>{{ $dealAmountInr ?? '' }}</strong> on Unity!
+  </p>
 
-Your success reflects the power of collaboration and the value of being part of Peers Global.
+  <p style="margin: 0 0 12px 0;">
+    Your success reflects the power of collaboration and the value of being part of Peers Global.
+  </p>
 
-Keep tracking your achievements and coins on Unity, and continue building momentum.
+  <p style="margin: 0 0 12px 0;">
+    Keep tracking your achievements and coins on Unity, and continue building momentum.
+  </p>
 
-Cheers,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0;">
+    Cheers,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>

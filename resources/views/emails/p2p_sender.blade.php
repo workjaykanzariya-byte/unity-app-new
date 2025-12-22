@@ -9,17 +9,27 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear <strong>{{ $actorName ?? '' }}</strong>,
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
 
-Your meeting with <strong>{{ $otherName ?? '' }}</strong> on <strong>{{ $meetingDate ?? '' }}</strong> at <strong>{{ $meetingPlace ?? '' }}</strong> has been successfully logged on Unity.
+  <p style="margin: 0 0 12px 0;">
+    Your meeting with <strong>{{ $otherName ?? '' }}</strong> on <strong>{{ $meetingDate ?? '' }}</strong> at <strong>{{ $meetingPlace ?? '' }}</strong> has been successfully logged on Unity.
+  </p>
 
-We believe every conversation opens doors to growth, trust, and new partnerships.
+  <p style="margin: 0 0 12px 0;">
+    We believe every conversation opens doors to growth, trust, and new partnerships.
+  </p>
 
-Want to share your experience?
-Add a testimonial or note from your dashboard
+  <p style="margin: 0 0 12px 0;">
+    Want to share your experience?<br />
+    Add a testimonial or note from your dashboard
+  </p>
 
-With appreciation,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0;">
+    With appreciation,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>

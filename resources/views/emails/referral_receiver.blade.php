@@ -9,21 +9,36 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 20px 20px; font-size: 16px; color: #333333;">Dear {{ $otherName ?? '' }}
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear {{ $otherName ?? '' }}</p>
 
-You’ve just received a referral from . {{ $actorName ?? '' }}
+  <p style="margin: 0 0 12px 0;">
+    You’ve just received a referral from . {{ $actorName ?? '' }}
+  </p>
 
-<strong>Referral Prospect Details:</strong>
--Referral of :- {{ $referralOf ?? '' }}
+  <p style="margin: 0 0 12px 0;"><strong>Referral Prospect Details:</strong></p>
 
-This is your chance to connect, create value, and explore new opportunities.
+  <p style="margin: 0 0 12px 0;">
+    -Referral of :- {{ $referralOf ?? '' }}
+  </p>
 
-Once you take action, don’t forget to update your referral status and share the outcome on your dashboard.
+  <p style="margin: 0 0 12px 0;">
+    This is your chance to connect, create value, and explore new opportunities.
+  </p>
 
-Together, we grow stronger.
+  <p style="margin: 0 0 12px 0;">
+    Once you take action, don’t forget to update your referral status and share the outcome on your dashboard.
+  </p>
 
-Wishing you great success,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0 0 12px 0;">
+    Together, we grow stronger.
+  </p>
+
+  <p style="margin: 0;">
+    Wishing you great success,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>
@@ -37,4 +52,3 @@ Wishing you great success,
 </tr>
 </tbody>
 </table>
-{{ $otherName ?? '' }}

@@ -9,14 +9,22 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">Dear <strong>{{ $actorName ?? '' }}</strong>,
+<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
+  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
 
-Thank you for sharing your valuable testimonial on Unity. Your words reflect the true spirit of collaboration and will inspire peers across our community.
+  <p style="margin: 0 0 12px 0;">
+    Thank you for sharing your valuable testimonial on Unity. Your words reflect the true spirit of collaboration and will inspire peers across our community.
+  </p>
 
-Peers are partners in business and friends in life.
+  <p style="margin: 0 0 12px 0;">
+    Peers are partners in business and friends in life.
+  </p>
 
-Warm regards,
-<strong>Peers Global Team</strong></td>
+  <p style="margin: 0;">
+    Warm regards,<br />
+    <strong>Peers Global Team</strong>
+  </p>
+</td>
 </tr>
 <!-- FOOTER -->
 <tr>
