@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreBusinessDealRequest;
+use App\Events\ActivityCreated;
 use App\Models\Post;
 use App\Models\BusinessDeal;
 use App\Models\User;
@@ -147,6 +148,13 @@ class BusinessDealController extends BaseApiController
             }
 
             $this->createPostForBusinessDeal($businessDeal);
+
+            event(new ActivityCreated(
+                'Business Deal',
+                $businessDeal,
+                (string) $authUser->id,
+                $businessDeal->to_user_id ? (string) $businessDeal->to_user_id : null
+            ));
 
             return $this->success($businessDeal, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
