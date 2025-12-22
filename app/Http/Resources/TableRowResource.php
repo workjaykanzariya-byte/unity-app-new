@@ -12,6 +12,6 @@ class TableRowResource extends JsonResource
             return $this->resource->getAttributes();
         }
 
-        return (array) ($this->resource ?? []);
+        return [];
     }
 }
