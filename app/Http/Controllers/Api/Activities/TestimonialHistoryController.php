@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\TableRowResource;
 use App\Models\Testimonial;
+use App\Support\ActivityHistory\OtherUserNameResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class TestimonialHistoryController extends BaseApiController
 {
@@ -37,12 +39,23 @@ class TestimonialHistoryController extends BaseApiController
             $filter = 'given';
         }
 
-        $items = TableRowResource::collection(
-            $query
-                ->orderByDesc('created_at')
-                ->orderByDesc('id')
-                ->get()
-        );
+        $items = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $nameResolver = app(OtherUserNameResolver::class);
+
+        $otherUserIds = $items->map(fn (Testimonial $testimonial): ?string => $this->resolveOtherUserId($testimonial, $filter, $authUserId));
+        $nameMap = $nameResolver->mapNames($otherUserIds);
+
+        $items = $items->map(function (Testimonial $testimonial) use ($nameMap, $filter, $authUserId) {
+            $attributes = $testimonial->getAttributes();
+            $otherUserId = $this->resolveOtherUserId($testimonial, $filter, $authUserId);
+            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+
+            return $attributes;
+        });
 
         $response = [
             'items' => $items,
@@ -95,7 +108,12 @@ class TestimonialHistoryController extends BaseApiController
             return $this->error('Testimonial not found', 404);
         }
 
-        $response = TableRowResource::make($testimonial);
+        $nameResolver = app(OtherUserNameResolver::class);
+        $otherUserId = $this->resolveOtherUserId($testimonial, $filterUsed, $authUserId);
+        $nameMap = $nameResolver->mapNames(collect([$otherUserId]));
+
+        $response = $testimonial->getAttributes();
+        $response['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
         if ($debugMode) {
             $response = [
@@ -109,5 +127,22 @@ class TestimonialHistoryController extends BaseApiController
         }
 
         return $this->success($response);
+    }
+
+    private function resolveOtherUserId(Testimonial $testimonial, ?string $filter, string $authUserId): ?string
+    {
+        if ($filter === 'received') {
+            return $testimonial->from_user_id;
+        }
+
+        if ($filter === 'given') {
+            return $testimonial->to_user_id;
+        }
+
+        if ($testimonial->from_user_id === $authUserId) {
+            return $testimonial->to_user_id;
+        }
+
+        return $testimonial->from_user_id;
     }
 }

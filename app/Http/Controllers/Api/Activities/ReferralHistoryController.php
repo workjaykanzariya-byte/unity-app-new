@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\TableRowResource;
 use App\Models\Referral;
+use App\Support\ActivityHistory\OtherUserNameResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class ReferralHistoryController extends BaseApiController
 {
@@ -44,12 +46,23 @@ class ReferralHistoryController extends BaseApiController
             $filter = 'all';
         }
 
-        $items = TableRowResource::collection(
-            $query
-                ->orderByDesc('created_at')
-                ->orderByDesc('id')
-                ->get()
-        );
+        $items = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $nameResolver = app(OtherUserNameResolver::class);
+
+        $otherUserIds = $items->map(fn (Referral $referral): ?string => $this->resolveOtherUserId($referral, $filter, $authUserId));
+        $nameMap = $nameResolver->mapNames($otherUserIds);
+
+        $items = $items->map(function (Referral $referral) use ($nameMap, $filter, $authUserId) {
+            $attributes = $referral->getAttributes();
+            $otherUserId = $this->resolveOtherUserId($referral, $filter, $authUserId);
+            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+
+            return $attributes;
+        });
 
         $response = [
             'items' => $items,
@@ -64,5 +77,22 @@ class ReferralHistoryController extends BaseApiController
         }
 
         return $this->success($response);
+    }
+
+    private function resolveOtherUserId(Referral $referral, string $filter, string $authUserId): ?string
+    {
+        if ($filter === 'given') {
+            return $referral->to_user_id;
+        }
+
+        if ($filter === 'received') {
+            return $referral->from_user_id;
+        }
+
+        if ($referral->from_user_id === $authUserId) {
+            return $referral->to_user_id;
+        }
+
+        return $referral->from_user_id;
     }
 }

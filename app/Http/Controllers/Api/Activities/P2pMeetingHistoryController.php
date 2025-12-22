@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\TableRowResource;
 use App\Models\P2pMeeting;
+use App\Support\ActivityHistory\OtherUserNameResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class P2pMeetingHistoryController extends BaseApiController
 {
@@ -38,12 +40,23 @@ class P2pMeetingHistoryController extends BaseApiController
             $filter = 'given';
         }
 
-        $items = TableRowResource::collection(
-            $query
-                ->orderByDesc('created_at')
-                ->orderByDesc('id')
-                ->get()
-        );
+        $items = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $nameResolver = app(OtherUserNameResolver::class);
+
+        $otherUserIds = $items->map(fn (P2pMeeting $meeting): ?string => $this->resolveOtherUserId($meeting, $filter, $authUserId));
+        $nameMap = $nameResolver->mapNames($otherUserIds);
+
+        $items = $items->map(function (P2pMeeting $meeting) use ($nameMap, $filter, $authUserId) {
+            $attributes = $meeting->getAttributes();
+            $otherUserId = $this->resolveOtherUserId($meeting, $filter, $authUserId);
+            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+
+            return $attributes;
+        });
 
         $response = [
             'items' => $items,
@@ -58,5 +71,14 @@ class P2pMeetingHistoryController extends BaseApiController
         }
 
         return $this->success($response);
+    }
+
+    private function resolveOtherUserId(P2pMeeting $meeting, string $filter, string $authUserId): ?string
+    {
+        if ($filter === 'received') {
+            return $meeting->initiator_user_id;
+        }
+
+        return $meeting->peer_user_id;
     }
 }

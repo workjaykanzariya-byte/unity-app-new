@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Activities;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\TableRowResource;
 use App\Models\BusinessDeal;
+use App\Support\ActivityHistory\OtherUserNameResolver;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class BusinessDealHistoryController extends BaseApiController
 {
@@ -37,12 +39,23 @@ class BusinessDealHistoryController extends BaseApiController
             $filter = 'given';
         }
 
-        $items = TableRowResource::collection(
-            $query
-                ->orderByDesc('created_at')
-                ->orderByDesc('id')
-                ->get()
-        );
+        $items = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $nameResolver = app(OtherUserNameResolver::class);
+
+        $otherUserIds = $items->map(fn (BusinessDeal $deal): ?string => $this->resolveOtherUserId($deal, $filter, $authUserId));
+        $nameMap = $nameResolver->mapNames($otherUserIds);
+
+        $items = $items->map(function (BusinessDeal $deal) use ($nameMap, $filter, $authUserId) {
+            $attributes = $deal->getAttributes();
+            $otherUserId = $this->resolveOtherUserId($deal, $filter, $authUserId);
+            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+
+            return $attributes;
+        });
 
         $response = [
             'items' => $items,
@@ -94,7 +107,12 @@ class BusinessDealHistoryController extends BaseApiController
             return $this->error('Business deal not found', 404);
         }
 
-        $response = TableRowResource::make($businessDeal);
+        $nameResolver = app(OtherUserNameResolver::class);
+        $otherUserId = $this->resolveOtherUserId($businessDeal, $filterUsed, $authUserId);
+        $nameMap = $nameResolver->mapNames(collect([$otherUserId]));
+
+        $response = $businessDeal->getAttributes();
+        $response['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
         if ($debugMode) {
             $response = [
@@ -108,5 +126,22 @@ class BusinessDealHistoryController extends BaseApiController
         }
 
         return $this->success($response);
+    }
+
+    private function resolveOtherUserId(BusinessDeal $deal, ?string $filter, string $authUserId): ?string
+    {
+        if ($filter === 'received') {
+            return $deal->from_user_id;
+        }
+
+        if ($filter === 'given') {
+            return $deal->to_user_id;
+        }
+
+        if ($deal->from_user_id === $authUserId) {
+            return $deal->to_user_id;
+        }
+
+        return $deal->from_user_id;
     }
 }
