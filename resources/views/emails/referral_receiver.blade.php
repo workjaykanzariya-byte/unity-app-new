@@ -10,34 +10,15 @@
 <!-- BODY -->
 <tr>
 <td style="padding: 20px 20px; font-size: 16px; color: #333333;">
-  <p style="margin: 0 0 12px 0;">Dear {{ $otherName ?? '' }}</p>
-
-  <p style="margin: 0 0 12px 0;">
-    You’ve just received a referral from . {{ $actorName ?? '' }}
-  </p>
-
-  <p style="margin: 0 0 12px 0;"><strong>Referral Prospect Details:</strong></p>
-
-  <p style="margin: 0 0 12px 0;">
-    -Referral of :- {{ $referralOf ?? '' }}
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    This is your chance to connect, create value, and explore new opportunities.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Once you take action, don’t forget to update your referral status and share the outcome on your dashboard.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Together, we grow stronger.
-  </p>
-
-  <p style="margin: 0;">
-    Wishing you great success,<br />
-    <strong>Peers Global Team</strong>
-  </p>
+Dear {{ $otherName ?? '' }}<br /><br />
+You’ve just received a referral from . {{ $actorName ?? '' }}<br /><br />
+<strong>Referral Prospect Details:</strong><br />
+-Referral of :- {{ $referralOf ?? '' }}<br /><br />
+This is your chance to connect, create value, and explore new opportunities.<br /><br />
+Once you take action, don’t forget to update your referral status and share the outcome on your dashboard.<br /><br />
+Together, we grow stronger.<br /><br />
+Wishing you great success,<br />
+<strong>Peers Global Team</strong>
 </td>
 </tr>
 <!-- FOOTER -->

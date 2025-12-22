@@ -9,25 +9,13 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
-  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
-
-  <p style="margin: 0 0 12px 0;">
-    Your requirement for <strong>{{ $requirementSubject ?? '' }}</strong> has been successfully posted on Unity’s Public Timeline.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Peers can now view your post and respond to support your business needs.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Stay connected. Stay supported.
-  </p>
-
-  <p style="margin: 0;">
-    Warm regards,<br />
-    <strong>Peers Global Team</strong>
-  </p>
+<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">
+Dear <strong>{{ $actorName ?? '' }}</strong>,<br /><br />
+Your requirement for <strong>{{ $requirementSubject ?? '' }}</strong> has been successfully posted on Unity’s Public Timeline.<br /><br />
+Peers can now view your post and respond to support your business needs.<br /><br />
+Stay connected. Stay supported.<br /><br />
+Warm regards,<br />
+<strong>Peers Global Team</strong>
 </td>
 </tr>
 <!-- FOOTER -->

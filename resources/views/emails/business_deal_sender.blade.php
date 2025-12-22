@@ -9,25 +9,13 @@
 </tr>
 <!-- BODY -->
 <tr>
-<td style="padding: 20px 20px; font-size: 16px; color: #333333;">
-  <p style="margin: 0 0 12px 0;">Dear <strong>{{ $actorName ?? '' }}</strong>,</p>
-
-  <p style="margin: 0 0 12px 0;">
-    Congratulations on recording your business deal worth ₹<strong>{{ $dealAmountInr ?? '' }}</strong> on Unity!
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Your success reflects the power of collaboration and the value of being part of Peers Global.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Keep tracking your achievements and coins on Unity, and continue building momentum.
-  </p>
-
-  <p style="margin: 0;">
-    Cheers,<br />
-    <strong>Peers Global Team</strong>
-  </p>
+<td style="padding: 5px 10px 5px 10px; font-size: 16px; color: #333333;">
+Dear <strong>{{ $actorName ?? '' }}</strong>,<br /><br />
+Congratulations on recording your business deal worth ₹<strong>{{ $dealAmountInr ?? '' }}</strong> on Unity!<br /><br />
+Your success reflects the power of collaboration and the value of being part of Peers Global.<br /><br />
+Keep tracking your achievements and coins on Unity, and continue building momentum.<br /><br />
+Cheers,<br />
+<strong>Peers Global Team</strong>
 </td>
 </tr>
 <!-- FOOTER -->

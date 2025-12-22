@@ -10,29 +10,14 @@
 <!-- BODY -->
 <tr>
 <td style="padding: 20px 20px; font-size: 16px; color: #333333;">
-  <p style="margin: 0 0 12px 0;">Dear {{ $otherName ?? '' }}</p>
-
-  <p style="margin: 0 0 12px 0;">
-    Great news! You’ve just <strong>received a testimonial</strong> from {{ $actorName ?? '' }}.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Here’s what they shared about you:<br />
-    <em>"{{ $testimonialContent ?? '' }}"</em>
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    Testimonials are proof of the impact you’re creating in the community — keep shining and inspiring others.
-  </p>
-
-  <p style="margin: 0 0 12px 0;">
-    You can view and showcase this testimonial anytime from your Unity dashboard.
-  </p>
-
-  <p style="margin: 0;">
-    With appreciation,<br />
-    <strong>Peers Global Team</strong>
-  </p>
+Dear {{ $otherName ?? '' }}<br /><br />
+Great news! You’ve just <strong>received a testimonial</strong> from {{ $actorName ?? '' }}.<br /><br />
+Here’s what they shared about you:<br />
+<em>"{{ $testimonialContent ?? '' }}"</em><br /><br />
+Testimonials are proof of the impact you’re creating in the community — keep shining and inspiring others.<br /><br />
+You can view and showcase this testimonial anytime from your Unity dashboard.<br /><br />
+With appreciation,<br />
+<strong>Peers Global Team</strong>
 </td>
 </tr>
 <!-- FOOTER -->
