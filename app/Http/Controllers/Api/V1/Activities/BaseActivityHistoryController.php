@@ -22,7 +22,10 @@ abstract class BaseActivityHistoryController extends BaseApiController
     protected function applyNotDeletedConstraints(Builder $query, string $table): void
     {
         if (Schema::hasColumn($table, 'is_deleted')) {
-            $query->where('is_deleted', false);
+            $query->where(function (Builder $q): void {
+                $q->where('is_deleted', false)
+                    ->orWhereNull('is_deleted');
+            });
         }
 
         if (Schema::hasColumn($table, 'deleted_at')) {

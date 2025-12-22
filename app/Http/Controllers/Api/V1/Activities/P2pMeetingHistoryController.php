@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Activities;
 
 use App\Http\Resources\TableRowResource;
 use App\Models\P2pMeeting;
-use App\Support\ActivityHistory\HistoryPaginator;
 use Illuminate\Http\Request;
 
 class P2pMeetingHistoryController extends BaseActivityHistoryController
@@ -47,13 +46,10 @@ class P2pMeetingHistoryController extends BaseActivityHistoryController
             $query->orderByDesc('id');
         }
 
-        $paginator = $query->paginate($perPage);
-
-        $items = TableRowResource::collection($paginator->getCollection())->toArray($request);
+        $items = TableRowResource::collection($query->get())->toArray($request);
 
         return $this->success([
             'items' => $items,
-            'meta' => HistoryPaginator::meta($paginator),
         ]);
     }
 }

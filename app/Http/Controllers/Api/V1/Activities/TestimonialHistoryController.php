@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Activities;
 
 use App\Http\Resources\TableRowResource;
 use App\Models\Testimonial;
-use App\Support\ActivityHistory\HistoryPaginator;
 use Illuminate\Http\Request;
 
 class TestimonialHistoryController extends BaseActivityHistoryController
@@ -46,13 +45,10 @@ class TestimonialHistoryController extends BaseActivityHistoryController
             $query->orderByDesc('id');
         }
 
-        $paginator = $query->paginate($perPage);
-
-        $items = TableRowResource::collection($paginator->getCollection())->toArray($request);
+        $items = TableRowResource::collection($query->get())->toArray($request);
 
         return $this->success([
             'items' => $items,
-            'meta' => HistoryPaginator::meta($paginator),
         ]);
     }
 

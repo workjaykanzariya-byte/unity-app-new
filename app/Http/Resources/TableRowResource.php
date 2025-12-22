@@ -8,6 +8,10 @@ class TableRowResource extends JsonResource
 {
     public function toArray($request): array
     {
-        return $this->resource?->getAttributes() ?? [];
+        if (is_object($this->resource) && method_exists($this->resource, 'getAttributes')) {
+            return $this->resource->getAttributes();
+        }
+
+        return (array) ($this->resource ?? []);
     }
 }
