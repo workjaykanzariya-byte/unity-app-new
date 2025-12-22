@@ -49,13 +49,15 @@ class BusinessDealHistoryController extends BaseApiController
         $otherUserIds = $items->map(fn (BusinessDeal $deal): ?string => $this->resolveOtherUserId($deal, $authUserId));
         $nameMap = $nameResolver->mapNames($otherUserIds);
 
-        $items = $items->map(function (BusinessDeal $deal) use ($nameMap, $authUserId) {
-            $attributes = $deal->getAttributes();
-            $otherUserId = $this->resolveOtherUserId($deal, $authUserId);
-            $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
+        $items = TableRowResource::collection(
+            $items->map(function (BusinessDeal $deal) use ($nameMap, $authUserId) {
+                $attributes = $deal->getAttributes();
+                $otherUserId = $this->resolveOtherUserId($deal, $authUserId);
+                $attributes['other_user_name'] = $otherUserId ? ($nameMap[$otherUserId] ?? null) : null;
 
-            return $attributes;
-        });
+                return $attributes;
+            })
+        );
 
         $response = [
             'items' => $items,
