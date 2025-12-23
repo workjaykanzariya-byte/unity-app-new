@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'membership_status'   => $this->membership_status,
             'coins_balance'       => $this->coins_balance,
             'profile_photo_url'   => $this->profile_photo_url,
+            'business_type'       => $this->business_type,
             'last_login_at'       => $this->last_login_at,
             'created_at'          => $this->created_at,
             'updated_at'          => $this->updated_at,

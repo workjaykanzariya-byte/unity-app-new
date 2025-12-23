@@ -18,6 +18,7 @@ class UserProfileResource extends JsonResource
 
             'company_name'       => $this->company_name,
             'designation'        => $this->designation,
+            'business_type'      => $this->business_type,
 
             'about'              => $this->short_bio,
 
