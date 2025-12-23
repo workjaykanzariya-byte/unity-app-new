@@ -29,6 +29,7 @@ class MemberController extends BaseApiController
                 'updated_at',
                 'profile_photo_file_id',
                 'city_id',
+                'business_type',
             ])
             ->with('city:id,name');
 
@@ -58,7 +59,16 @@ class MemberController extends BaseApiController
             }
         }
 
-        $query->orderByDesc('created_at');
+        if ($request->has('business_type')) {
+            $query->where('business_type', $request->input('business_type'));
+        }
+
+        $authBusinessType = $request->user()->business_type;
+
+        $query->orderByRaw(
+            'CASE WHEN business_type = ? THEN 0 ELSE 1 END',
+            [$authBusinessType]
+        )->orderByDesc('created_at');
 
         $data = [
             'items' => UserResource::collection($query->get()),
