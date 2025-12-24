@@ -24,11 +24,26 @@ class AdminUsersController extends Controller
         'created_at',
         'updated_at',
     ];
+    protected array $booleanFields = [
+        'is_sponsored_member',
+    ];
 
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
-        $query = User::query();
+        $selectColumns = array_filter([
+            'id',
+            'first_name',
+            'last_name',
+            'display_name',
+            'email',
+            'membership_status',
+            'created_at',
+            'profile_photo_id',
+            'profile_photo_file_id',
+        ], static fn (string $column): bool => Schema::hasColumn('users', $column));
+
+        $query = User::query()->select($selectColumns);
         if (Schema::hasColumn('users', 'created_at')) {
             $query->orderByDesc('created_at');
         }
@@ -100,6 +115,8 @@ class AdminUsersController extends Controller
         foreach ($fields as $field) {
             if ($field === 'email') {
                 $rules[$field] = ['required', 'email'];
+            } elseif (in_array($field, $this->booleanFields, true)) {
+                $rules[$field] = ['sometimes', 'boolean'];
             } elseif (in_array($field, ['membership_expiry', 'dob', 'last_login_at', 'gdpr_deleted_at', 'anonymized_at'], true)) {
                 $rules[$field] = ['nullable', 'date'];
             } elseif (in_array($field, ['coins_balance', 'members_introduced_count', 'influencer_stars', 'experience_years'], true)) {
@@ -112,7 +129,13 @@ class AdminUsersController extends Controller
         $validated = $request->validate($rules);
 
         $casts = $user->getCasts();
-        foreach ($validated as $field => $value) {
+        foreach ($fields as $field) {
+            if (! array_key_exists($field, $validated)) {
+                continue;
+            }
+
+            $value = $validated[$field];
+
             if (($casts[$field] ?? null) === 'array') {
                 $validated[$field] = $value !== null && $value !== ''
                     ? array_values(array_filter(array_map('trim', explode(',', (string) $value))))
@@ -124,8 +147,22 @@ class AdminUsersController extends Controller
             }
         }
 
-        $user->fill($validated);
-        $user->save();
+        foreach ($this->booleanFields as $booleanField) {
+            if (! Schema::hasColumn('users', $booleanField)) {
+                continue;
+            }
+
+            $validated[$booleanField] = $request->has($booleanField)
+                ? (bool) $request->boolean($booleanField)
+                : ($user->{$booleanField} ?? false);
+        }
+
+        try {
+            $user->fill($validated);
+            $user->save();
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Could not update user. Please check required fields.');
+        }
 
         $canManageRoles = Auth::guard('admin')->user()?->adminRoles()->where('key', 'global_admin')->exists();
 

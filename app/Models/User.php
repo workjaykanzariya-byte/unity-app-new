@@ -94,6 +94,7 @@ class User extends Authenticatable
         'interests' => 'array',
         'social_links' => 'array',
         'coins_balance' => 'integer',
+        'is_sponsored_member' => 'boolean',
     ];
 
     public function getAuthPassword()
@@ -300,6 +301,17 @@ class User extends Authenticatable
     public function coverPhotoFile(): BelongsTo
     {
         return $this->belongsTo(File::class, 'cover_photo_file_id');
+    }
+
+    public function adminProfilePhotoUrl(): ?string
+    {
+        $fileId = $this->profile_photo_id ?? $this->profile_photo_file_id ?? null;
+
+        if (! $fileId) {
+            return null;
+        }
+
+        return url("/api/v1/files/{$fileId}");
     }
 
     public function getProfilePhotoUrlAttribute(): ?string
