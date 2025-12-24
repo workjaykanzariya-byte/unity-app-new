@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AdminAuthController extends Controller
@@ -42,9 +43,9 @@ class AdminAuthController extends Controller
         }
 
         $otpRecord = AdminLoginOtp::firstOrNew(['email' => $email]);
-        $now = Carbon::now();
+        $now = now(config('app.timezone'));
 
-        if ($otpRecord->last_sent_at && Carbon::parse($otpRecord->last_sent_at)->diffInSeconds($now) < 60) {
+        if ($otpRecord->last_sent_at && Carbon::parse($otpRecord->last_sent_at, config('app.timezone'))->diffInSeconds($now) < 60) {
             return back()->withErrors([
                 'email' => 'OTP already sent recently. Please check your email.',
             ]);
@@ -54,8 +55,8 @@ class AdminAuthController extends Controller
 
         $otpRecord->email = $email;
         $otpRecord->otp_hash = Hash::make($otp);
-        $otpRecord->expires_at = now()->addMinutes(10);
-        $otpRecord->last_sent_at = now();
+        $otpRecord->expires_at = $now->copy()->addMinutes(10);
+        $otpRecord->last_sent_at = $now;
         $otpRecord->attempts = 0;
         $otpRecord->save();
 
@@ -83,7 +84,8 @@ class AdminAuthController extends Controller
             'otp' => ['required', 'digits:6'],
         ]);
 
-        $otpRecord = AdminLoginOtp::where('email', $data['email'])->first();
+        $email = $data['email'];
+        $otpRecord = AdminLoginOtp::where('email', $email)->first();
 
         if (! $otpRecord) {
             return back()->withErrors([
@@ -91,15 +93,26 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        $now = Carbon::now();
+        $now = now(config('app.timezone'));
+        $expiresAt = $otpRecord->expires_at instanceof Carbon
+            ? $otpRecord->expires_at
+            : Carbon::parse($otpRecord->expires_at, config('app.timezone'));
 
-        if ($otpRecord->attempts >= 5 && $otpRecord->expires_at && $otpRecord->expires_at->isFuture()) {
+        Log::info('ADMIN OTP VERIFY TIME', [
+            'email' => $email,
+            'now' => $now->toDateTimeString(),
+            'expires_at_raw' => $otpRecord->expires_at,
+            'expires_at_parsed' => $expiresAt->toDateTimeString(),
+            'app_tz' => config('app.timezone'),
+        ]);
+
+        if ($otpRecord->attempts >= 5 && $expiresAt->gt($now)) {
             return back()->withErrors([
                 'otp' => 'Too many attempts. Please request a new OTP.',
             ]);
         }
 
-        if ($otpRecord->expires_at && Carbon::parse($otpRecord->expires_at)->isPast()) {
+        if ($expiresAt->lte($now)) {
             return back()->withErrors([
                 'otp' => 'OTP expired. Please request again.',
             ]);
