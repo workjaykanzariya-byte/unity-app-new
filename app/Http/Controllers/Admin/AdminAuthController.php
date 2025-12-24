@@ -54,8 +54,8 @@ class AdminAuthController extends Controller
 
         $otpRecord->email = $email;
         $otpRecord->otp_hash = Hash::make($otp);
-        $otpRecord->expires_at = Carbon::now()->addMinutes(10);
-        $otpRecord->last_sent_at = Carbon::now();
+        $otpRecord->expires_at = now()->addMinutes(10);
+        $otpRecord->last_sent_at = now();
         $otpRecord->attempts = 0;
         $otpRecord->save();
 
@@ -87,7 +87,7 @@ class AdminAuthController extends Controller
 
         if (! $otpRecord) {
             return back()->withErrors([
-                'otp' => 'Invalid OTP',
+                'otp' => 'OTP not found. Please request again.',
             ]);
         }
 
@@ -99,11 +99,9 @@ class AdminAuthController extends Controller
             ]);
         }
 
-        if ($otpRecord->expires_at && $otpRecord->expires_at->isPast()) {
-            $otpRecord->delete();
-
+        if ($otpRecord->expires_at && Carbon::parse($otpRecord->expires_at)->isPast()) {
             return back()->withErrors([
-                'otp' => 'OTP expired. Please request a new one.',
+                'otp' => 'OTP expired. Please request again.',
             ]);
         }
 

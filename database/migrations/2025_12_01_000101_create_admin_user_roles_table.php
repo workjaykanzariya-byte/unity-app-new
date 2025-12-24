@@ -12,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('admin_user_roles')) {
+            return;
+        }
+
         Schema::create('admin_user_roles', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
             $table->uuid('user_id');
