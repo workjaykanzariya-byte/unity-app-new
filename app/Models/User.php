@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -259,6 +260,11 @@ class User extends Authenticatable
     public function uploadedFiles(): HasMany
     {
         return $this->hasMany(FileModel::class, 'uploader_user_id');
+    }
+
+    public function adminRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'admin_user_roles', 'user_id', 'role_id');
     }
 
     public function adminAuditLogs(): HasMany
