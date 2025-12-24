@@ -44,7 +44,7 @@ class AdminAuthController extends Controller
         $otpRecord = AdminLoginOtp::firstOrNew(['email' => $email]);
         $now = Carbon::now();
 
-        if ($otpRecord->last_sent_at && $otpRecord->last_sent_at->diffInSeconds($now) < 60) {
+        if ($otpRecord->last_sent_at && Carbon::parse($otpRecord->last_sent_at)->diffInSeconds($now) < 60) {
             return back()->withErrors([
                 'email' => 'OTP already sent recently. Please check your email.',
             ]);
@@ -52,9 +52,10 @@ class AdminAuthController extends Controller
 
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
+        $otpRecord->email = $email;
         $otpRecord->otp_hash = Hash::make($otp);
-        $otpRecord->expires_at = $now->copy()->addMinutes(10);
-        $otpRecord->last_sent_at = $now;
+        $otpRecord->expires_at = Carbon::now()->addMinutes(10);
+        $otpRecord->last_sent_at = Carbon::now();
         $otpRecord->attempts = 0;
         $otpRecord->save();
 

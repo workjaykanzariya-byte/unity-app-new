@@ -12,14 +12,17 @@ return new class extends Migration
      */
     public function up(): void
     {
+        DB::statement('CREATE EXTENSION IF NOT EXISTS pgcrypto;');
+
         Schema::create('admin_login_otps', function (Blueprint $table) {
             $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
             $table->string('email', 255)->unique();
             $table->string('otp_hash');
             $table->timestampTz('expires_at')->index();
             $table->timestampTz('last_sent_at')->nullable();
-            $table->unsignedInteger('attempts')->default(0);
+            $table->integer('attempts')->default(0);
             $table->timestampTz('created_at')->useCurrent();
+            $table->timestampTz('updated_at')->nullable();
         });
     }
 

@@ -11,11 +11,11 @@ class AdminLoginOtp extends Model
 
     protected $table = 'admin_login_otps';
 
-    public $timestamps = false;
-
-    protected $keyType = 'string';
+    protected $primaryKey = 'id';
 
     public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'email',
@@ -28,5 +28,6 @@ class AdminLoginOtp extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'last_sent_at' => 'datetime',
+        'attempts' => 'integer',
     ];
 }
