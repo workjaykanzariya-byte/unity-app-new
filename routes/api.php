@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
+use App\Http\Controllers\Api\V1\CoinHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -104,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/activities/my/coins-ledger', [ActivityController::class, 'myCoinsLedger']);
         Route::get('/me/coins', [CoinsController::class, 'balance']);
         Route::get('/me/coins/ledger', [CoinsController::class, 'ledger']);
+        Route::get('/coins/history', [CoinHistoryController::class, 'index']);
 
         Route::prefix('activities')->group(function () {
             // P2P Meetings
