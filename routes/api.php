@@ -105,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/activities/my/coins-ledger', [ActivityController::class, 'myCoinsLedger']);
         Route::get('/me/coins', [CoinsController::class, 'balance']);
         Route::get('/me/coins/ledger', [CoinsController::class, 'ledger']);
+        // If routes are cached, run `php artisan route:clear` and `php artisan optimize:clear` to load this route.
         Route::get('/coins/history', [CoinHistoryController::class, 'index']);
 
         Route::prefix('activities')->group(function () {
