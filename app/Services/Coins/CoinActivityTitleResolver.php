@@ -21,12 +21,6 @@ class CoinActivityTitleResolver
     {
         $titles = [];
 
-        foreach ($activities as $activity) {
-            if (! empty($activity->description)) {
-                $titles[$activity->id] = $activity->description;
-            }
-        }
-
         $grouped = $activities->groupBy('type');
 
         foreach ($grouped as $type => $activityGroup) {
