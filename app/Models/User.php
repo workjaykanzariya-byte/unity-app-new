@@ -95,6 +95,17 @@ class User extends Authenticatable
         'coins_balance' => 'integer',
     ];
 
+    public function adminProfilePhotoUrl(): ?string
+    {
+        $fileId = $this->profile_photo_id ?? $this->profile_photo_file_id ?? null;
+
+        if (! $fileId) {
+            return null;
+        }
+
+        return url("/api/v1/files/{$fileId}");
+    }
+
     public function getAuthPassword()
     {
         return $this->password_hash;
