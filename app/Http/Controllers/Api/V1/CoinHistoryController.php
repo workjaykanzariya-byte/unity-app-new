@@ -29,6 +29,7 @@ class CoinHistoryController extends BaseApiController
             ])],
             'from_date' => ['sometimes', 'date_format:Y-m-d'],
             'to_date' => ['sometimes', 'date_format:Y-m-d'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:5000'],
         ]);
 
         if ($validator->fails()) {
@@ -39,6 +40,7 @@ class CoinHistoryController extends BaseApiController
         $user = $request->user();
 
         $perPage = (int) ($data['per_page'] ?? 20);
+        $limit = (int) ($data['limit'] ?? 2000);
 
         $query = CoinLedger::query()
             ->where('user_id', $user->id);
@@ -59,11 +61,10 @@ class CoinHistoryController extends BaseApiController
             $query->where('created_at', '<=', $toDate);
         }
 
-        $paginator = $query
+        $ledgerItems = $query
             ->orderByDesc('created_at')
-            ->paginate($perPage);
-
-        $ledgerItems = collect($paginator->items());
+            ->limit($limit)
+            ->get();
 
         $activityMap = $this->loadActivities($ledgerItems);
         $activityTitles = $titleResolver->resolveTitles($activityMap->values());
@@ -98,12 +99,6 @@ class CoinHistoryController extends BaseApiController
         return $this->success([
             'current_coins_balance' => (int) $user->coins_balance,
             'items' => CoinHistoryItemResource::collection($transformed),
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
         ], 'Coins history fetched successfully');
     }
 
