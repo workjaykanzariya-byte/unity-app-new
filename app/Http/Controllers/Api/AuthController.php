@@ -48,7 +48,7 @@ class AuthController extends BaseApiController
 
         $user->save();
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('mobile-app', ['*'])->plainTextToken;
 
         return response()->json([
             'success' => true,
@@ -88,7 +88,7 @@ class AuthController extends BaseApiController
         }
 
         // Create Sanctum token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('mobile-app', ['*'])->plainTextToken;
 
         // If you already have a UserResource, you can use it here instead of returning $user directly
         return response()->json([
@@ -195,7 +195,7 @@ class AuthController extends BaseApiController
         $user->save();
         $user->refresh();
 
-        $token = $user->createToken('api')->plainTextToken;
+        $token = $user->createToken('mobile-app', ['*'])->plainTextToken;
 
         return $this->success([
             'user' => new UserResource($user->load('city')),

@@ -50,6 +50,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
         Route::patch('/profile', [ProfileController::class, 'update']);
+        Route::get('/debug-auth', function () {
+            return [
+                'user' => auth()->user(),
+                'token' => request()->bearerToken(),
+            ];
+        })->middleware('auth:sanctum');
 
         // Members & connections
         // Specific route FIRST

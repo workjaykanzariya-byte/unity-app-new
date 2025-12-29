@@ -12,7 +12,6 @@ use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class PostController extends BaseApiController
 {
@@ -73,7 +72,7 @@ class PostController extends BaseApiController
 
     public function store(StorePostRequest $request)
     {
-        $user = Auth::user();
+        $user = auth()->user();
 
         $data = $request->validate([
             'content_text'   => ['required', 'string', 'max:5000'],
