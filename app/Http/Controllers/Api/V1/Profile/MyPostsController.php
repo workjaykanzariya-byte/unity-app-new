@@ -15,10 +15,7 @@ class MyPostsController extends BaseApiController
     {
         $user = $request->user();
 
-        $perPage = (int) $request->input('per_page', 12);
-        $perPage = max(1, min($perPage, 50));
-
-        $paginator = Post::query()
+        $posts = Post::query()
             ->where('user_id', $user->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
@@ -36,16 +33,10 @@ class MyPostsController extends BaseApiController
                 'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
             ])
             ->orderByDesc('created_at')
-            ->paginate($perPage);
+            ->get();
 
         return $this->success([
-            'items' => PostResource::collection($paginator->getCollection()),
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'last_page' => $paginator->lastPage(),
-            ],
+            'items' => PostResource::collection($posts),
         ]);
     }
 
@@ -67,22 +58,13 @@ class MyPostsController extends BaseApiController
             return $this->error('Forbidden', 403);
         }
 
-        $perPage = (int) $request->input('per_page', 20);
-        $perPage = max(1, min($perPage, 50));
-
-        $paginator = $post->likes()
+        $likes = $post->likes()
             ->with('user:id,display_name,profile_photo_file_id')
             ->orderByDesc('created_at')
-            ->paginate($perPage);
+            ->get();
 
         return $this->success([
-            'items' => PostLikeResource::collection($paginator->getCollection()),
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'last_page' => $paginator->lastPage(),
-            ],
+            'items' => PostLikeResource::collection($likes),
         ]);
     }
 }
