@@ -31,9 +31,9 @@ class PostController extends BaseApiController
         // Do NOT filter by moderation status so that newly created posts appear immediately.
         $query->where('visibility', 'public');
 
-        $paginator = $query->paginate(20);
+        $posts = $query->get();
 
-        $items = $paginator->getCollection()->map(function (Post $post) {
+        $items = $posts->map(function (Post $post) {
             return [
                 'id'                => $post->id,
                 'content_text'      => $post->content_text,
@@ -60,15 +60,7 @@ class PostController extends BaseApiController
             ];
         });
 
-        return $this->success([
-            'items' => $items,
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'last_page' => $paginator->lastPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-            ],
-        ]);
+        return $this->success(['items' => $items]);
     }
 
     public function store(StorePostRequest $request)
