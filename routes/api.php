@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
+use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -90,6 +91,8 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/posts/{id}/comments', [PostController::class, 'storeComment']);
         Route::get('/posts/{id}/comments', [PostController::class, 'listComments']);
+        Route::get('/posts/{post}/likes', [MyPostsController::class, 'likes']);
+        Route::get('/profile/posts', [MyPostsController::class, 'index']);
 
         // Events
         Route::get('/events', [EventController::class, 'index']);

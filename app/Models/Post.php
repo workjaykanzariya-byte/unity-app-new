@@ -71,4 +71,28 @@ class Post extends Model
     {
         return $this->hasMany(PostLike::class);
     }
+
+    public function getMediaItemsAttribute(): array
+    {
+        return collect($this->media ?? [])
+            ->map(function ($item) {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $fileId = $item['file_id'] ?? $item['id'] ?? null;
+
+                return [
+                    'id' => $fileId,
+                    'file_id' => $fileId,
+                    'type' => $item['type'] ?? null,
+                    'url' => $fileId
+                        ? url("/api/v1/files/{$fileId}")
+                        : null,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
 }
