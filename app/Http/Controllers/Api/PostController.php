@@ -60,7 +60,10 @@ class PostController extends BaseApiController
             ];
         });
 
-        return $this->success(['items' => $items]);
+        return $this->success([
+            'items' => $items,
+            'total' => $items->count(),
+        ]);
     }
 
     public function store(StorePostRequest $request)
