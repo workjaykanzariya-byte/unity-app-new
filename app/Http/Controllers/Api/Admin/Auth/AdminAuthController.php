@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class AdminAuthController extends Controller
@@ -20,7 +22,7 @@ class AdminAuthController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        $email = strtolower($validated['email']);
+        $email = strtolower(trim($validated['email']));
         $adminUser = $this->getAdminUserOrFail($email);
 
         $existingOtp = AdminLoginOtp::where('email', $email)->first();
@@ -32,15 +34,30 @@ class AdminAuthController extends Controller
 
         $otp = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
 
-        AdminLoginOtp::updateOrCreate(
-            ['email' => $email],
-            [
-                'otp_hash' => Hash::make($otp),
-                'expires_at' => now()->addMinutes(10),
-                'last_sent_at' => now(),
-                'attempts' => 0,
-            ]
-        );
+        $otpRow = AdminLoginOtp::firstOrNew(['email' => $email]);
+
+        if (!$otpRow->exists) {
+            $otpRow->id = (string) Str::uuid();
+        }
+
+        $otpRow->otp_hash = Hash::make($otp);
+        $otpRow->expires_at = now()->addMinutes(10);
+        $otpRow->last_sent_at = now();
+        $otpRow->attempts = 0;
+
+        try {
+            $otpRow->save();
+            Log::info('Admin OTP saved', ['email' => $email, 'expires_at' => $otpRow->expires_at]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to save admin OTP', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Could not send OTP, please try again.',
+            ], 500);
+        }
 
         Mail::to($adminUser->email)->send(new AdminOtpMail($otp));
 
@@ -56,20 +73,22 @@ class AdminAuthController extends Controller
             'otp' => ['required', 'digits:4'],
         ]);
 
-        $email = strtolower($validated['email']);
+        $email = strtolower(trim($validated['email']));
         $otpInput = $validated['otp'];
 
         $adminUser = $this->getAdminUserOrFail($email);
         $otpRecord = AdminLoginOtp::where('email', $email)->first();
 
         if (!$otpRecord) {
+            Log::warning('Admin OTP verification failed: not found', ['email' => $email]);
             return response()->json([
-                'message' => 'OTP not found. Please request a new one.',
-            ], 404);
+                'message' => 'OTP not found, please request again.',
+            ], 422);
         }
 
         if ($otpRecord->expires_at && $otpRecord->expires_at->isPast()) {
             $otpRecord->delete();
+            Log::warning('Admin OTP verification failed: expired', ['email' => $email]);
 
             return response()->json([
                 'message' => 'OTP expired. Please request a new one.',
@@ -77,6 +96,7 @@ class AdminAuthController extends Controller
         }
 
         if ($otpRecord->attempts >= 5) {
+            Log::warning('Admin OTP verification failed: too many attempts', ['email' => $email]);
             return response()->json([
                 'message' => 'Too many attempts. Please request a new OTP.',
             ], 429);
@@ -84,9 +104,10 @@ class AdminAuthController extends Controller
 
         if (!Hash::check($otpInput, $otpRecord->otp_hash)) {
             $otpRecord->increment('attempts');
+            Log::warning('Admin OTP verification failed: invalid code', ['email' => $email]);
 
             return response()->json([
-                'message' => 'Invalid OTP. Please try again.',
+                'message' => 'OTP invalid. Please try again.',
             ], 422);
         }
 
