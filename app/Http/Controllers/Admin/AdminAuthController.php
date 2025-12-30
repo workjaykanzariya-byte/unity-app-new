@@ -70,7 +70,6 @@ class AdminAuthController extends Controller
             [
                 'otp_hash' => Hash::make($otp),
                 'expires_at' => now()->addMinutes(5),
-                'used_at' => null,
                 'last_sent_at' => now(),
             ]
         );
@@ -104,7 +103,6 @@ class AdminAuthController extends Controller
         }
 
         $otpRecord = AdminLoginOtp::where('email', $email)
-            ->whereNull('used_at')
             ->orderByDesc('expires_at')
             ->first();
 
@@ -133,7 +131,8 @@ class AdminAuthController extends Controller
         }
 
         $otpRecord->forceFill([
-            'used_at' => now(),
+            'otp_hash' => null,
+            'expires_at' => now(),
         ])->save();
 
         $user = User::where('email', $email)->first();
