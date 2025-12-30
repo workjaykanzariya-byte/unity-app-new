@@ -14,10 +14,16 @@ class AdminLoginOtp extends Model
         'otp_hash',
         'expires_at',
         'last_sent_at',
+        'attempts',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'last_sent_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'attempts' => 'integer',
     ];
 }

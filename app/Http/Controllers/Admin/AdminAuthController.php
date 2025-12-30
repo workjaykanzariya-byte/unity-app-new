@@ -64,18 +64,24 @@ class AdminAuthController extends Controller
 
         Cache::put($cacheKey, $requestAttempts + 1, 300);
 
-        $otp = (string) random_int(1000, 9999);
         $now = Carbon::now('UTC');
         $expiresAt = $now->copy()->addMinutes(5);
+        $otp = (string) random_int(1000, 9999);
 
-        AdminLoginOtp::updateOrCreate(
-            ['email' => $email],
-            [
-                'otp_hash' => Hash::make($otp),
-                'expires_at' => $expiresAt,
-                'last_sent_at' => $now,
-            ]
-        );
+        AdminLoginOtp::where('email', $email)
+            ->where('created_at', '<', $now->copy()->subDay())
+            ->delete();
+
+        AdminLoginOtp::create([
+            'id' => (string) Str::uuid(),
+            'email' => $email,
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => $expiresAt,
+            'last_sent_at' => $now,
+            'attempts' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         Mail::to($email)->send(new AdminLoginOtpMail($otp));
         Log::info("ADMIN OTP for {$email}: {$otp} (expires UTC: {$expiresAt})");
@@ -107,7 +113,7 @@ class AdminAuthController extends Controller
         }
 
         $otpRecord = AdminLoginOtp::where('email', $email)
-            ->orderByDesc('expires_at')
+            ->orderByDesc('created_at')
             ->first();
 
         if (! $otpRecord) {
@@ -137,6 +143,7 @@ class AdminAuthController extends Controller
         $otpRecord->forceFill([
             'otp_hash' => null,
             'expires_at' => $now,
+            'updated_at' => $now,
         ])->save();
 
         $user = User::where('email', $email)->first();
