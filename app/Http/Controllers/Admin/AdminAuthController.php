@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class AdminAuthController extends Controller
@@ -64,18 +65,20 @@ class AdminAuthController extends Controller
         Cache::put($cacheKey, $requestAttempts + 1, 300);
 
         $otp = (string) random_int(1000, 9999);
+        $now = Carbon::now('UTC');
+        $expiresAt = $now->copy()->addMinutes(5);
 
         AdminLoginOtp::updateOrCreate(
             ['email' => $email],
             [
                 'otp_hash' => Hash::make($otp),
-                'expires_at' => now()->addMinutes(5),
-                'last_sent_at' => now(),
+                'expires_at' => $expiresAt,
+                'last_sent_at' => $now,
             ]
         );
 
         Mail::to($email)->send(new AdminLoginOtpMail($otp));
-        Log::info("ADMIN OTP for {$email}: {$otp}");
+        Log::info("ADMIN OTP for {$email}: {$otp} (expires UTC: {$expiresAt})");
 
         return back()
             ->with('status', 'OTP sent to your email.')
@@ -92,6 +95,7 @@ class AdminAuthController extends Controller
 
         $email = $validated['email'];
         $otp = $validated['otp'];
+        $now = Carbon::now('UTC');
 
         $cacheKey = 'admin_otp_verify:' . Str::lower($email);
         $verifyAttempts = Cache::get($cacheKey, 0);
@@ -114,7 +118,7 @@ class AdminAuthController extends Controller
             ])->withInput();
         }
 
-        if ($otpRecord->expires_at->isPast()) {
+        if ($otpRecord->expires_at->lt($now)) {
             Cache::put($cacheKey, $verifyAttempts + 1, 300);
 
             return back()->withErrors([
@@ -132,7 +136,7 @@ class AdminAuthController extends Controller
 
         $otpRecord->forceFill([
             'otp_hash' => null,
-            'expires_at' => now(),
+            'expires_at' => $now,
         ])->save();
 
         $user = User::where('email', $email)->first();
