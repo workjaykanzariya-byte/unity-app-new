@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AdminOtp;
+use App\Mail\AdminLoginOtpMail;
+use App\Models\AdminLoginOtp;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -62,15 +65,18 @@ class AdminAuthController extends Controller
 
         $otp = (string) random_int(1000, 9999);
 
-        AdminOtp::create([
-            'email' => $email,
-            'otp' => Hash::make($otp),
-            'expires_at' => now()->addMinutes(5),
-            'created_at' => now(),
-        ]);
+        AdminLoginOtp::updateOrCreate(
+            ['email' => $email],
+            [
+                'otp_hash' => Hash::make($otp),
+                'expires_at' => now()->addMinutes(5),
+                'used_at' => null,
+                'last_sent_at' => now(),
+            ]
+        );
 
-        // TODO: Send the OTP via email integration. This is stubbed for now.
-        // Mail::to($email)->send(new AdminOtpMail($otp));
+        Mail::to($email)->send(new AdminLoginOtpMail($otp));
+        Log::info("ADMIN OTP for {$email}: {$otp}");
 
         return back()
             ->with('status', 'OTP sent to your email.')
@@ -97,16 +103,16 @@ class AdminAuthController extends Controller
             ])->withInput();
         }
 
-        $otpRecord = AdminOtp::where('email', $email)
+        $otpRecord = AdminLoginOtp::where('email', $email)
             ->whereNull('used_at')
-            ->orderByDesc('created_at')
+            ->orderByDesc('expires_at')
             ->first();
 
         if (! $otpRecord) {
             Cache::put($cacheKey, $verifyAttempts + 1, 300);
 
             return back()->withErrors([
-                'otp' => 'Invalid OTP.',
+                'otp' => 'OTP not requested.',
             ])->withInput();
         }
 
@@ -118,7 +124,7 @@ class AdminAuthController extends Controller
             ])->withInput();
         }
 
-        if (! Hash::check($otp, $otpRecord->otp)) {
+        if (! Hash::check($otp, $otpRecord->otp_hash)) {
             Cache::put($cacheKey, $verifyAttempts + 1, 300);
 
             return back()->withErrors([
