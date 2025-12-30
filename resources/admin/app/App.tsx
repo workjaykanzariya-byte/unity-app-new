@@ -29,84 +29,86 @@ const activities = [
 
 const App: React.FC<Props> = ({ admin, onLogout }) => {
     return (
-        <div className="dashboard-shell">
-            <div className="top-bar">
-                <div className="brand">
-                    <div className="brand-circle">PG</div>
-                    <div className="brand-text">
-                        <span>Peers Global Unity</span>
-                        <span>Admin Dashboard</span>
-                    </div>
-                </div>
-                <div className="user">
-                    <div>
-                        <div style={{ fontWeight: 700 }}>
-                            {admin.name || admin.email}
+        <div className="min-h-screen relative flex justify-center bg-slate-50">
+            <div className="dashboard-shell py-12 px-4 sm:px-8">
+                <div className="top-bar">
+                    <div className="brand">
+                        <div className="brand-circle">PG</div>
+                        <div className="brand-text">
+                            <span>Peers Global Unity</span>
+                            <span>Admin Dashboard</span>
                         </div>
-                        <div className="pill">Verified OTP session</div>
                     </div>
-                    <button className="logout-btn" onClick={onLogout}>
-                        Logout
-                    </button>
-                </div>
-            </div>
-
-            <div className="stat-grid">
-                {stats.map((stat) => (
-                    <div key={stat.label} className="stat-card">
-                        <h3>{stat.label}</h3>
-                        <div className="value">{stat.value}</div>
-                        <div className="trend">▲ {stat.trend}</div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="panels">
-                <div className="panel">
-                    <h2>Recent Members</h2>
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Circle</th>
-                                <th>Status</th>
-                                <th>Coins</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {members.map((member) => (
-                                <tr key={member.name}>
-                                    <td>{member.name}</td>
-                                    <td>{member.circle}</td>
-                                    <td>
-                                        <span
-                                            className={`pill ${
-                                                member.status === 'Active'
-                                                    ? 'success'
-                                                    : member.status === 'Invited'
-                                                        ? 'warning'
-                                                        : 'muted'
-                                            }`}
-                                        >
-                                            {member.status}
-                                        </span>
-                                    </td>
-                                    <td>{member.coins.toLocaleString()}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="panel">
-                    <h2>Latest Activity</h2>
-                    <div className="activity-list">
-                        {activities.map((item) => (
-                            <div key={item.title + item.time} className="activity">
-                                <strong>{item.title}</strong>
-                                <div>{item.by}</div>
-                                <small>{item.time}</small>
+                    <div className="user">
+                        <div>
+                            <div style={{ fontWeight: 700 }}>
+                                {admin.name || admin.email}
                             </div>
-                        ))}
+                            <div className="pill">Verified OTP session</div>
+                        </div>
+                        <button className="logout-btn" onClick={onLogout}>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+
+                <div className="stat-grid">
+                    {stats.map((stat) => (
+                        <div key={stat.label} className="stat-card">
+                            <h3>{stat.label}</h3>
+                            <div className="value">{stat.value}</div>
+                            <div className="trend">▲ {stat.trend}</div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="panels">
+                    <div className="panel">
+                        <h2>Recent Members</h2>
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Circle</th>
+                                    <th>Status</th>
+                                    <th>Coins</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {members.map((member) => (
+                                    <tr key={member.name}>
+                                        <td>{member.name}</td>
+                                        <td>{member.circle}</td>
+                                        <td>
+                                            <span
+                                                className={`pill ${
+                                                    member.status === 'Active'
+                                                        ? 'success'
+                                                        : member.status === 'Invited'
+                                                            ? 'warning'
+                                                            : 'muted'
+                                                }`}
+                                            >
+                                                {member.status}
+                                            </span>
+                                        </td>
+                                        <td>{member.coins.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="panel">
+                        <h2>Latest Activity</h2>
+                        <div className="activity-list">
+                            {activities.map((item) => (
+                                <div key={item.title + item.time} className="activity">
+                                    <strong>{item.title}</strong>
+                                    <div>{item.by}</div>
+                                    <small>{item.time}</small>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

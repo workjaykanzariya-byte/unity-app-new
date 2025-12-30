@@ -1,33 +1,44 @@
+@import "tailwindcss";
+
 :root {
     color-scheme: light;
-    --bg: #0b1224;
     --card: #0f172a;
     --muted: #cbd5e1;
-    --accent: #60a5fa;
-    --accent-2: #a78bfa;
-    --border: #1f2937;
+    --accent: #2563eb;
+    --accent-2: #7c3aed;
+    --border: #e2e8f0;
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    margin: 0;
-    background: radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.08), transparent 25%),
-    radial-gradient(circle at 80% 0%, rgba(167, 139, 250, 0.08), transparent 20%),
-    var(--bg);
-    color: #e2e8f0;
+    overflow-x: hidden;
+    background: #fff;
+    color: #0f172a;
 }
 
-#admin-app {
+#admin-root {
+    height: 100%;
     min-height: 100vh;
+}
+
+svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.bg-svg svg {
+    width: 100%;
+    height: 100%;
+    max-width: none;
 }
 
 .admin-shell {
@@ -36,6 +47,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 32px 16px 48px;
+    background: #f8fafc;
 }
 
 .auth-container {
@@ -54,7 +66,7 @@ body {
     width: 44px;
     height: 44px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     display: grid;
     place-items: center;
     font-weight: 800;
@@ -70,32 +82,32 @@ body {
 
 .brand-text span:first-child {
     font-weight: 800;
-    color: #fff;
+    color: #0f172a;
 }
 
 .brand-text span:last-child {
-    color: #94a3b8;
+    color: #475569;
     font-size: 13px;
 }
 
 .auth-card,
 .panel {
-    background: #0b1530;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.06);
     border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 20px 70px rgba(15, 23, 42, 0.08);
 }
 
 .auth-card h1 {
     margin: 0 0 8px;
     font-size: 24px;
-    color: #fff;
+    color: #0f172a;
 }
 
 .auth-card p {
     margin: 0 0 24px;
-    color: #94a3b8;
+    color: #475569;
     line-height: 1.6;
 }
 
@@ -107,7 +119,7 @@ body {
 }
 
 .field label {
-    color: #e5e7eb;
+    color: #0f172a;
     font-weight: 600;
 }
 
@@ -115,17 +127,17 @@ body {
     width: 100%;
     padding: 14px 14px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.02);
-    color: #e2e8f0;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #0f172a;
     font-size: 15px;
     outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .input:focus {
-    border-color: rgba(96, 165, 250, 0.8);
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+    border-color: rgba(37, 99, 235, 0.9);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .btn {
@@ -139,12 +151,12 @@ body {
     font-size: 15px;
     cursor: pointer;
     transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
-    box-shadow: 0 18px 45px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 18px 45px rgba(59, 130, 246, 0.3);
 }
 
 .btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 24px 55px rgba(59, 130, 246, 0.55);
+    box-shadow: 0 24px 55px rgba(59, 130, 246, 0.4);
 }
 
 .btn:disabled {
@@ -178,7 +190,7 @@ body {
 }
 
 .link:hover {
-    color: #93c5fd;
+    color: #1d4ed8;
 }
 
 .dashboard-shell {
@@ -197,22 +209,22 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #e2e8f0;
+    color: #0f172a;
 }
 
 .pill {
     padding: 6px 10px;
     border-radius: 9999px;
-    background: rgba(96, 165, 250, 0.12);
-    color: #bfdbfe;
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
     font-size: 13px;
     font-weight: 600;
 }
 
 .logout-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #e2e8f0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
     padding: 10px 14px;
     border-radius: 12px;
     cursor: pointer;
@@ -220,8 +232,8 @@ body {
 }
 
 .logout-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: #eef2ff;
+    border-color: #c7d2fe;
 }
 
 .stat-grid {
@@ -232,22 +244,22 @@ body {
 }
 
 .stat-card {
-    background: linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(124, 58, 237, 0.18));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1));
+    border: 1px solid rgba(15, 23, 42, 0.05);
     border-radius: 16px;
     padding: 16px;
 }
 
 .stat-card h3 {
     margin: 0;
-    color: #cbd5e1;
+    color: #475569;
     font-size: 14px;
 }
 
 .stat-card .value {
     font-size: 28px;
     font-weight: 800;
-    color: #fff;
+    color: #0f172a;
     margin: 6px 0 4px;
 }
 
@@ -268,7 +280,7 @@ body {
 .panel h2 {
     margin: 0 0 10px;
     font-size: 18px;
-    color: #f8fafc;
+    color: #0f172a;
 }
 
 .table {
@@ -280,33 +292,33 @@ body {
 .table td {
     padding: 10px 12px;
     text-align: left;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .table th {
-    color: #cbd5e1;
+    color: #475569;
     font-size: 13px;
     letter-spacing: 0.3px;
 }
 
 .table td {
-    color: #e2e8f0;
+    color: #0f172a;
     font-size: 14px;
 }
 
 .pill.success {
     background: rgba(16, 185, 129, 0.12);
-    color: #a7f3d0;
+    color: #15803d;
 }
 
 .pill.warning {
     background: rgba(245, 158, 11, 0.12);
-    color: #fde68a;
+    color: #b45309;
 }
 
 .pill.muted {
-    background: rgba(148, 163, 184, 0.12);
-    color: #cbd5e1;
+    background: rgba(148, 163, 184, 0.2);
+    color: #334155;
 }
 
 .activity-list {
@@ -317,17 +329,17 @@ body {
 
 .activity {
     padding: 12px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.05);
     border-radius: 12px;
 }
 
 .activity strong {
-    color: #fff;
+    color: #0f172a;
 }
 
 .activity small {
-    color: #94a3b8;
+    color: #475569;
 }
 
 @media (max-width: 960px) {

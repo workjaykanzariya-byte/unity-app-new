@@ -3,9 +3,8 @@ import { createRoot } from 'react-dom/client';
 import AdminRoot from './AdminRoot';
 import './styles/index.css';
 
-const element = document.getElementById('admin-app');
+const rootElement = document.getElementById('admin-root');
 
-if (element) {
-    const root = createRoot(element);
-    root.render(<AdminRoot />);
+if (rootElement) {
+    createRoot(rootElement).render(<AdminRoot />);
 }
