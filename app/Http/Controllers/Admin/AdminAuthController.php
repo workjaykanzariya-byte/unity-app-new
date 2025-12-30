@@ -64,9 +64,9 @@ class AdminAuthController extends Controller
 
         Cache::put($cacheKey, $requestAttempts + 1, 300);
 
+        $otp = (string) random_int(1000, 9999);
         $now = Carbon::now('UTC');
         $expiresAt = $now->copy()->addMinutes(5);
-        $otp = (string) random_int(1000, 9999);
 
         AdminLoginOtp::where('email', $email)
             ->where('created_at', '<', $now->copy()->subDay())
@@ -85,6 +85,8 @@ class AdminAuthController extends Controller
 
         Mail::to($email)->send(new AdminLoginOtpMail($otp));
         Log::info("ADMIN OTP for {$email}: {$otp} (expires UTC: {$expiresAt})");
+
+        $request->session()->forget('errors');
 
         return back()
             ->with('status', 'OTP sent to your email.')
@@ -113,7 +115,7 @@ class AdminAuthController extends Controller
         }
 
         $otpRecord = AdminLoginOtp::where('email', $email)
-            ->orderByDesc('created_at')
+            ->orderByDesc('last_sent_at')
             ->first();
 
         if (! $otpRecord) {
@@ -123,6 +125,8 @@ class AdminAuthController extends Controller
                 'otp' => 'OTP not requested.',
             ])->withInput();
         }
+
+        Log::info("ADMIN OTP VERIFY: email={$email}, now={$now}, expires_at={$otpRecord->expires_at}");
 
         if ($otpRecord->expires_at->lt($now)) {
             Cache::put($cacheKey, $verifyAttempts + 1, 300);
