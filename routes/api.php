@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Activities\TestimonialHistoryController;
 use App\Http\Controllers\Api\ActivityController;
 use App\Http\Controllers\Api\AdsController;
 use App\Http\Controllers\Api\AdminActivityController;
+use App\Http\Controllers\Api\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
@@ -33,6 +34,16 @@ use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::prefix('admin/auth')->group(function () {
+        Route::post('request-otp', [AdminAuthController::class, 'requestOtp']);
+        Route::post('verify-otp', [AdminAuthController::class, 'verifyOtp']);
+
+        Route::middleware(['auth:sanctum', 'admin.token'])->group(function () {
+            Route::get('me', [AdminAuthController::class, 'me']);
+            Route::post('logout', [AdminAuthController::class, 'logout']);
+        });
+    });
+
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
