@@ -20,6 +20,7 @@ class MemberController extends BaseApiController
                 'first_name',
                 'last_name',
                 'display_name',
+                'company_name',
                 'email',
                 'phone',
                 'membership_status',
