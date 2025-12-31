@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\MemberController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\PostSaveController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
@@ -84,12 +85,14 @@ Route::prefix('v1')->group(function () {
 
         // Posts & feed
         Route::get('/posts/feed', [PostController::class, 'feed']);
+        Route::get('/posts/saved', [PostSaveController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::get('/posts/{id}', [PostController::class, 'show']);
         Route::delete('/posts/{id}', [PostController::class, 'destroy']);
 
         Route::post('/posts/{id}/like', [PostController::class, 'like']);
         Route::delete('/posts/{id}/like', [PostController::class, 'unlike']);
+        Route::post('/posts/{post}/save', [PostSaveController::class, 'toggle']);
 
         Route::post('/posts/{id}/comments', [PostController::class, 'storeComment']);
         Route::get('/posts/{id}/comments', [PostController::class, 'listComments']);

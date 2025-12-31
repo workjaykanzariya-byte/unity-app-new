@@ -24,7 +24,11 @@ class PostController extends BaseApiController
             ->with([
                 'author:id,display_name,first_name,last_name,profile_photo_file_id',
             ])
-            ->withCount(['likes', 'comments'])
+            ->withCount(['likes', 'comments', 'saves'])
+            ->withExists([
+                'likes as is_liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
+                'saves as is_saved_by_me' => fn ($query) => $query->where('user_id', $user->id),
+            ])
             ->orderByDesc('created_at');
 
         // For now, just show all public posts.
@@ -55,6 +59,8 @@ class PostController extends BaseApiController
                 'likes_count'       => isset($post->likes_count) ? (int) $post->likes_count : 0,
                 'comments_count'    => isset($post->comments_count) ? (int) $post->comments_count : 0,
                 'is_liked_by_me'    => (bool) ($post->is_liked_by_me ?? false),
+                'saves_count'       => isset($post->saves_count) ? (int) $post->saves_count : 0,
+                'is_saved'          => (bool) ($post->is_saved_by_me ?? false),
                 'created_at'        => $post->created_at,
                 'updated_at'        => $post->updated_at,
             ];
@@ -137,7 +143,11 @@ class PostController extends BaseApiController
     public function show(Request $request, string $id)
     {
         $post = Post::with(['user', 'circle'])
-            ->withCount(['likes', 'comments'])
+            ->withCount(['likes', 'comments', 'saves'])
+            ->withExists([
+                'likes as is_liked_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
+                'saves as is_saved_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
+            ])
             ->find($id);
 
         if (! $post || $post->is_deleted || $post->deleted_at) {
@@ -165,6 +175,8 @@ class PostController extends BaseApiController
             'likes_count'       => isset($post->likes_count) ? (int) $post->likes_count : 0,
             'comments_count'    => isset($post->comments_count) ? (int) $post->comments_count : 0,
             'is_liked_by_me'    => (bool) ($post->is_liked_by_me ?? false),
+            'saves_count'       => isset($post->saves_count) ? (int) $post->saves_count : 0,
+            'is_saved'          => (bool) ($post->is_saved_by_me ?? false),
             'created_at'        => $post->created_at,
             'updated_at'        => $post->updated_at,
         ]);
