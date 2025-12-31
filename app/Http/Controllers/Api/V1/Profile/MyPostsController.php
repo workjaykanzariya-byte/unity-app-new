@@ -31,7 +31,9 @@ class MyPostsController extends BaseApiController
             ->withCount(['likes', 'comments'])
             ->withExists([
                 'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
+                'saves as is_saved_by_me' => fn ($query) => $query->where('user_id', $user->id),
             ])
+            ->withCount('saves')
             ->orderByDesc('created_at')
             ->get();
 

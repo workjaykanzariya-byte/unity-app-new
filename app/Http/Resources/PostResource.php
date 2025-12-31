@@ -8,9 +8,26 @@ class PostResource extends JsonResource
 {
     public function toArray($request): array
     {
+        $authUser = auth()->user();
+
+        $isSaved = false;
+
+        if ($authUser) {
+            if (isset($this->is_saved_by_me)) {
+                $isSaved = (bool) $this->is_saved_by_me;
+            } elseif ($this->relationLoaded('saves')) {
+                $isSaved = $this->saves->contains('user_id', $authUser->id);
+            }
+        }
+
+        $savesCount = isset($this->saves_count)
+            ? (int) $this->saves_count
+            : ($this->relationLoaded('saves') ? $this->saves->count() : 0);
+
         return [
             'id' => $this->id,
 
+            'content_text'   => $this->content_text,
             'content'        => $this->content_text,
             'media'          => $this->media
                 ? collect($this->media)->map(function ($item) {
@@ -63,6 +80,8 @@ class PostResource extends JsonResource
             'comments_count' => isset($this->comments_count) ? (int) $this->comments_count : 0,
 
             'is_liked_by_me' => (bool) ($this->is_liked_by_me ?? false),
+            'saves_count'    => $savesCount,
+            'is_saved'       => $isSaved,
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
