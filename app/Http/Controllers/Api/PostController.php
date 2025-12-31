@@ -142,7 +142,11 @@ class PostController extends BaseApiController
 
     public function show(Request $request, string $id)
     {
-        $post = Post::with(['user', 'circle'])
+        $post = Post::with([
+                'user:id,display_name,first_name,last_name,profile_photo_file_id',
+                'user.profilePhotoFile',
+                'circle',
+            ])
             ->withCount(['likes', 'comments', 'saves'])
             ->withExists([
                 'likes as is_liked_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),

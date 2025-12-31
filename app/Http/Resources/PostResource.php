@@ -56,12 +56,18 @@ class PostResource extends JsonResource
                 function () {
                     $author = $this->user ?? $this->author;
 
+                    $profilePhotoFileId = optional($author?->profilePhotoFile)->id
+                        ?? $author?->profile_photo_file_id
+                        ?? $author?->profile_photo_id;
+
                     return [
-                        'id'               => $author?->id,
-                        'display_name'     => $author?->display_name,
-                        'first_name'       => $author?->first_name,
-                        'last_name'        => $author?->last_name,
-                        'profile_photo_url'=> $author?->profile_photo_url,
+                        'id'                => $author?->id,
+                        'display_name'      => $author?->display_name,
+                        'first_name'        => $author?->first_name,
+                        'last_name'         => $author?->last_name,
+                        'profile_photo_url' => $profilePhotoFileId
+                            ? url("/api/v1/files/{$profilePhotoFileId}")
+                            : null,
                     ];
                 }
             ),

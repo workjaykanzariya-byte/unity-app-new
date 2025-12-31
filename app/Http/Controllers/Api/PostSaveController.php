@@ -61,6 +61,7 @@ class PostSaveController extends BaseApiController
             ->whereNull('posts.deleted_at')
             ->with([
                 'author:id,display_name,first_name,last_name,profile_photo_file_id',
+                'author.profilePhotoFile',
                 'circle:id,name',
             ])
             ->withCount(['likes', 'comments', 'saves'])
