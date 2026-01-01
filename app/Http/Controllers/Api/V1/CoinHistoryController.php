@@ -4,19 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\CoinHistoryItemResource;
-use App\Models\Activity;
 use App\Models\CoinLedger;
-use App\Models\User;
 use App\Services\Coins\CoinActivityTitleResolver;
+use App\Services\Coins\CoinsLedgerActivityResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class CoinHistoryController extends BaseApiController
 {
-    public function index(Request $request, CoinActivityTitleResolver $titleResolver)
+    public function index(Request $request, CoinActivityTitleResolver $titleResolver, CoinsLedgerActivityResolver $activityResolver)
     {
         $validator = validator($request->all(), [
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -66,19 +64,20 @@ class CoinHistoryController extends BaseApiController
             ->limit($limit)
             ->get();
 
-        $activityMap = $this->loadActivities($ledgerItems);
-        $activityTitles = $titleResolver->resolveTitles($activityMap->values());
-        $relatedUsers = $this->loadRelatedUsers($activityMap);
+        $resolution = $activityResolver->resolve($ledgerItems, $user->id, $titleResolver);
 
-        $transformed = $ledgerItems->map(function ($ledger) use ($activityMap, $activityTitles, $relatedUsers, $titleResolver) {
-            $activity = $ledger->activity_id ? $activityMap->get($ledger->activity_id) : null;
+        $transformed = $ledgerItems->map(function ($ledger) use ($resolution, $titleResolver) {
+            $activity = $ledger->activity_id ? $resolution['activities']->get($ledger->activity_id) : null;
             $activityType = $activity->type ?? null;
 
-            $relatedUserId = $ledger->related_user_id ?? ($activity->related_user_id ?? null);
-            $relatedUser = $relatedUserId ? $relatedUsers->get($relatedUserId) : null;
+            $relatedUserId = $ledger->related_user_id ?? null;
+            if (! $relatedUserId && $activity) {
+                $relatedUserId = $resolution['activityRelatedUserIds'][$activity->id] ?? ($activity->related_user_id ?? null);
+            }
+            $relatedUser = $relatedUserId ? $resolution['relatedUsers']->get($relatedUserId) : null;
 
             $reasonKey = $ledger->reason_key ?? $ledger->reference ?? ($activityType ? 'activity_'.$activityType : 'coins_transaction');
-            $activityTitle = $activity ? ($activityTitles[$activity->id] ?? $titleResolver->defaultTitle($activityType)) : $titleResolver->defaultTitle($activityType);
+            $activityTitle = $activity ? ($resolution['activityTitles'][$activity->id] ?? $titleResolver->defaultTitle($activityType)) : $titleResolver->defaultTitle($activityType);
 
             return [
                 'id' => $ledger->transaction_id ?? $ledger->id ?? null,
@@ -87,11 +86,8 @@ class CoinHistoryController extends BaseApiController
                 'activity_type' => $activityType,
                 'activity_id' => $ledger->activity_id,
                 'activity_title' => $activityTitle,
-                'related_user' => $relatedUser ? [
-                    'id' => $relatedUser->id,
-                    'display_name' => $relatedUser->display_name ?? trim($relatedUser->first_name.' '.($relatedUser->last_name ?? '')),
-                    'profile_photo_url' => $this->buildProfilePhotoUrl($relatedUser),
-                ] : null,
+                'related_user' => $relatedUser,
+                'activity_summary' => $activity ? ($resolution['activitySummaries'][$activity->id] ?? null) : null,
                 'created_at' => $ledger->created_at,
             ];
         });
@@ -100,50 +96,6 @@ class CoinHistoryController extends BaseApiController
             'current_coins_balance' => (int) $user->coins_balance,
             'items' => CoinHistoryItemResource::collection($transformed),
         ], 'Coins history fetched successfully');
-    }
-
-    private function loadActivities(Collection $ledgerItems): Collection
-    {
-        $activityIds = $ledgerItems->pluck('activity_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($activityIds->isEmpty()) {
-            return collect();
-        }
-
-        return Activity::whereIn('id', $activityIds)->get()->keyBy('id');
-    }
-
-    private function loadRelatedUsers(Collection $activities): Collection
-    {
-        $relatedUserIds = $activities
-            ->pluck('related_user_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($relatedUserIds->isEmpty()) {
-            return collect();
-        }
-
-        return User::whereIn('id', $relatedUserIds)
-            ->get()
-            ->keyBy('id');
-    }
-
-    private function buildProfilePhotoUrl(User $user): ?string
-    {
-        $fileId = $user->profile_photo_file_id
-            ?? $user->profile_photo_id
-            ?? null;
-
-        if (! $fileId) {
-            return null;
-        }
-
-        return url('/api/v1/files/'.$fileId);
     }
 
     private function formatReasonLabel(?string $reasonKey): string
