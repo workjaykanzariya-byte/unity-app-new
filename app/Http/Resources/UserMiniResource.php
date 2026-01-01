@@ -29,9 +29,7 @@ class UserMiniResource extends JsonResource
     {
         $user = $this->resource;
 
-        $fileId = $user->profile_photo_file_id
-            ?? $user->profile_photo_id
-            ?? null;
+        $fileId = $user->profile_photo_file_id ?? null;
 
         if (! $fileId) {
             return null;
