@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\UserMiniResource;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class CoinHistoryItemResource extends JsonResource
@@ -17,11 +18,7 @@ class CoinHistoryItemResource extends JsonResource
             'activity_type' => $this->resource['activity_type'] ?? null,
             'activity_id' => $this->resource['activity_id'] ?? null,
             'activity_title' => $this->resource['activity_title'] ?? null,
-            'related_user' => $relatedUser ? [
-                'id' => $relatedUser['id'] ?? null,
-                'display_name' => $relatedUser['display_name'] ?? null,
-                'profile_photo_url' => $relatedUser['profile_photo_url'] ?? null,
-            ] : null,
+            'related_user' => $relatedUser ? (new UserMiniResource($relatedUser))->toArray($request) : null,
             'created_at' => $this->resource['created_at'] ?? null,
         ];
     }

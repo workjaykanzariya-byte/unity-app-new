@@ -54,6 +54,27 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## Coins history response example
+
+A single item returned by `GET /api/v1/coins/history` now includes the counterparty user when available while maintaining backward compatibility:
+
+```json
+{
+  "id": "d4c1c6a0-9e21-4c7c-9d7e-52d3c2f1d003",
+  "coins_delta": 25,
+  "reason_label": "Requirement",
+  "activity_type": "requirement",
+  "activity_id": "7bfb2d64-6de3-422c-9c9c-7a4c93f3f4a9",
+  "activity_title": "Requirement",
+  "related_user": {
+    "id": "f2c6cb46-9f38-47c1-98fd-bbde45ca297e",
+    "display_name": "Alex Smith",
+    "profile_photo_url": "https://example.com/api/v1/files/file-id"
+  },
+  "created_at": "2024-07-08T13:22:01.000000Z"
+}
+```
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
