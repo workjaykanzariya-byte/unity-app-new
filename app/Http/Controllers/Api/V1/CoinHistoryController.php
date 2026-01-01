@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\CoinHistoryItemResource;
 use App\Models\CoinLedger;
 use App\Services\Coins\CoinActivityTitleResolver;
-use App\Services\Coins\CoinsLedgerActivityResolver;
+use App\Services\Coins\CoinActivityUserResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 class CoinHistoryController extends BaseApiController
 {
-    public function index(Request $request, CoinActivityTitleResolver $titleResolver, CoinsLedgerActivityResolver $activityResolver)
+    public function index(Request $request, CoinActivityTitleResolver $titleResolver, CoinActivityUserResolver $userResolver)
     {
         $validator = validator($request->all(), [
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -64,20 +64,23 @@ class CoinHistoryController extends BaseApiController
             ->limit($limit)
             ->get();
 
-        $resolution = $activityResolver->resolve($ledgerItems, $user->id, $titleResolver);
+        $activities = $this->loadActivities($ledgerItems);
+        $activityTitles = $titleResolver->resolveTitles($activities->values());
+        $relatedUsers = $userResolver->resolve($ledgerItems, $activities, $user->id);
 
-        $transformed = $ledgerItems->map(function ($ledger) use ($resolution, $titleResolver) {
-            $activity = $ledger->activity_id ? $resolution['activities']->get($ledger->activity_id) : null;
+        $transformed = $ledgerItems->map(function ($ledger) use ($activities, $activityTitles, $relatedUsers, $titleResolver) {
+            $activity = $ledger->activity_id ? $activities->get($ledger->activity_id) : null;
             $activityType = $activity->type ?? null;
 
-            $relatedUserId = $ledger->related_user_id ?? null;
-            if (! $relatedUserId && $activity) {
-                $relatedUserId = $resolution['activityRelatedUserIds'][$activity->id] ?? ($activity->related_user_id ?? null);
-            }
-            $relatedUser = $relatedUserId ? $resolution['relatedUsers']->get($relatedUserId) : null;
+            $ledgerKey = (string) ($ledger->transaction_id ?? $ledger->id ?? null);
+            $relatedUserId = $relatedUsers['ledgerUserIds'][$ledgerKey] ?? null;
+            $relatedUserId = $relatedUserId
+                ?? ($ledger->related_user_id ?? null)
+                ?? ($activity->related_user_id ?? null);
+            $relatedUser = $relatedUserId ? $relatedUsers['users']->get($relatedUserId) : null;
 
             $reasonKey = $ledger->reason_key ?? $ledger->reference ?? ($activityType ? 'activity_'.$activityType : 'coins_transaction');
-            $activityTitle = $activity ? ($resolution['activityTitles'][$activity->id] ?? $titleResolver->defaultTitle($activityType)) : $titleResolver->defaultTitle($activityType);
+            $activityTitle = $activity ? ($activityTitles[$activity->id] ?? $titleResolver->defaultTitle($activityType)) : $titleResolver->defaultTitle($activityType);
 
             return [
                 'id' => $ledger->transaction_id ?? $ledger->id ?? null,
@@ -87,7 +90,6 @@ class CoinHistoryController extends BaseApiController
                 'activity_id' => $ledger->activity_id,
                 'activity_title' => $activityTitle,
                 'related_user' => $relatedUser,
-                'activity_summary' => $activity ? ($resolution['activitySummaries'][$activity->id] ?? null) : null,
                 'created_at' => $ledger->created_at,
             ];
         });
@@ -96,6 +98,20 @@ class CoinHistoryController extends BaseApiController
             'current_coins_balance' => (int) $user->coins_balance,
             'items' => CoinHistoryItemResource::collection($transformed),
         ], 'Coins history fetched successfully');
+    }
+
+    private function loadActivities($ledgerItems)
+    {
+        $activityIds = $ledgerItems->pluck('activity_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($activityIds->isEmpty()) {
+            return collect();
+        }
+
+        return \App\Models\Activity::whereIn('id', $activityIds)->get()->keyBy('id');
     }
 
     private function formatReasonLabel(?string $reasonKey): string

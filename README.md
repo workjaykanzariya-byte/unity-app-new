@@ -56,7 +56,7 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 ## Coins history response example
 
-A single item returned by `GET /api/v1/coins/history` now includes enriched details while maintaining backward compatibility:
+A single item returned by `GET /api/v1/coins/history` now includes the counterparty user when available while maintaining backward compatibility:
 
 ```json
 {
@@ -66,17 +66,9 @@ A single item returned by `GET /api/v1/coins/history` now includes enriched deta
   "activity_type": "requirement",
   "activity_id": "7bfb2d64-6de3-422c-9c9c-7a4c93f3f4a9",
   "activity_title": "Requirement",
-  "activity_summary": {
-    "type": "requirement",
-    "id": "7bfb2d64-6de3-422c-9c9c-7a4c93f3f4a9",
-    "title": "Requirement",
-    "extra_label": "open"
-  },
   "related_user": {
     "id": "f2c6cb46-9f38-47c1-98fd-bbde45ca297e",
     "display_name": "Alex Smith",
-    "first_name": "Alex",
-    "last_name": "Smith",
     "profile_photo_url": "https://example.com/api/v1/files/file-id"
   },
   "created_at": "2024-07-08T13:22:01.000000Z"

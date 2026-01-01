@@ -18,7 +18,6 @@ class CoinHistoryItemResource extends JsonResource
             'activity_type' => $this->resource['activity_type'] ?? null,
             'activity_id' => $this->resource['activity_id'] ?? null,
             'activity_title' => $this->resource['activity_title'] ?? null,
-            'activity_summary' => $this->resource['activity_summary'] ?? null,
             'related_user' => $relatedUser ? (new UserMiniResource($relatedUser))->toArray($request) : null,
             'created_at' => $this->resource['created_at'] ?? null,
         ];

@@ -21,8 +21,6 @@ class UserMiniResource extends JsonResource
         return [
             'id' => $user->id,
             'display_name' => $displayName ? trim($displayName) : null,
-            'first_name' => $user->first_name ?? null,
-            'last_name' => $user->last_name ?? null,
             'profile_photo_url' => $this->buildProfilePhotoUrl(),
         ];
     }
