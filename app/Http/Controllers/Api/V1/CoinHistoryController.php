@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\CoinHistoryItemResource;
 use App\Models\CoinLedger;
 use App\Services\Coins\CoinActivityTitleResolver;
-use App\Services\Coins\CoinActivityUserResolver;
+use App\Services\Coins\CoinLedgerRelatedUserService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 class CoinHistoryController extends BaseApiController
 {
-    public function index(Request $request, CoinActivityTitleResolver $titleResolver, CoinActivityUserResolver $userResolver)
+    public function index(Request $request, CoinActivityTitleResolver $titleResolver, CoinLedgerRelatedUserService $relatedUserService)
     {
         $validator = validator($request->all(), [
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -66,28 +66,39 @@ class CoinHistoryController extends BaseApiController
 
         $activities = $this->loadActivities($ledgerItems);
         $activityTitles = $titleResolver->resolveTitles($activities->values());
-        $relatedUsers = $userResolver->resolve($ledgerItems, $activities, $user->id);
 
-        $transformed = $ledgerItems->map(function ($ledger) use ($activities, $activityTitles, $relatedUsers, $titleResolver) {
+        $transformed = $ledgerItems->map(function ($ledger) use ($activities, $activityTitles, $titleResolver, $relatedUserService, $user) {
             $activity = $ledger->activity_id ? $activities->get($ledger->activity_id) : null;
             $activityType = $activity->type ?? null;
-
-            $ledgerKey = (string) ($ledger->transaction_id ?? $ledger->id ?? null);
-            $relatedUserId = $relatedUsers['ledgerUserIds'][$ledgerKey] ?? null;
-            $relatedUserId = $relatedUserId
-                ?? ($ledger->related_user_id ?? null)
-                ?? ($activity->related_user_id ?? null);
-            $relatedUser = $relatedUserId ? $relatedUsers['users']->get($relatedUserId) : null;
+            $activityId = $ledger->activity_id;
 
             $reasonKey = $ledger->reason_key ?? $ledger->reference ?? ($activityType ? 'activity_'.$activityType : 'coins_transaction');
-            $activityTitle = $activity ? ($activityTitles[$activity->id] ?? $titleResolver->defaultTitle($activityType)) : $titleResolver->defaultTitle($activityType);
+            $reasonLabel = $this->formatReasonLabel($reasonKey);
+
+            $relatedUser = null;
+
+            $relatedUserId = $ledger->related_user_id ?? ($activity->related_user_id ?? null);
+            if ($relatedUserId) {
+                $relatedUser = $relatedUserService->loadUserById($relatedUserId);
+            }
+
+            if (! $relatedUser) {
+                $fallback = $relatedUserService->enrichLedgerItem($ledger, $user->id, $reasonLabel);
+                $relatedUser = $fallback['related_user'] ?? null;
+                $activityType = $activityType ?? $fallback['activity_type'];
+                $activityId = $activityId ?? $fallback['activity_id'];
+            }
+
+            $activityTitle = $activity
+                ? ($activityTitles[$activity->id] ?? $titleResolver->defaultTitle($activityType))
+                : $titleResolver->defaultTitle($activityType);
 
             return [
                 'id' => $ledger->transaction_id ?? $ledger->id ?? null,
                 'coins_delta' => (int) ($ledger->coins_delta ?? $ledger->amount ?? 0),
-                'reason_label' => $this->formatReasonLabel($reasonKey),
+                'reason_label' => $reasonLabel,
                 'activity_type' => $activityType,
-                'activity_id' => $ledger->activity_id,
+                'activity_id' => $activityId,
                 'activity_title' => $activityTitle,
                 'related_user' => $relatedUser,
                 'created_at' => $ledger->created_at,
