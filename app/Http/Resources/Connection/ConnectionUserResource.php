@@ -15,21 +15,11 @@ class ConnectionUserResource extends JsonResource
             'display_name' => $this->display_name,
             'profile_photo_url' => $fileId ? url('/api/v1/files/' . $fileId) : null,
             'company_name' => $this->company_name,
-            'city' => $this->resolveCity(),
+            'city' => optional($this->city)->name
+                ?? $this->city_name
+                ?? $this->city
+                ?? null,
             'membership_status' => $this->membership_status,
         ];
-    }
-
-    private function resolveCity(): ?string
-    {
-        $cityRelation = $this->relationLoaded('city')
-            ? $this->getRelationValue('city')
-            : null;
-
-        if ($cityRelation) {
-            return $cityRelation->name;
-        }
-
-        return $this->city_name ?? $this->city ?? null;
     }
 }
