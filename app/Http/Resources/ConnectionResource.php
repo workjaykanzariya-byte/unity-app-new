@@ -22,6 +22,8 @@ class ConnectionResource extends JsonResource
                 'first_name' => $this->requester?->first_name,
                 'last_name' => $this->requester?->last_name,
                 'profile_photo_url' => $this->requester?->profile_photo_url,
+                'company_name' => $this->requester?->company_name,
+                'city' => $this->resolveCity($this->requester),
             ],
             'addressee' => [
                 'id' => $this->addressee?->id,
@@ -29,7 +31,26 @@ class ConnectionResource extends JsonResource
                 'first_name' => $this->addressee?->first_name,
                 'last_name' => $this->addressee?->last_name,
                 'profile_photo_url' => $this->addressee?->profile_photo_url,
+                'company_name' => $this->addressee?->company_name,
+                'city' => $this->resolveCity($this->addressee),
             ],
         ];
+    }
+
+    private function resolveCity($user): ?string
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $cityRelation = $user->relationLoaded('city')
+            ? $user->getRelationValue('city')
+            : null;
+
+        if ($cityRelation) {
+            return $cityRelation->name;
+        }
+
+        return $user->city_name ?? $user->city ?? null;
     }
 }

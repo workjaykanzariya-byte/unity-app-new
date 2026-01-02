@@ -16,7 +16,9 @@ class MyConnectionsController extends BaseApiController
         $connections = Connection::query()
             ->with([
                 'requester.profilePhotoFile',
+                'requester.city',
                 'addressee.profilePhotoFile',
+                'addressee.city',
             ])
             ->where('is_approved', true)
             ->where(function ($query) use ($authUser) {

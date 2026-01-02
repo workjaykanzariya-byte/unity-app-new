@@ -14,7 +14,11 @@ class ConnectionUserResource extends JsonResource
             'id' => $this->id,
             'display_name' => $this->display_name,
             'profile_photo_url' => $fileId ? url('/api/v1/files/' . $fileId) : null,
-            'city' => $this->city,
+            'company_name' => $this->company_name,
+            'city' => optional($this->city)->name
+                ?? $this->city_name
+                ?? $this->city
+                ?? null,
             'membership_status' => $this->membership_status,
         ];
     }

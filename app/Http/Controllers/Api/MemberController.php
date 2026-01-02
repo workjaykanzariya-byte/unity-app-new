@@ -207,7 +207,12 @@ class MemberController extends BaseApiController
     {
         $authUser = $request->user();
 
-        $connections = Connection::with(['requester', 'addressee'])
+        $connections = Connection::with([
+            'requester',
+            'requester.city',
+            'addressee',
+            'addressee.city',
+        ])
             ->where('is_approved', true)
             ->where(function ($q) use ($authUser) {
                 $q->where('requester_id', $authUser->id)
@@ -223,7 +228,12 @@ class MemberController extends BaseApiController
     {
         $authUser = $request->user();
 
-        $connections = Connection::with(['requester', 'addressee'])
+        $connections = Connection::with([
+            'requester',
+            'requester.city',
+            'addressee',
+            'addressee.city',
+        ])
             ->where('addressee_id', $authUser->id)
             ->where('is_approved', false)
             ->orderBy('created_at', 'desc')
