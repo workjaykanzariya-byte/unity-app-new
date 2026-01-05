@@ -68,7 +68,7 @@
                         <td>{{ optional($user->last_login_at)->format('Y-m-d H:i') ?? '—' }}</td>
                         <td><span class="badge bg-success-subtle text-success">Active</span></td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-light">View</button>
+                            <a class="btn btn-sm btn-light" href="{{ route('admin.users.show', $user) }}">View</a>
                         </td>
                     </tr>
                 @empty

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\CirclesController;
 
@@ -22,6 +23,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         })->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [UsersController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [AdminUsersController::class, 'show'])->name('users.show');
+        Route::post('/users/{user}/role', [AdminUsersController::class, 'updateRole'])->name('users.updateRole');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });
