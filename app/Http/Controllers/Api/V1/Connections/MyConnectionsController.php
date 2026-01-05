@@ -70,4 +70,24 @@ class MyConnectionsController extends BaseApiController
             'items' => $items,
         ]);
     }
+
+    public function cancelSent(string $addresseeId)
+    {
+        $connection = Connection::query()
+            ->where('requester_id', auth()->id())
+            ->where('addressee_id', $addresseeId)
+            ->first();
+
+        if (! $connection) {
+            return $this->error('Request not found', 404);
+        }
+
+        if ($connection->is_approved) {
+            return $this->error('Request already approved. Use remove connection API.', 422);
+        }
+
+        $connection->delete();
+
+        return $this->success(null, 'Connection request cancelled');
+    }
 }
