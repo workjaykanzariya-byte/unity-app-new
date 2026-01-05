@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminLoginOtp;
-use App\Models\User;
+use App\Models\AdminUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,9 +41,9 @@ class AdminAuthController extends Controller
         }
 
         $email = strtolower($request->input('email'));
-        $user = $this->eligibleAdmin($email);
+        $adminUser = $this->eligibleAdmin($email);
 
-        if (! $user) {
+        if (! $adminUser) {
             return response()->json([
                 'message' => 'You are not admin',
             ], 403);
@@ -51,10 +51,10 @@ class AdminAuthController extends Controller
 
         $existingOtp = AdminLoginOtp::query()
             ->where('email', $email)
-            ->orderByDesc('last_sent_at')
+            ->orderByDesc('created_at')
             ->first();
 
-        $now = now();
+        $now = now('UTC');
         if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds($now) < 30) {
             return response()->json([
                 'message' => 'Please wait before requesting another OTP.',
@@ -66,26 +66,17 @@ class AdminAuthController extends Controller
         $otpRecord = null;
 
         DB::transaction(function () use (&$otpRecord, $email, $otp, $expiresAt, $now): void {
-            $otpRecord = AdminLoginOtp::query()
-                ->where('email', $email)
-                ->lockForUpdate()
-                ->first();
-
-            $data = [
+            $otpRecord = AdminLoginOtp::create([
+                'id' => (string) Str::uuid(),
+                'email' => $email,
                 'otp_hash' => Hash::make($otp),
                 'expires_at' => $expiresAt,
                 'last_sent_at' => $now,
                 'attempts' => 0,
-            ];
-
-            if ($otpRecord) {
-                $otpRecord->fill($data)->save();
-            } else {
-                $otpRecord = AdminLoginOtp::create(array_merge([
-                    'id' => (string) Str::uuid(),
-                    'email' => $email,
-                ], $data));
-            }
+                'used_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
         });
 
         Mail::raw(
@@ -128,7 +119,8 @@ class AdminAuthController extends Controller
         $result = DB::transaction(function () use ($email, $otp): array {
             $otpRecord = AdminLoginOtp::query()
                 ->where('email', $email)
-                ->orderByDesc('last_sent_at')
+                ->whereNull('used_at')
+                ->orderByDesc('created_at')
                 ->lockForUpdate()
                 ->first();
 
@@ -140,12 +132,9 @@ class AdminAuthController extends Controller
                 return ['status' => 423, 'message' => 'Too many attempts'];
             }
 
-            $expired = DB::table('admin_login_otps')
-                ->where('id', $otpRecord->id)
-                ->where('expires_at', '<=', DB::raw('NOW()'))
-                ->exists();
+            $now = now('UTC');
 
-            if ($expired || ! $otpRecord->otp_hash) {
+            if (! $otpRecord->expires_at || $otpRecord->expires_at->lt($now)) {
                 return ['status' => 410, 'message' => 'OTP expired'];
             }
 
@@ -156,7 +145,8 @@ class AdminAuthController extends Controller
                 return ['status' => 422, 'message' => 'Invalid OTP'];
             }
 
-            $otpRecord->delete();
+            $otpRecord->used_at = $now;
+            $otpRecord->save();
 
             return ['status' => 200, 'message' => 'OTP verified'];
         });
@@ -185,15 +175,15 @@ class AdminAuthController extends Controller
         return redirect()->route('admin.login');
     }
 
-    private function eligibleAdmin(string $email): ?User
+    private function eligibleAdmin(string $email): ?AdminUser
     {
-        return User::query()
+        return AdminUser::query()
             ->where('email', $email)
             ->whereExists(function ($query) {
                 $query->selectRaw(1)
                     ->from('admin_user_roles')
                     ->join('roles', 'roles.id', '=', 'admin_user_roles.role_id')
-                    ->whereColumn('admin_user_roles.user_id', 'users.id')
+                    ->whereColumn('admin_user_roles.user_id', 'admin_users.id')
                     ->where('roles.key', 'global_admin');
             })
             ->first();

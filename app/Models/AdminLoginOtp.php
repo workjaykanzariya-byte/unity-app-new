@@ -22,11 +22,13 @@ class AdminLoginOtp extends Model
         'expires_at',
         'last_sent_at',
         'attempts',
+        'used_at',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'last_sent_at' => 'datetime',
         'attempts' => 'integer',
+        'used_at' => 'datetime',
     ];
 }
