@@ -78,7 +78,7 @@
         </table>
     </div>
     <div class="mt-2">
-        {{ $users->links() }}
+        {{ $users->withQueryString()->links() }}
     </div>
 </div>
 @endsection

@@ -11,6 +11,25 @@ body {
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+.pagination {
+    gap: 0.25rem;
+}
+
+.pagination .page-item {
+    list-style: none;
+}
+
+.pagination .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination svg {
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
 .admin-shell {
     min-height: 100vh;
 }
