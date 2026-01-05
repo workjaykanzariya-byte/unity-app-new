@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminLoginOtp;
-use App\Models\AdminUser;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,9 +41,9 @@ class AdminAuthController extends Controller
         }
 
         $email = strtolower($request->input('email'));
-        $adminUser = $this->eligibleAdmin($email);
+        $user = $this->eligibleAdmin($email);
 
-        if (! $adminUser) {
+        if (! $user) {
             return response()->json([
                 'message' => 'You are not admin',
             ], 403);
@@ -152,7 +152,7 @@ class AdminAuthController extends Controller
             $otpRecord->save();
         });
 
-        Auth::guard('admin')->login($adminUser);
+        Auth::guard('admin')->login($user);
         $request->session()->regenerate();
 
         return response()->json([
@@ -170,12 +170,16 @@ class AdminAuthController extends Controller
         return redirect()->route('admin.login');
     }
 
-    private function eligibleAdmin(string $email): ?AdminUser
+    private function eligibleAdmin(string $email): ?User
     {
-        return AdminUser::query()
+        return User::query()
             ->where('email', $email)
-            ->whereHas('roles', static function ($query): void {
-                $query->where('key', 'global_admin');
+            ->whereExists(function ($query) {
+                $query->selectRaw(1)
+                    ->from('admin_user_roles')
+                    ->join('roles', 'roles.id', '=', 'admin_user_roles.role_id')
+                    ->whereColumn('admin_user_roles.user_id', 'users.id')
+                    ->where('roles.key', 'global_admin');
             })
             ->first();
     }
