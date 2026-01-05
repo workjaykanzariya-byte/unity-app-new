@@ -16,8 +16,6 @@ class AdminUser extends Authenticatable
 
     protected $keyType = 'string';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'id',
         'name',
@@ -26,6 +24,6 @@ class AdminUser extends Authenticatable
 
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'admin_user_roles', 'admin_user_id', 'role_id');
+        return $this->belongsToMany(Role::class, 'admin_user_roles', 'user_id', 'role_id');
     }
 }

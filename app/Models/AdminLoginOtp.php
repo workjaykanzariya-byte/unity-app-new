@@ -15,8 +15,6 @@ class AdminLoginOtp extends Model
 
     protected $keyType = 'string';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'id',
         'email',
