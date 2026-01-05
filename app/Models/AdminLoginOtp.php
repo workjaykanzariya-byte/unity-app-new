@@ -27,5 +27,6 @@ class AdminLoginOtp extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'last_sent_at' => 'datetime',
+        'attempts' => 'integer',
     ];
 }

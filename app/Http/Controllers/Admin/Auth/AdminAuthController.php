@@ -118,7 +118,7 @@ class AdminAuthController extends Controller
             ], 410);
         }
 
-        if ($otpRecord->expires_at && $otpRecord->expires_at->isPast()) {
+        if (! $otpRecord->expires_at || $otpRecord->expires_at->isPast()) {
             return response()->json([
                 'message' => 'OTP expired',
             ], 410);
