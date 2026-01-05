@@ -1,4 +1,4 @@
-@extends('admin.layouts.app')
+@extends('admin.layouts.auth')
 
 @section('title', 'Admin Login')
 
@@ -19,11 +19,11 @@
             <div id="statusMessage" class="status"></div>
         @endif
 
-        <form id="request-otp-form" autocomplete="off" method="POST" action="{{ route('admin.auth.request-otp') }}">
+        <form id="request-otp-form" autocomplete="off" method="POST" action="{{ route('admin.login.send-otp') }}">
             @csrf
             <label for="email">Admin Email</label>
             <div class="input-row">
-                <input id="email" name="email" type="email" placeholder="you@company.com" required autocomplete="email" value="{{ old('email', request('email')) }}" />
+                <input id="email" name="email" type="email" placeholder="you@company.com" required autocomplete="email" value="{{ old('email', session('admin_login_email')) }}" />
                 <button type="submit" class="btn primary" id="request-otp-btn">Send OTP</button>
             </div>
             <p class="muted">Only global admins are eligible. OTP codes expire in 5 minutes.</p>
@@ -31,9 +31,9 @@
 
         <div style="height: 16px;"></div>
 
-        <form id="verify-otp-form" autocomplete="off" method="POST" action="{{ route('admin.auth.verify-otp') }}">
+        <form id="verify-otp-form" autocomplete="off" method="POST" action="{{ route('admin.login.verify') }}">
             @csrf
-            <input type="hidden" name="email" id="verify-email" value="{{ old('email', request('email')) }}">
+            <input type="hidden" name="email" id="verify-email" value="{{ old('email', session('admin_login_email')) }}">
             <label for="otp-1">Verification Code</label>
             <div class="otp-grid">
                 <input id="otp-1" class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" aria-label="OTP Digit 1">

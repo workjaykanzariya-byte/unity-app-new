@@ -54,18 +54,22 @@ class AdminAuthController extends Controller
         }
 
         $otp = (string) random_int(1000, 9999);
+        $now = now('UTC');
+        $expiresAt = $now->copy()->addMinutes(5);
 
-        DB::table('admin_login_otps')->insert([
-            'id' => (string) Str::uuid(),
-            'email' => $email,
-            'otp_hash' => Hash::make($otp),
-            'expires_at' => DB::raw("NOW() + INTERVAL '5 minutes'"),
-            'last_sent_at' => DB::raw('NOW()'),
-            'attempts' => 0,
-            'used_at' => null,
-            'created_at' => DB::raw('NOW()'),
-            'updated_at' => DB::raw('NOW()'),
-        ]);
+        DB::table('admin_login_otps')->updateOrInsert(
+            ['email' => $email],
+            [
+                'id' => (string) Str::uuid(),
+                'otp_hash' => Hash::make($otp),
+                'expires_at' => $expiresAt,
+                'last_sent_at' => $now,
+                'attempts' => 0,
+                'used_at' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]
+        );
 
         Mail::raw(
             "Your admin login OTP is {$otp}. It expires in 5 minutes.",
@@ -75,10 +79,12 @@ class AdminAuthController extends Controller
         );
 
         $request->session()->forget('errors');
+        $request->session()->put('admin_login_email', $email);
 
         return redirect()
-            ->back()
+            ->route('admin.login')
             ->withInput(['email' => $email])
+            ->with('otp_sent', true)
             ->with('status', 'OTP sent');
     }
 
@@ -102,7 +108,6 @@ class AdminAuthController extends Controller
             $otpRecord = AdminLoginOtp::query()
                 ->where('email', $email)
                 ->whereNull('used_at')
-                ->where('expires_at', '>', DB::raw('NOW()'))
                 ->orderByDesc('created_at')
                 ->lockForUpdate()
                 ->first();
@@ -111,36 +116,41 @@ class AdminAuthController extends Controller
                 return ['status' => 410, 'message' => 'OTP expired'];
             }
 
+            $now = now('UTC');
+
+            if ($otpRecord->used_at || ($otpRecord->expires_at && $otpRecord->expires_at->lt($now))) {
+                return ['status' => 410, 'message' => 'OTP expired'];
+            }
+
             if ($otpRecord->attempts >= 5) {
                 return ['status' => 423, 'message' => 'Too many attempts'];
             }
 
             if (! Hash::check($otp, $otpRecord->otp_hash)) {
-                DB::table('admin_login_otps')
-                    ->where('id', $otpRecord->id)
-                    ->update([
-                        'attempts' => DB::raw('attempts + 1'),
-                        'updated_at' => DB::raw('NOW()'),
-                    ]);
+                $otpRecord->attempts += 1;
+                $otpRecord->updated_at = $now;
+                $otpRecord->save();
 
                 return ['status' => 422, 'message' => 'Invalid OTP'];
             }
 
-            DB::table('admin_login_otps')
-                ->where('id', $otpRecord->id)
-                ->update([
-                    'used_at' => DB::raw('NOW()'),
-                    'updated_at' => DB::raw('NOW()'),
-                ]);
+            $otpRecord->used_at = $now;
+            $otpRecord->updated_at = $now;
+            $otpRecord->attempts += 1;
+            $otpRecord->save();
 
             return ['status' => 200, 'message' => 'OTP verified'];
         });
 
         if ($result['status'] !== 200) {
-            return back()->withErrors(['otp' => $result['message']]);
+            return back()
+                ->withInput(['email' => $email])
+                ->withErrors(['otp' => $result['message']]);
         }
 
         Auth::guard('admin')->login($adminUser);
+        $request->session()->put('admin_user_id', $adminUser->id);
+        $request->session()->put('admin_login_email', $adminUser->email);
         $request->session()->regenerate();
 
         return redirect()->route('admin.dashboard');
@@ -150,6 +160,7 @@ class AdminAuthController extends Controller
     {
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
+        $request->session()->forget(['admin_user_id', 'admin_login_email']);
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
