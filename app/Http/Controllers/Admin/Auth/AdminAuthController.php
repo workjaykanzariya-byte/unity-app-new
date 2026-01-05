@@ -37,7 +37,9 @@ class AdminAuthController extends Controller
         $adminUser = $this->eligibleAdmin($email);
 
         if (! $adminUser) {
-            return back()->withErrors(['email' => 'You are not admin']);
+            return back()
+                ->withInput(['email' => $email])
+                ->withErrors(['email' => 'You are not admin']);
         }
 
         $recentOtp = AdminLoginOtp::query()
@@ -46,7 +48,9 @@ class AdminAuthController extends Controller
             ->first();
 
         if ($recentOtp && $recentOtp->last_sent_at && $recentOtp->last_sent_at->diffInSeconds(now('UTC')) < 30) {
-            return back()->withErrors(['email' => 'Please wait before requesting another OTP.']);
+            return back()
+                ->withInput(['email' => $email])
+                ->withErrors(['email' => 'Please wait before requesting another OTP.']);
         }
 
         $otp = (string) random_int(1000, 9999);
@@ -72,7 +76,10 @@ class AdminAuthController extends Controller
 
         $request->session()->forget('errors');
 
-        return back()->with('status', 'OTP sent');
+        return redirect()
+            ->back()
+            ->withInput(['email' => $email])
+            ->with('status', 'OTP sent');
     }
 
     public function verifyOtp(Request $request): RedirectResponse
