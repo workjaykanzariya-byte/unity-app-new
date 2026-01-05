@@ -1,0 +1,121 @@
+:root {
+    --sidebar-width: 240px;
+    --primary-100: #e9f1ff;
+    --primary-500: #0d6efd;
+    --gray-100: #f8f9fb;
+    --gray-300: #e7eaf1;
+}
+
+body {
+    background: var(--gray-100);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.pagination {
+    gap: 0.25rem;
+}
+
+.pagination .page-item {
+    list-style: none;
+}
+
+.pagination .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pagination svg {
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+.admin-shell {
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: var(--sidebar-width);
+    background: #0f172a;
+    color: #e5e7eb;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    padding: 20px 16px;
+}
+
+.sidebar-brand {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 12px;
+}
+
+.brand-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #4f46e5, #22d3ee);
+}
+
+.admin-sidebar .nav-link {
+    color: #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 2px 0;
+}
+
+.admin-sidebar .nav-link:hover,
+.admin-sidebar .nav-link.active {
+    background: rgba(79, 70, 229, 0.15);
+    color: #fff;
+}
+
+.admin-sidebar .nav-link.disabled {
+    color: #64748b;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+}
+
+.admin-main {
+    background: var(--gray-100);
+    min-height: 100vh;
+}
+
+.admin-topbar .input-group .form-control {
+    background: #fff;
+}
+
+.admin-content .card {
+    border: 1px solid var(--gray-300);
+    border-radius: 14px;
+}
+
+.table thead {
+    background: var(--gray-100);
+}
+
+.badge-soft-success {
+    background: #ecfdf3;
+    color: #16a34a;
+}
+
+.badge-soft-warning {
+    background: #fff7ed;
+    color: #f97316;
+}
+
+.badge-soft-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
