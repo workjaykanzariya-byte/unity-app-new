@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -17,6 +18,8 @@ class AdminUsersController extends Controller
 {
     public function show(User $user): View
     {
+        $user->loadMissing('city');
+
         $roles = Role::query()->orderBy('name')->get();
         $currentRoleId = AdminUserRole::query()
             ->where('user_id', $user->id)
@@ -25,11 +28,20 @@ class AdminUsersController extends Controller
         $adminId = auth('admin')->id();
         $canAssign = $adminId ? $this->isGlobalAdmin($adminId) : false;
 
+        $details = $this->buildDetails($user);
+        $skills = $this->extractArrayField($user, 'skills');
+        $interests = $this->extractArrayField($user, 'interests');
+        $socialLinks = $this->extractSocialLinks($user);
+
         return view('admin.users.show', [
             'user' => $user->load('city'),
             'roles' => $roles,
             'currentRoleId' => $currentRoleId,
             'canAssign' => $canAssign,
+            'details' => $details,
+            'skills' => $skills,
+            'interests' => $interests,
+            'socialLinks' => $socialLinks,
         ]);
     }
 
@@ -85,5 +97,134 @@ class AdminUsersController extends Controller
         }
 
         return $name;
+    }
+
+    /**
+     * @return array<int, array{label: string, value: string}>
+     */
+    private function buildDetails(User $user): array
+    {
+        $details = [];
+
+        $this->addDetail($details, 'User ID', $user->id, 'id');
+        $this->addDetail($details, 'First Name', $user->first_name, 'first_name');
+        $this->addDetail($details, 'Last Name', $user->last_name, 'last_name');
+        $this->addDetail($details, 'Gender', $user->gender ?? null, 'gender');
+        $this->addDetail($details, 'Date of Birth', $this->formatDate($user->dob ?? null), 'dob');
+        $this->addDetail($details, 'Influencer Stars', $user->influencer_stars ?? null, 'influencer_stars');
+        $this->addDetail($details, 'Coins Balance', isset($user->coins_balance) ? number_format((int) $user->coins_balance) : null, 'coins_balance');
+        $this->addDetail($details, 'Joined', $this->formatDate($user->created_at ?? null), 'created_at');
+        $this->addDetail($details, 'Updated At', $this->formatDate($user->updated_at ?? null), 'updated_at');
+
+        $bio = $this->collectBio($user);
+        $this->addDetail($details, 'About', $bio, $bio !== null ? null : 'short_bio');
+
+        return $details;
+    }
+
+    private function collectBio(User $user): ?string
+    {
+        if ($this->hasUserColumn('short_bio') && !empty($user->short_bio)) {
+            return $user->short_bio;
+        }
+
+        if ($this->hasUserColumn('long_bio_html') && !empty($user->long_bio_html)) {
+            return strip_tags((string) $user->long_bio_html);
+        }
+
+        return null;
+    }
+
+    private function addDetail(array &$details, string $label, $value, ?string $column): void
+    {
+        if ($column !== null && !$this->hasUserColumn($column)) {
+            return;
+        }
+
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        $details[] = [
+            'label' => $label,
+            'value' => (string) $value,
+        ];
+    }
+
+    private function hasUserColumn(string $column): bool
+    {
+        static $columns = null;
+
+        if ($columns === null) {
+            $columns = Schema::getColumnListing('users');
+        }
+
+        return in_array($column, $columns, true);
+    }
+
+    private function formatDate($value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d H:i');
+        }
+
+        return $value ?: null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractArrayField(User $user, string $field): array
+    {
+        if (!$this->hasUserColumn($field)) {
+            return [];
+        }
+
+        $value = $user->{$field};
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(fn ($item) => is_string($item) ? trim($item) : null, $value)));
+    }
+
+    /**
+     * @return array<int, array{label: string, url: string}>
+     */
+    private function extractSocialLinks(User $user): array
+    {
+        if (!$this->hasUserColumn('social_links')) {
+            return [];
+        }
+
+        $links = $user->social_links;
+
+        if (!is_array($links)) {
+            return [];
+        }
+
+        $prepared = [];
+
+        foreach ($links as $key => $link) {
+            $url = null;
+            $label = is_string($key) ? ucfirst(str_replace('_', ' ', $key)) : 'Link ' . ((int) $key + 1);
+
+            if (is_array($link)) {
+                $url = $link['url'] ?? $link['link'] ?? null;
+                $label = $link['label'] ?? $label;
+            } elseif (is_string($link)) {
+                $url = $link;
+            }
+
+            if ($url) {
+                $prepared[] = [
+                    'label' => $label,
+                    'url' => $url,
+                ];
+            }
+        }
+
+        return $prepared;
     }
 }
