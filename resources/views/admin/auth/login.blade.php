@@ -11,13 +11,19 @@
             <p>Use your admin email to request a 4-digit OTP for secure access.</p>
         </div>
 
-        <div id="statusMessage" class="status"></div>
+        @if (session('status'))
+            <div class="status show success" id="statusMessage">{{ session('status') }}</div>
+        @elseif ($errors->any())
+            <div class="status show error" id="statusMessage">{{ $errors->first() }}</div>
+        @else
+            <div id="statusMessage" class="status"></div>
+        @endif
 
-        <form id="request-otp-form" autocomplete="off">
+        <form id="request-otp-form" autocomplete="off" method="POST" action="{{ route('admin.auth.request-otp') }}">
             @csrf
             <label for="email">Admin Email</label>
             <div class="input-row">
-                <input id="email" name="email" type="email" placeholder="you@company.com" required autocomplete="email" />
+                <input id="email" name="email" type="email" placeholder="you@company.com" required autocomplete="email" value="{{ old('email') }}" />
                 <button type="submit" class="btn primary" id="request-otp-btn">Send OTP</button>
             </div>
             <p class="muted">Only global admins are eligible. OTP codes expire in 5 minutes.</p>
@@ -25,7 +31,7 @@
 
         <div style="height: 16px;"></div>
 
-        <form id="verify-otp-form" autocomplete="off">
+        <form id="verify-otp-form" autocomplete="off" method="POST" action="{{ route('admin.auth.verify-otp') }}">
             @csrf
             <input type="hidden" name="email" id="verify-email">
             <label for="otp-1">Verification Code</label>
@@ -97,85 +103,23 @@
         });
     });
 
-    requestForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    requestForm.addEventListener('submit', () => {
         syncEmail();
         setStatus('');
         setLoading(requestBtn, true, 'Sending...');
-
-        try {
-            const formData = new FormData(requestForm);
-            const response = await fetch('{{ route('admin.auth.request-otp') }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setStatus(data.message || 'OTP sent successfully.', 'success');
-                verifyEmailInput.value = formData.get('email') || '';
-                otpInputs.forEach((input) => input.value = '');
-                otpInputs[0].focus();
-            } else {
-                setStatus(data.message || 'Unable to send OTP.', 'error');
-            }
-        } catch (_) {
-            setStatus('Unable to send OTP right now.', 'error');
-        } finally {
-            setLoading(requestBtn, false, 'Send OTP');
-        }
     });
 
-    verifyForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    verifyForm.addEventListener('submit', () => {
         syncEmail();
         setStatus('');
-
         const otpValue = otpInputs.map((input) => input.value).join('');
-
-        if (otpValue.length !== 4) {
-            setStatus('Enter the 4-digit OTP.', 'error');
-            return;
-        }
-
+        document.querySelector('[name=\"otp\"]')?.remove();
+        const hiddenOtp = document.createElement('input');
+        hiddenOtp.type = 'hidden';
+        hiddenOtp.name = 'otp';
+        hiddenOtp.value = otpValue;
+        verifyForm.appendChild(hiddenOtp);
         setLoading(verifyBtn, true, 'Verifying...');
-
-        try {
-            const formData = new FormData();
-            formData.append('_token', csrfToken);
-            formData.append('email', verifyEmailInput.value);
-            formData.append('otp', otpValue);
-
-            const response = await fetch('{{ route('admin.auth.verify-otp') }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept': 'application/json',
-                },
-                body: formData,
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setStatus(data.message || 'OTP verified.', 'success');
-                const redirectUrl = data.redirect || '{{ route('admin.dashboard') }}';
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 300);
-            } else {
-                setStatus(data.message || 'OTP verification failed.', 'error');
-            }
-        } catch (_) {
-            setStatus('Unable to verify OTP right now.', 'error');
-        } finally {
-            setLoading(verifyBtn, false, 'Verify & Login');
-        }
     });
 </script>
 @endsection

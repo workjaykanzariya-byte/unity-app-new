@@ -27,57 +27,41 @@ class AdminAuthController extends Controller
         return view('admin.auth.login');
     }
 
-    public function requestOtp(Request $request): JsonResponse
+    public function requestOtp(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'email' => ['required', 'email'],
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()->all(),
-            ], 422);
-        }
-
-        $email = strtolower($request->input('email'));
+        $email = strtolower(trim($validated['email']));
         $adminUser = $this->eligibleAdmin($email);
 
         if (! $adminUser) {
-            return response()->json([
-                'message' => 'You are not admin',
-            ], 403);
+            return back()->withErrors(['email' => 'You are not admin']);
         }
 
-        $existingOtp = AdminLoginOtp::query()
+        $recentOtp = AdminLoginOtp::query()
             ->where('email', $email)
             ->orderByDesc('created_at')
             ->first();
 
-        $now = now('UTC');
-        if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds($now) < 30) {
-            return response()->json([
-                'message' => 'Please wait before requesting another OTP.',
-            ], 429);
+        if ($recentOtp && $recentOtp->last_sent_at && $recentOtp->last_sent_at->diffInSeconds(now('UTC')) < 30) {
+            return back()->withErrors(['email' => 'Please wait before requesting another OTP.']);
         }
 
         $otp = (string) random_int(1000, 9999);
-        $expiresAt = $now->copy()->addMinutes(5);
-        $otpRecord = null;
 
-        DB::transaction(function () use (&$otpRecord, $email, $otp, $expiresAt, $now): void {
-            $otpRecord = AdminLoginOtp::create([
-                'id' => (string) Str::uuid(),
-                'email' => $email,
-                'otp_hash' => Hash::make($otp),
-                'expires_at' => $expiresAt,
-                'last_sent_at' => $now,
-                'attempts' => 0,
-                'used_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-        });
+        DB::table('admin_login_otps')->insert([
+            'id' => (string) Str::uuid(),
+            'email' => $email,
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => DB::raw("NOW() + INTERVAL '5 minutes'"),
+            'last_sent_at' => DB::raw('NOW()'),
+            'attempts' => 0,
+            'used_at' => null,
+            'created_at' => DB::raw('NOW()'),
+            'updated_at' => DB::raw('NOW()'),
+        ]);
 
         Mail::raw(
             "Your admin login OTP is {$otp}. It expires in 5 minutes.",
@@ -86,40 +70,32 @@ class AdminAuthController extends Controller
             }
         );
 
-        return response()->json([
-            'message' => 'OTP sent to your email.',
-        ]);
+        $request->session()->forget('errors');
+
+        return back()->with('status', 'OTP sent');
     }
 
-    public function verifyOtp(Request $request): JsonResponse
+    public function verifyOtp(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'email' => ['required', 'email'],
             'otp' => ['required', 'digits:4'],
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()->all(),
-            ], 422);
-        }
-
-        $email = strtolower($request->input('email'));
-        $otp = $request->input('otp');
+        $email = strtolower(trim($validated['email']));
+        $otp = trim($validated['otp']);
 
         $adminUser = $this->eligibleAdmin($email);
 
         if (! $adminUser) {
-            return response()->json([
-                'message' => 'You are not admin',
-            ], 403);
+            return back()->withErrors(['email' => 'You are not admin']);
         }
 
         $result = DB::transaction(function () use ($email, $otp): array {
             $otpRecord = AdminLoginOtp::query()
                 ->where('email', $email)
                 ->whereNull('used_at')
+                ->where('expires_at', '>', DB::raw('NOW()'))
                 ->orderByDesc('created_at')
                 ->lockForUpdate()
                 ->first();
@@ -132,38 +108,35 @@ class AdminAuthController extends Controller
                 return ['status' => 423, 'message' => 'Too many attempts'];
             }
 
-            $now = now('UTC');
-
-            if (! $otpRecord->expires_at || $otpRecord->expires_at->lt($now)) {
-                return ['status' => 410, 'message' => 'OTP expired'];
-            }
-
             if (! Hash::check($otp, $otpRecord->otp_hash)) {
-                $otpRecord->attempts += 1;
-                $otpRecord->save();
+                DB::table('admin_login_otps')
+                    ->where('id', $otpRecord->id)
+                    ->update([
+                        'attempts' => DB::raw('attempts + 1'),
+                        'updated_at' => DB::raw('NOW()'),
+                    ]);
 
                 return ['status' => 422, 'message' => 'Invalid OTP'];
             }
 
-            $otpRecord->used_at = $now;
-            $otpRecord->save();
+            DB::table('admin_login_otps')
+                ->where('id', $otpRecord->id)
+                ->update([
+                    'used_at' => DB::raw('NOW()'),
+                    'updated_at' => DB::raw('NOW()'),
+                ]);
 
             return ['status' => 200, 'message' => 'OTP verified'];
         });
 
         if ($result['status'] !== 200) {
-            return response()->json([
-                'message' => $result['message'],
-            ], $result['status']);
+            return back()->withErrors(['otp' => $result['message']]);
         }
 
         Auth::guard('admin')->login($adminUser);
         $request->session()->regenerate();
 
-        return response()->json([
-            'message' => 'OTP verified',
-            'redirect' => route('admin.dashboard'),
-        ]);
+        return redirect()->route('admin.dashboard');
     }
 
     public function logout(Request $request): RedirectResponse
