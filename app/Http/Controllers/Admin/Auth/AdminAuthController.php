@@ -49,37 +49,43 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        $recentOtp = AdminLoginOtp::query()
+        $existingOtp = AdminLoginOtp::query()
             ->where('email', $email)
-            ->where('last_sent_at', '>', DB::raw("NOW() - INTERVAL '30 seconds'"))
+            ->orderByDesc('last_sent_at')
             ->first();
 
-        if ($recentOtp) {
+        $now = now();
+        if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->diffInSeconds($now) < 30) {
             return response()->json([
                 'message' => 'Please wait before requesting another OTP.',
             ], 429);
         }
 
         $otp = (string) random_int(1000, 9999);
+        $expiresAt = $now->copy()->addMinutes(5);
         $otpRecord = null;
-        DB::transaction(function () use (&$otpRecord, $email, $otp): void {
+
+        DB::transaction(function () use (&$otpRecord, $email, $otp, $expiresAt, $now): void {
             $otpRecord = AdminLoginOtp::query()
                 ->where('email', $email)
                 ->lockForUpdate()
                 ->first();
 
-            if (! $otpRecord) {
-                $otpRecord = new AdminLoginOtp();
-                $otpRecord->id = (string) Str::uuid();
-                $otpRecord->email = $email;
-            }
+            $data = [
+                'otp_hash' => Hash::make($otp),
+                'expires_at' => $expiresAt,
+                'last_sent_at' => $now,
+                'attempts' => 0,
+            ];
 
-            $otpRecord->otp_hash = Hash::make($otp);
-            $otpRecord->expires_at = DB::raw("NOW() + INTERVAL '5 minutes'");
-            $otpRecord->last_sent_at = DB::raw('NOW()');
-            $otpRecord->attempts = 0;
-            $otpRecord->save();
-            $otpRecord->refresh();
+            if ($otpRecord) {
+                $otpRecord->fill($data)->save();
+            } else {
+                $otpRecord = AdminLoginOtp::create(array_merge([
+                    'id' => (string) Str::uuid(),
+                    'email' => $email,
+                ], $data));
+            }
         });
 
         Mail::raw(
