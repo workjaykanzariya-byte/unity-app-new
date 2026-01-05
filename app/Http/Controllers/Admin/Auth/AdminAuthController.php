@@ -49,12 +49,12 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        $existingOtp = AdminLoginOtp::query()
+        $recentOtp = AdminLoginOtp::query()
             ->where('email', $email)
-            ->orderByDesc('last_sent_at')
+            ->where('last_sent_at', '>', DB::raw("NOW() - INTERVAL '30 seconds'"))
             ->first();
 
-        if ($existingOtp && $existingOtp->last_sent_at && $existingOtp->last_sent_at->gt(now()->subSeconds(30))) {
+        if ($recentOtp) {
             return response()->json([
                 'message' => 'Please wait before requesting another OTP.',
             ], 429);
@@ -62,20 +62,24 @@ class AdminAuthController extends Controller
 
         $otp = (string) random_int(1000, 9999);
         $otpRecord = null;
+        DB::transaction(function () use (&$otpRecord, $email, $otp): void {
+            $otpRecord = AdminLoginOtp::query()
+                ->where('email', $email)
+                ->lockForUpdate()
+                ->first();
 
-        DB::transaction(function () use (&$otpRecord, $existingOtp, $email, $otp): void {
-            $otpRecord = $existingOtp ?? new AdminLoginOtp();
-
-            if (! $existingOtp) {
+            if (! $otpRecord) {
+                $otpRecord = new AdminLoginOtp();
                 $otpRecord->id = (string) Str::uuid();
+                $otpRecord->email = $email;
             }
 
-            $otpRecord->email = $email;
             $otpRecord->otp_hash = Hash::make($otp);
-            $otpRecord->expires_at = now()->addMinutes(5);
-            $otpRecord->last_sent_at = now();
+            $otpRecord->expires_at = DB::raw("NOW() + INTERVAL '5 minutes'");
+            $otpRecord->last_sent_at = DB::raw('NOW()');
             $otpRecord->attempts = 0;
             $otpRecord->save();
+            $otpRecord->refresh();
         });
 
         Mail::raw(
@@ -107,29 +111,6 @@ class AdminAuthController extends Controller
         $email = strtolower($request->input('email'));
         $otp = $request->input('otp');
 
-        $otpRecord = AdminLoginOtp::query()
-            ->where('email', $email)
-            ->orderByDesc('last_sent_at')
-            ->first();
-
-        if (! $otpRecord) {
-            return response()->json([
-                'message' => 'OTP expired',
-            ], 410);
-        }
-
-        if (! $otpRecord->expires_at || $otpRecord->expires_at->isPast()) {
-            return response()->json([
-                'message' => 'OTP expired',
-            ], 410);
-        }
-
-        if ($otpRecord->attempts >= 5) {
-            return response()->json([
-                'message' => 'Too many attempts',
-            ], 423);
-        }
-
         $adminUser = $this->eligibleAdmin($email);
 
         if (! $adminUser) {
@@ -138,21 +119,49 @@ class AdminAuthController extends Controller
             ], 403);
         }
 
-        if (! Hash::check($otp, $otpRecord->otp_hash)) {
-            $otpRecord->increment('attempts');
+        $result = DB::transaction(function () use ($email, $otp): array {
+            $otpRecord = AdminLoginOtp::query()
+                ->where('email', $email)
+                ->orderByDesc('last_sent_at')
+                ->lockForUpdate()
+                ->first();
 
-            return response()->json([
-                'message' => 'Invalid OTP',
-            ], 422);
-        }
+            if (! $otpRecord) {
+                return ['status' => 410, 'message' => 'OTP expired'];
+            }
 
-        DB::transaction(function () use ($otpRecord): void {
-            $otpRecord->attempts = 0;
-            $otpRecord->expires_at = now();
-            $otpRecord->save();
+            if ($otpRecord->attempts >= 5) {
+                return ['status' => 423, 'message' => 'Too many attempts'];
+            }
+
+            $expired = DB::table('admin_login_otps')
+                ->where('id', $otpRecord->id)
+                ->where('expires_at', '<=', DB::raw('NOW()'))
+                ->exists();
+
+            if ($expired || ! $otpRecord->otp_hash) {
+                return ['status' => 410, 'message' => 'OTP expired'];
+            }
+
+            if (! Hash::check($otp, $otpRecord->otp_hash)) {
+                $otpRecord->attempts += 1;
+                $otpRecord->save();
+
+                return ['status' => 422, 'message' => 'Invalid OTP'];
+            }
+
+            $otpRecord->delete();
+
+            return ['status' => 200, 'message' => 'OTP verified'];
         });
 
-        Auth::guard('admin')->login($user);
+        if ($result['status'] !== 200) {
+            return response()->json([
+                'message' => $result['message'],
+            ], $result['status']);
+        }
+
+        Auth::guard('admin')->login($adminUser);
         $request->session()->regenerate();
 
         return response()->json([
