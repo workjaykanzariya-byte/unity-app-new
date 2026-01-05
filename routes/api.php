@@ -67,6 +67,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/members/{id}/connections/accept', [MemberController::class, 'acceptConnection']);
         Route::delete('/members/{id}/connections', [MemberController::class, 'deleteConnection']);
         Route::get('/connections', [MyConnectionsController::class, 'index']);
+        Route::get('/connections/sent', [MyConnectionsController::class, 'sent']);
 
         Route::get('/me/connections', [MemberController::class, 'myConnections']);
         Route::get('/me/connection-requests', [MemberController::class, 'myConnectionRequests']);

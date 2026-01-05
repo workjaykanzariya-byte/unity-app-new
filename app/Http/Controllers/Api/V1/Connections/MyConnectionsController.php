@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Connections;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\Connection\ConnectionUserResource;
+use App\Http\Resources\Connection\SentConnectionResource;
 use App\Models\Connection;
 use Illuminate\Http\Request;
 
@@ -44,6 +45,28 @@ class MyConnectionsController extends BaseApiController
         })->filter()->values();
 
         return $this->success([
+            'items' => $items,
+        ]);
+    }
+
+    public function sent()
+    {
+        $authUser = auth()->user();
+
+        $connections = Connection::query()
+            ->with([
+                'addressee.profilePhotoFile',
+                'addressee.city',
+            ])
+            ->where('requester_id', $authUser->id)
+            ->where('is_approved', false)
+            ->orderByDesc('created_at')
+            ->get();
+
+        $items = SentConnectionResource::collection($connections);
+
+        return $this->success([
+            'total' => $items->count(),
             'items' => $items,
         ]);
     }
