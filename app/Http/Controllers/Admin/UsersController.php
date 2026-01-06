@@ -234,14 +234,13 @@ class UsersController extends Controller
             $user->save();
 
             if ($request->filled('role_ids')) {
-                $adminUser = AdminUser::query()->where('user_id', $user->id)->first();
+                $adminUser = AdminUser::find($user->id);
 
                 if (! $adminUser) {
                     $adminUser = AdminUser::create([
-                        'user_id' => $user->id,
+                        'id' => $user->id,
                         'email' => $user->email,
                         'name' => $user->display_name ?? $user->first_name,
-                        'status' => 'active',
                     ]);
                 }
 

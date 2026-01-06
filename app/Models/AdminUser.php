@@ -18,10 +18,8 @@ class AdminUser extends Authenticatable
 
     protected $fillable = [
         'id',
-        'user_id',
         'name',
         'email',
-        'status',
     ];
 
     public function roles(): BelongsToMany
