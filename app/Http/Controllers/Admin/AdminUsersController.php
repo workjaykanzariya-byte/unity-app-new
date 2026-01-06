@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 
 class AdminUsersController extends Controller
 {
@@ -64,14 +65,22 @@ class AdminUsersController extends Controller
                 ]
             );
 
-            AdminUserRole::query()->where('user_id', $user->id)->delete();
+            $existingRole = AdminUserRole::query()->where('user_id', $user->id)->first();
 
-            AdminUserRole::query()->create([
-                'id' => DB::raw('gen_random_uuid()'),
-                'user_id' => $user->id,
-                'role_id' => $validated['role_id'],
-                'created_at' => now(),
-            ]);
+            if ($existingRole) {
+                $existingRole->update([
+                    'role_id' => $validated['role_id'],
+                ]);
+            } else {
+                AdminUserRole::query()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'id' => Str::uuid()->toString(),
+                        'role_id' => $validated['role_id'],
+                        'created_at' => now(),
+                    ]
+                );
+            }
         });
 
         return redirect()
