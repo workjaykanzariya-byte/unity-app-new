@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
@@ -54,7 +55,6 @@ class UsersController extends Controller
                 'city',
                 'skills',
                 'interests',
-                'social_links',
                 'gender',
                 'dob',
                 'experience_years',
@@ -184,7 +184,6 @@ class UsersController extends Controller
             'city' => ['nullable', 'string', 'max:150'],
             'introduced_by' => ['nullable', 'exists:users,id'],
             'members_introduced_count' => ['nullable', 'integer', 'min:0'],
-            'profile_photo_url' => ['nullable', 'string'],
             'profile_photo_file_id' => ['nullable', 'uuid'],
             'cover_photo_file_id' => ['nullable', 'uuid'],
             'industry_tags' => ['nullable', 'string', 'max:10000'],
@@ -195,7 +194,6 @@ class UsersController extends Controller
             'special_recognitions' => ['nullable', 'string', 'max:10000'],
             'skills' => ['nullable', 'string', 'max:10000'],
             'interests' => ['nullable', 'string', 'max:10000'],
-            'social_links' => ['nullable', 'string', 'max:10000'],
             'role_ids' => ['array'],
             'role_ids.*' => ['exists:roles,id'],
         ]);
@@ -215,20 +213,40 @@ class UsersController extends Controller
             $validated[$field] = $this->csvToArray($request->input($field, ''));
         }
 
-        $validated['social_links'] = $this->csvToSocialLinks($request->input('social_links', ''));
-
         $booleanFields = ['is_sponsored_member'];
         foreach ($booleanFields as $field) {
             $validated[$field] = $request->boolean($field);
         }
 
-        $updatable = Arr::except($validated, ['role_ids']);
+        $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id']);
 
-        DB::transaction(function () use ($user, $updatable, $validated) {
+        DB::transaction(function () use ($user, $updatable, $validated, $request) {
             $user->fill($updatable);
+
+            if ($request->filled('profile_photo_file_id')) {
+                $user->profile_photo_file_id = $request->input('profile_photo_file_id');
+            }
+
+            if ($request->filled('cover_photo_file_id')) {
+                $user->cover_photo_file_id = $request->input('cover_photo_file_id');
+            }
+
             $user->save();
 
-            $user->roles()->sync($validated['role_ids'] ?? []);
+            if ($request->filled('role_ids')) {
+                $adminUser = AdminUser::query()->where('user_id', $user->id)->first();
+
+                if (! $adminUser) {
+                    $adminUser = AdminUser::create([
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'name' => $user->display_name ?? $user->first_name,
+                        'status' => 'active',
+                    ]);
+                }
+
+                $adminUser->roles()->sync($validated['role_ids']);
+            }
         });
 
         return redirect()->route('admin.users.edit', $user->id)
@@ -255,35 +273,5 @@ class UsersController extends Controller
         $parts = array_filter($parts, fn ($v) => $v !== '');
 
         return array_values($parts);
-    }
-
-    private function csvToSocialLinks(?string $value): array
-    {
-        if ($value === null) {
-            return [];
-        }
-
-        $value = trim($value);
-        if ($value === '') {
-            return [];
-        }
-
-        if (str_contains($value, '=')) {
-            $pairs = array_map('trim', explode(',', $value));
-            $result = [];
-            foreach ($pairs as $pair) {
-                if (! str_contains($pair, '=')) {
-                    continue;
-                }
-                [$key, $val] = array_map('trim', explode('=', $pair, 2));
-                if ($key === '' || $val === '') {
-                    continue;
-                }
-                $result[$key] = $val;
-            }
-            return $result;
-        }
-
-        return $this->csvToArray($value);
     }
 }

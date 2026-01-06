@@ -104,16 +104,32 @@
                         <textarea name="long_bio_html" class="form-control" rows="3">{{ old('long_bio_html', $user->long_bio_html) }}</textarea>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Profile Photo URL</label>
-                        <input type="text" name="profile_photo_url" class="form-control" value="{{ old('profile_photo_url', $user->profile_photo_url) }}">
+                        <label class="form-label">Profile Photo</label>
+                        <input type="hidden" name="profile_photo_file_id" id="profilePhotoFileId" value="{{ old('profile_photo_file_id', $user->profile_photo_file_id) }}">
+                        <div id="profilePhotoExisting" class="{{ $user->profile_photo_file_id ? '' : 'd-none' }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ $user->profile_photo_file_id ? url('/api/v1/files/' . $user->profile_photo_file_id) : '#' }}" target="_blank" class="btn btn-outline-secondary btn-sm">View Image</a>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-change-target="profilePhoto">Change</button>
+                            </div>
+                        </div>
+                        <div id="profilePhotoUpload" class="{{ $user->profile_photo_file_id ? 'd-none' : '' }}">
+                            <input type="file" class="form-control" id="profilePhotoFile" accept="image/*">
+                            <div class="form-text" id="profilePhotoStatus">Upload up to 10MB.</div>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Profile Photo File ID</label>
-                        <input type="text" name="profile_photo_file_id" class="form-control" value="{{ old('profile_photo_file_id', $user->profile_photo_file_id) }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cover Photo File ID</label>
-                        <input type="text" name="cover_photo_file_id" class="form-control" value="{{ old('cover_photo_file_id', $user->cover_photo_file_id) }}">
+                    <div class="col-md-6">
+                        <label class="form-label">Cover Photo</label>
+                        <input type="hidden" name="cover_photo_file_id" id="coverPhotoFileId" value="{{ old('cover_photo_file_id', $user->cover_photo_file_id) }}">
+                        <div id="coverPhotoExisting" class="{{ $user->cover_photo_file_id ? '' : 'd-none' }}">
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ $user->cover_photo_file_id ? url('/api/v1/files/' . $user->cover_photo_file_id) : '#' }}" target="_blank" class="btn btn-outline-secondary btn-sm">View Image</a>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-change-target="coverPhoto">Change</button>
+                            </div>
+                        </div>
+                        <div id="coverPhotoUpload" class="{{ $user->cover_photo_file_id ? 'd-none' : '' }}">
+                            <input type="file" class="form-control" id="coverPhotoFile" accept="image/*">
+                            <div class="form-text" id="coverPhotoStatus">Upload up to 10MB.</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Public Profile Slug</label>
@@ -211,18 +227,6 @@
                             return '';
                         };
 
-                        $socialLinksValue = '';
-                        if (is_array($user->social_links) && $user->social_links !== []) {
-                            if (array_keys($user->social_links) !== range(0, count($user->social_links) - 1)) {
-                                $pairs = [];
-                                foreach ($user->social_links as $k => $v) {
-                                    $pairs[] = $k . '=' . $v;
-                                }
-                                $socialLinksValue = implode(', ', $pairs);
-                            } else {
-                                $socialLinksValue = implode(', ', $user->social_links);
-                            }
-                        }
                     @endphp
                     @foreach ($jsonFields as $field => $value)
                         <div class="col-md-6">
@@ -230,10 +234,6 @@
                             <textarea name="{{ $field }}" class="form-control" rows="3" placeholder="Enter comma separated values (e.g. IT, Finance, Retail)">{{ old($field, $asCsv($value)) }}</textarea>
                         </div>
                     @endforeach
-                    <div class="col-md-6">
-                        <label class="form-label">Social Links</label>
-                        <textarea name="social_links" class="form-control" rows="3" placeholder="linkedin=https://..., instagram=https://... or comma separated list">{{ old('social_links', $socialLinksValue) }}</textarea>
-                    </div>
                 </div>
             </div>
         </div>
@@ -290,3 +290,78 @@
     </div>
 </form>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const uploadUrl = '/api/v1/files/upload';
+
+        const setupUploader = (prefix) => {
+            const fileInput = document.getElementById(`${prefix}File`);
+            const hiddenInput = document.getElementById(`${prefix}FileId`);
+            const existing = document.getElementById(`${prefix}Existing`);
+            const upload = document.getElementById(`${prefix}Upload`);
+            const status = document.getElementById(`${prefix}Status`);
+            const changeBtn = existing?.querySelector('[data-change-target]');
+            const viewLink = existing?.querySelector('a');
+
+            const setStatus = (text, isError = false) => {
+                if (!status) return;
+                status.textContent = text;
+                status.classList.toggle('text-danger', isError);
+            };
+
+            changeBtn?.addEventListener('click', () => {
+                if (existing) existing.classList.add('d-none');
+                if (upload) upload.classList.remove('d-none');
+                if (hiddenInput) hiddenInput.value = '';
+                if (fileInput) fileInput.value = '';
+                setStatus('Select a file to upload.');
+            });
+
+            fileInput?.addEventListener('change', async () => {
+                const file = fileInput.files?.[0];
+                if (!file) return;
+                setStatus('Uploading...');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch(uploadUrl, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {},
+                    });
+
+                    if (!response.ok) {
+                        setStatus('Upload failed. Please try again.', true);
+                        return;
+                    }
+
+                    const json = await response.json();
+                    const fileId = json?.data?.id;
+                    if (!fileId) {
+                        setStatus('Upload failed. Missing file id.', true);
+                        return;
+                    }
+
+                    if (hiddenInput) hiddenInput.value = fileId;
+                    if (viewLink) viewLink.href = `/api/v1/files/${fileId}`;
+
+                    if (upload) upload.classList.add('d-none');
+                    if (existing) existing.classList.remove('d-none');
+                    setStatus('Upload successful.');
+                } catch (e) {
+                    setStatus('Upload failed. Please try again.', true);
+                }
+            });
+        };
+
+        setupUploader('profilePhoto');
+        setupUploader('coverPhoto');
+    });
+</script>
+@endpush

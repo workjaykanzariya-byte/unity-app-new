@@ -250,7 +250,6 @@
                                             ['label' => 'Experience Summary', 'value' => $user->experience_summary],
                                             ['label' => 'Skills', 'value' => $user->skills, 'type' => 'json'],
                                             ['label' => 'Interests', 'value' => $user->interests, 'type' => 'json'],
-                                            ['label' => 'Social Links', 'value' => $user->social_links, 'type' => 'json'],
                                             ['label' => 'GDPR Deleted At', 'value' => $user->gdpr_deleted_at, 'type' => 'date'],
                                             ['label' => 'Anonymized At', 'value' => $user->anonymized_at, 'type' => 'date'],
                                             ['label' => 'Is GDPR Exported', 'value' => $user->is_gdpr_exported, 'type' => 'bool'],
