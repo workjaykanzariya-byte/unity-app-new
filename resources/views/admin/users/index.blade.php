@@ -258,7 +258,17 @@
                                                     return '—';
                                                 }
 
-                                                return '<pre class="mb-0 small">' . e(json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) . '</pre>';
+                                                if (is_array($value) && $value !== []) {
+                                                    $isAssoc = array_keys($value) !== range(0, count($value) - 1);
+                                                    if ($isAssoc) {
+                                                        $rendered = collect($value)->map(fn ($v, $k) => $k . ': ' . $v)->implode(', ');
+                                                    } else {
+                                                        $rendered = implode(', ', $value);
+                                                    }
+                                                    return e($rendered);
+                                                }
+
+                                                return '—';
                                             }
 
                                             if ($value === null || $value === '') {
