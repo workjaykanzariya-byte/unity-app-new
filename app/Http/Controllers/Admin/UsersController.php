@@ -449,19 +449,21 @@ class UsersController extends Controller
             ])
             ->with('city');
 
-        $search = $request->input('q', $request->input('search'));
+        $search = trim((string) $request->query('q', $request->input('search', '')));
         $membership = $request->input('membership_status');
         $cityId = $request->input('city_id', $request->input('city'));
         $phone = $request->input('phone');
         $company = $request->input('company_name');
         $perPage = $request->integer('per_page') ?: 20;
 
-        if ($search) {
+        if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('display_name', 'ILIKE', "%{$search}%")
-                    ->orWhere('email', 'ILIKE', "%{$search}%")
-                    ->orWhere('first_name', 'ILIKE', "%{$search}%")
-                    ->orWhere('last_name', 'ILIKE', "%{$search}%");
+                $like = "%{$search}%";
+                $q->where('display_name', 'ILIKE', $like)
+                    ->orWhere('first_name', 'ILIKE', $like)
+                    ->orWhere('last_name', 'ILIKE', $like)
+                    ->orWhere('email', 'ILIKE', $like)
+                    ->orWhere('company_name', 'ILIKE', $like);
             });
         }
 
