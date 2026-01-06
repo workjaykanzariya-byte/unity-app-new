@@ -26,7 +26,7 @@
     </div>
 @endif
 
-<form action="{{ route('admin.users.update', $user->id) }}" method="POST">
+<form id="userEditForm" action="{{ route('admin.users.update', $user->id) }}" method="POST">
     @csrf
     @method('PUT')
 
@@ -268,26 +268,24 @@
                 <div class="card-body">
                     @php
                         $currentRoleIds = old('role_ids', $userRoleIds);
-                        $hasGlobalAdmin = $roles->firstWhere('key', 'global_admin') && in_array($roles->firstWhere('key', 'global_admin')->id, $currentRoleIds);
                         $globalRole = $roles->firstWhere('key', 'global_admin');
+                        $hasGlobalAdmin = $globalRole && in_array($globalRole->id, $currentRoleIds);
                     @endphp
                     <div class="row g-3 align-items-center">
                         @foreach ($roles as $role)
                             @php $isGlobal = $role->key === 'global_admin'; @endphp
                             <div class="col-md-4 d-flex align-items-start">
                                 @if ($isGlobal && $hasGlobalAdmin)
-                                    <div class="w-100">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <div class="fw-semibold">{{ $role->name }}</div>
-                                                <div class="small text-muted">{{ $role->description }}</div>
-                                                <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
-                                            </div>
-                                            <form method="POST" action="{{ route('admin.users.roles.remove', [$user->id, $role->id]) }}">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove Role</button>
-                                            </form>
+                                    <div class="w-100 d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="fw-semibold">{{ $role->name }}</div>
+                                            <div class="small text-muted">{{ $role->description }}</div>
+                                            <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
                                         </div>
+                                        <form method="POST" action="{{ route('admin.users.roles.remove', [$user->id, $role->id]) }}" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove Global Admin role from this user?');">Remove Role</button>
+                                        </form>
                                     </div>
                                 @else
                                     <div class="form-check">
@@ -308,7 +306,7 @@
 
     <div class="mt-4">
         <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Cancel</a>
+        <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary" type="button">Cancel</a>
     </div>
 </form>
 @endsection
