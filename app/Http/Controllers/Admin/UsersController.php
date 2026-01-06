@@ -7,6 +7,7 @@ use App\Models\AdminUser;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -250,6 +251,20 @@ class UsersController extends Controller
 
         return redirect()->route('admin.users.edit', $user->id)
             ->with('status', 'User updated successfully.');
+    }
+
+    public function removeRole(Request $request, string $userId, string $roleId): RedirectResponse
+    {
+        $user = User::query()->findOrFail($userId);
+        $adminUser = AdminUser::find($user->id);
+
+        if (! $adminUser) {
+            return back()->withErrors(['roles' => 'Admin user record not found for this user.']);
+        }
+
+        $adminUser->roles()->detach($roleId);
+
+        return back()->with('status', 'Role removed successfully.');
     }
 
     private function membershipStatuses(): array

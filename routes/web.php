@@ -24,6 +24,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UsersController::class, 'index'])->name('users.index');
         Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
+        Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });

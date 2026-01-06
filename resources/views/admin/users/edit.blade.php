@@ -266,16 +266,38 @@
             <div class="card">
                 <div class="card-header fw-semibold">Roles</div>
                 <div class="card-body">
-                    <div class="row g-3">
+                    @php
+                        $currentRoleIds = old('role_ids', $userRoleIds);
+                        $hasGlobalAdmin = $roles->firstWhere('key', 'global_admin') && in_array($roles->firstWhere('key', 'global_admin')->id, $currentRoleIds);
+                        $globalRole = $roles->firstWhere('key', 'global_admin');
+                    @endphp
+                    <div class="row g-3 align-items-center">
                         @foreach ($roles as $role)
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}" id="role-{{ $role->id }}" @checked(in_array($role->id, old('role_ids', $userRoleIds)))>
-                                    <label class="form-check-label" for="role-{{ $role->id }}">
-                                        <strong>{{ $role->name }}</strong>
-                                        <div class="small text-muted">{{ $role->description }}</div>
-                                    </label>
-                                </div>
+                            @php $isGlobal = $role->key === 'global_admin'; @endphp
+                            <div class="col-md-4 d-flex align-items-start">
+                                @if ($isGlobal && $hasGlobalAdmin)
+                                    <div class="w-100">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div class="fw-semibold">{{ $role->name }}</div>
+                                                <div class="small text-muted">{{ $role->description }}</div>
+                                                <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
+                                            </div>
+                                            <form method="POST" action="{{ route('admin.users.roles.remove', [$user->id, $role->id]) }}">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove Role</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @else
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}" id="role-{{ $role->id }}" @checked(in_array($role->id, $currentRoleIds))>
+                                        <label class="form-check-label" for="role-{{ $role->id }}">
+                                            <strong>{{ $role->name }}</strong>
+                                            <div class="small text-muted">{{ $role->description }}</div>
+                                        </label>
+                                    </div>
+                                @endif
                             </div>
                         @endforeach
                     </div>
@@ -295,7 +317,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const uploadUrl = '/api/v1/files/upload';
+        const uploadUrl = '{{ route('admin.files.upload') }}';
 
         const setupUploader = (prefix) => {
             const fileInput = document.getElementById(`${prefix}File`);
@@ -342,7 +364,7 @@
                     }
 
                     const json = await response.json();
-                    const fileId = json?.data?.id;
+                    const fileId = json?.data?.id ?? json?.data?.[0]?.id;
                     if (!fileId) {
                         setStatus('Upload failed. Missing file id.', true);
                         return;
