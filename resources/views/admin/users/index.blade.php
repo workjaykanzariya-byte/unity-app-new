@@ -74,6 +74,7 @@
                     <th style="width: 40px;">
                         <input type="checkbox" class="form-check-input" id="select-all">
                     </th>
+                    <th>ID</th>
                     <th>
                         <a href="{{ route('admin.users.index', array_merge(request()->query(), ['sort' => 'display_name', 'dir' => $filters['sort'] === 'display_name' && $filters['dir'] === 'asc' ? 'desc' : 'asc'])) }}" class="text-decoration-none text-dark">
                             User
@@ -82,6 +83,7 @@
                             @endif
                         </a>
                     </th>
+                    <th>Phone</th>
                     <th>Company</th>
                     <th>Membership</th>
                     <th>City</th>
@@ -107,7 +109,13 @@
                 <tr class="bg-light align-middle">
                     <th></th>
                     <th>
+                        <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                    </th>
+                    <th>
                         <input type="text" name="q" form="grid-filters" class="form-control form-control-sm" placeholder="Name or email" value="{{ $filters['search'] }}">
+                    </th>
+                    <th>
+                        <input type="text" name="phone" form="grid-filters" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
                     </th>
                     <th>
                         <input type="text" name="company_name" form="grid-filters" class="form-control form-control-sm" placeholder="Company" value="{{ $filters['company_name'] }}">
@@ -155,16 +163,20 @@
                         $cityName = $user->city->name ?? $user->city ?? '—';
                         $isActive = $user->deleted_at === null;
                         $detailsId = 'details-' . $user->id;
+                        $shortId = substr($user->id, 0, 8);
                     @endphp
                     <tr>
                         <td>
                             <input type="checkbox" class="form-check-input row-checkbox">
                         </td>
                         <td>
+                            <span class="font-monospace" data-bs-toggle="tooltip" title="{{ $user->id }}">{{ $shortId }}</span>
+                        </td>
+                        <td>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="avatar avatar-sm rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; overflow: hidden;">
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" style="width: 36px; height: 36px; overflow: hidden;">
                                     @if ($avatar)
-                                        <img src="{{ $avatar }}" alt="{{ $name }}" class="img-fluid">
+                                        <img src="{{ $avatar }}" alt="{{ $name }}" class="img-fluid w-100 h-100 object-fit-cover">
                                     @else
                                         <span class="text-muted">{{ strtoupper(substr($name, 0, 1)) }}</span>
                                     @endif
@@ -175,6 +187,7 @@
                                 </div>
                             </div>
                         </td>
+                        <td>{{ $user->phone ?? '—' }}</td>
                         <td>{{ $user->company_name ?? '—' }}</td>
                         <td>
                             <span class="badge bg-primary-subtle text-primary text-uppercase">{{ $user->membership_status ?? 'Free' }}</span>
@@ -195,30 +208,105 @@
                         </td>
                     </tr>
                     <tr class="collapse-row">
-                        <td colspan="9" class="p-0 border-0">
+                        <td colspan="11" class="p-0 border-0">
                             <div class="collapse" id="{{ $detailsId }}">
                                 <div class="p-3 bg-light border-top">
+                                    @php
+                                        $fields = [
+                                            ['label' => 'ID', 'value' => $user->id],
+                                            ['label' => 'Email', 'value' => $user->email],
+                                            ['label' => 'Phone', 'value' => $user->phone],
+                                            ['label' => 'First Name', 'value' => $user->first_name],
+                                            ['label' => 'Last Name', 'value' => $user->last_name],
+                                            ['label' => 'Display Name', 'value' => $user->display_name],
+                                            ['label' => 'Designation', 'value' => $user->designation],
+                                            ['label' => 'Company Name', 'value' => $user->company_name],
+                                            ['label' => 'Profile Photo URL', 'value' => $user->profile_photo_url],
+                                            ['label' => 'Profile Photo File ID', 'value' => $user->profile_photo_file_id],
+                                            ['label' => 'Cover Photo File ID', 'value' => $user->cover_photo_file_id],
+                                            ['label' => 'Short Bio', 'value' => $user->short_bio],
+                                            ['label' => 'Long Bio (HTML)', 'value' => $user->long_bio_html],
+                                            ['label' => 'Industry Tags', 'value' => $user->industry_tags, 'type' => 'json'],
+                                            ['label' => 'Business Type', 'value' => $user->business_type],
+                                            ['label' => 'Turnover Range', 'value' => $user->turnover_range],
+                                            ['label' => 'City ID', 'value' => $user->city_id],
+                                            ['label' => 'City (string)', 'value' => $user->city],
+                                            ['label' => 'Membership Status', 'value' => $user->membership_status],
+                                            ['label' => 'Membership Expiry', 'value' => $user->membership_expiry, 'type' => 'date'],
+                                            ['label' => 'Coins Balance', 'value' => $user->coins_balance],
+                                            ['label' => 'Introduced By', 'value' => $user->introduced_by],
+                                            ['label' => 'Members Introduced Count', 'value' => $user->members_introduced_count],
+                                            ['label' => 'Influencer Stars', 'value' => $user->influencer_stars],
+                                            ['label' => 'Target Regions', 'value' => $user->target_regions, 'type' => 'json'],
+                                            ['label' => 'Target Business Categories', 'value' => $user->target_business_categories, 'type' => 'json'],
+                                            ['label' => 'Hobbies / Interests', 'value' => $user->hobbies_interests, 'type' => 'json'],
+                                            ['label' => 'Leadership Roles', 'value' => $user->leadership_roles, 'type' => 'json'],
+                                            ['label' => 'Is Sponsored Member', 'value' => $user->is_sponsored_member, 'type' => 'bool'],
+                                            ['label' => 'Public Profile Slug', 'value' => $user->public_profile_slug],
+                                            ['label' => 'Special Recognitions', 'value' => $user->special_recognitions, 'type' => 'json'],
+                                            ['label' => 'Gender', 'value' => $user->gender],
+                                            ['label' => 'Date of Birth', 'value' => $user->dob, 'type' => 'date'],
+                                            ['label' => 'Experience (years)', 'value' => $user->experience_years],
+                                            ['label' => 'Experience Summary', 'value' => $user->experience_summary],
+                                            ['label' => 'Skills', 'value' => $user->skills, 'type' => 'json'],
+                                            ['label' => 'Interests', 'value' => $user->interests, 'type' => 'json'],
+                                            ['label' => 'Social Links', 'value' => $user->social_links, 'type' => 'json'],
+                                            ['label' => 'GDPR Deleted At', 'value' => $user->gdpr_deleted_at, 'type' => 'date'],
+                                            ['label' => 'Anonymized At', 'value' => $user->anonymized_at, 'type' => 'date'],
+                                            ['label' => 'Is GDPR Exported', 'value' => $user->is_gdpr_exported, 'type' => 'bool'],
+                                            ['label' => 'Last Login', 'value' => $user->last_login_at, 'type' => 'date'],
+                                            ['label' => 'Created At', 'value' => $user->created_at, 'type' => 'date'],
+                                            ['label' => 'Updated At', 'value' => $user->updated_at, 'type' => 'date'],
+                                            ['label' => 'Deleted At', 'value' => $user->deleted_at, 'type' => 'date'],
+                                        ];
+
+                                        $chunks = array_chunk($fields, (int) ceil(count($fields) / 2));
+                                        $renderValue = function ($value, $type = 'text') {
+                                            if ($type === 'bool') {
+                                                $class = $value ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary';
+                                                $label = $value ? 'Yes' : 'No';
+                                                return '<span class="badge ' . $class . '">' . $label . '</span>';
+                                            }
+
+                                            if ($type === 'date') {
+                                                if (! $value) {
+                                                    return '—';
+                                                }
+
+                                                $isDate = $value instanceof \DateTimeInterface;
+                                                $formatted = $isDate ? $value->format('Y-m-d H:i') : (string) $value;
+                                                $raw = $isDate && method_exists($value, 'toDateTimeString') ? $value->toDateTimeString() : (string) $value;
+                                                return e($formatted) . ' <span class="text-muted small">(' . e($raw) . ')</span>';
+                                            }
+
+                                            if ($type === 'json') {
+                                                if (is_null($value)) {
+                                                    return '—';
+                                                }
+
+                                                return '<pre class="mb-0 small">' . e(json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) . '</pre>';
+                                            }
+
+                                            if ($value === null || $value === '') {
+                                                return '—';
+                                            }
+
+                                            return e((string) $value);
+                                        };
+                                    @endphp
                                     <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <table class="table table-sm">
-                                                <tr><th class="w-50 text-muted">ID</th><td class="text-break">{{ $user->id }}</td></tr>
-                                                <tr><th class="text-muted">Phone</th><td>{{ $user->phone ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">Business Type</th><td>{{ $user->business_type ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">Industry Tags</th><td>{{ is_array($user->industry_tags) ? implode(', ', $user->industry_tags) : ($user->industry_tags ?? '—') }}</td></tr>
-                                                <tr><th class="text-muted">Membership Expiry</th><td>{{ optional($user->membership_expiry)->format('Y-m-d') ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">City ID</th><td>{{ $user->city_id ?? '—' }}</td></tr>
-                                            </table>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <table class="table table-sm">
-                                                <tr><th class="w-50 text-muted">Influencer Stars</th><td>{{ $user->influencer_stars ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">Membership Status</th><td>{{ $user->membership_status ?? 'Free' }}</td></tr>
-                                                <tr><th class="text-muted">Coins Balance</th><td>{{ number_format($user->coins_balance ?? 0) }}</td></tr>
-                                                <tr><th class="text-muted">Last Login</th><td>{{ optional($user->last_login_at)->format('Y-m-d H:i') ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">Created At</th><td>{{ optional($user->created_at)->format('Y-m-d H:i') ?? '—' }}</td></tr>
-                                                <tr><th class="text-muted">Updated At</th><td>{{ optional($user->updated_at)->format('Y-m-d H:i') ?? '—' }}</td></tr>
-                                            </table>
-                                        </div>
+                                        @foreach ($chunks as $chunk)
+                                            <div class="col-md-6">
+                                                <table class="table table-sm mb-0">
+                                                    @foreach ($chunk as $field)
+                                                        <tr>
+                                                            <th class="w-50 text-muted">{{ $field['label'] }}</th>
+                                                            <td class="text-break">{!! $renderValue($field['value'], $field['type'] ?? 'text') !!}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </table>
+                                            </div>
+                                        @endforeach
                                     </div>
                                 </div>
                             </div>
@@ -275,6 +363,11 @@
             }
             params.set('per_page', document.getElementById('perPage')?.value || '{{ $filters['per_page'] }}');
             window.location = `${window.location.pathname}?${params.toString()}`;
+        });
+
+        const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(tooltipTriggerEl => {
+            new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });
 </script>
