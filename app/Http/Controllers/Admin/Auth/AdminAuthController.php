@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -47,29 +48,30 @@ class AdminAuthController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
-        if ($recentOtp && $recentOtp->last_sent_at && $recentOtp->last_sent_at->diffInSeconds(now('UTC')) < 30) {
+        if ($recentOtp && $recentOtp->last_sent_at && $recentOtp->last_sent_at->diffInSeconds(now()->utc()) < 30) {
             return back()
                 ->withInput(['email' => $email])
                 ->withErrors(['email' => 'Please wait before requesting another OTP.']);
         }
 
         $otp = (string) random_int(1000, 9999);
-        $now = now('UTC');
+        $now = now()->utc();
         $expiresAt = $now->copy()->addMinutes(5);
 
-        DB::table('admin_login_otps')->updateOrInsert(
-            ['email' => $email],
-            [
-                'id' => (string) Str::uuid(),
-                'otp_hash' => Hash::make($otp),
-                'expires_at' => $expiresAt,
-                'last_sent_at' => $now,
-                'attempts' => 0,
-                'used_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]
-        );
+        $otpRecord = AdminLoginOtp::query()->where('email', $email)->first();
+
+        if (! $otpRecord) {
+            $otpRecord = new AdminLoginOtp();
+            $otpRecord->id = (string) Str::uuid();
+            $otpRecord->email = $email;
+        }
+
+        $otpRecord->otp_hash = Hash::make($otp);
+        $otpRecord->expires_at = $expiresAt;
+        $otpRecord->last_sent_at = $now;
+        $otpRecord->attempts = 0;
+        $otpRecord->used_at = null;
+        $otpRecord->save();
 
         Mail::raw(
             "Your admin login OTP is {$otp}. It expires in 5 minutes.",
@@ -105,21 +107,26 @@ class AdminAuthController extends Controller
         }
 
         $result = DB::transaction(function () use ($email, $otp): array {
+            $now = now()->utc();
+
             $otpRecord = AdminLoginOtp::query()
                 ->where('email', $email)
                 ->whereNull('used_at')
+                ->where('expires_at', '>=', $now)
                 ->orderByDesc('created_at')
                 ->lockForUpdate()
                 ->first();
 
-            if (! $otpRecord) {
-                return ['status' => 410, 'message' => 'OTP expired'];
+            if (app()->environment('local')) {
+                Log::info('ADMIN OTP TIME CHECK', [
+                    'app_now' => now()->toIso8601String(),
+                    'utc_now' => $now->toIso8601String(),
+                    'expires_at' => optional($otpRecord)->expires_at?->toIso8601String(),
+                ]);
             }
 
-            $now = now('UTC');
-
-            if ($otpRecord->used_at || ($otpRecord->expires_at && $otpRecord->expires_at->lt($now))) {
-                return ['status' => 410, 'message' => 'OTP expired'];
+            if (! $otpRecord) {
+                return ['status' => 410, 'message' => 'OTP expired or invalid'];
             }
 
             if ($otpRecord->attempts >= 5) {
