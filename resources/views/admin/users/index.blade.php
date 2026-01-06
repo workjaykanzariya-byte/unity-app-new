@@ -30,6 +30,7 @@
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('admin.users.import') }}" class="btn btn-outline-primary btn-sm">Import</a>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
+            <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">Add Member</a>
         </div>
     </div>
     <form id="exportCsvForm" method="POST" action="{{ route('admin.users.export.csv') }}" class="d-none">

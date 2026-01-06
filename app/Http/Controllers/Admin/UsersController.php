@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -37,6 +38,86 @@ class UsersController extends Controller
             'cities' => $cities,
             'filters' => $filters,
         ]);
+    }
+
+    public function create(): View
+    {
+        $user = new User();
+        $cities = City::query()->orderBy('name')->get();
+        $membershipStatuses = $this->membershipStatuses();
+
+        return view('admin.users.create', [
+            'user' => $user,
+            'cities' => $cities,
+            'membershipStatuses' => $membershipStatuses,
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $membershipStatuses = $this->membershipStatuses();
+
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'display_name' => ['nullable', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'company_name' => ['nullable', 'string', 'max:150'],
+            'business_type' => ['nullable', 'string', 'max:100'],
+            'turnover_range' => ['nullable', 'string', 'max:100'],
+            'gender' => ['nullable', 'string', 'max:20'],
+            'dob' => ['nullable', 'date'],
+            'experience_years' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'experience_summary' => ['nullable', 'string'],
+            'short_bio' => ['nullable', 'string'],
+            'long_bio_html' => ['nullable', 'string'],
+            'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug'],
+            'membership_status' => ['nullable', 'in:' . implode(',', $membershipStatuses)],
+            'membership_expiry' => ['nullable', 'date'],
+            'coins_balance' => ['nullable', 'integer', 'min:0'],
+            'is_sponsored_member' => ['boolean'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'city' => ['nullable', 'string', 'max:150'],
+            'profile_photo_file_id' => ['nullable', 'uuid'],
+            'cover_photo_file_id' => ['nullable', 'uuid'],
+            'industry_tags' => ['nullable', 'string', 'max:10000'],
+            'target_regions' => ['nullable', 'string', 'max:10000'],
+            'target_business_categories' => ['nullable', 'string', 'max:10000'],
+            'hobbies_interests' => ['nullable', 'string', 'max:10000'],
+            'leadership_roles' => ['nullable', 'string', 'max:10000'],
+            'special_recognitions' => ['nullable', 'string', 'max:10000'],
+            'skills' => ['nullable', 'string', 'max:10000'],
+            'interests' => ['nullable', 'string', 'max:10000'],
+            'social_links' => ['nullable', 'string', 'max:10000'],
+        ]);
+
+        $csvFields = [
+            'industry_tags',
+            'target_regions',
+            'target_business_categories',
+            'hobbies_interests',
+            'leadership_roles',
+            'special_recognitions',
+            'skills',
+            'interests',
+        ];
+
+        foreach ($csvFields as $field) {
+            $validated[$field] = $this->csvToArray($request->input($field, ''));
+        }
+
+        $validated['social_links'] = $this->parseSocialLinks($request->input('social_links'));
+        $validated['is_sponsored_member'] = $request->boolean('is_sponsored_member');
+        $validated['membership_status'] = $validated['membership_status'] ?: 'visitor';
+        $validated['coins_balance'] = $validated['coins_balance'] ?? 0;
+        $validated['password_hash'] = Hash::make(Str::random(32));
+
+        $user = User::create($validated);
+
+        return redirect()->route('admin.users.edit', $user->id)
+            ->with('success', 'User created successfully.');
     }
 
     public function edit(string $userId): View
