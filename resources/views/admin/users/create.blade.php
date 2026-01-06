@@ -99,10 +99,6 @@
                         <textarea name="short_bio" class="form-control" rows="2">{{ old('short_bio', $user->short_bio) }}</textarea>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Long Bio (HTML)</label>
-                        <textarea name="long_bio_html" class="form-control" rows="3">{{ old('long_bio_html', $user->long_bio_html) }}</textarea>
-                    </div>
-                    <div class="col-md-6">
                         <label class="form-label">Profile Photo</label>
                         <input type="hidden" name="profile_photo_file_id" id="profilePhotoFileId" value="{{ old('profile_photo_file_id', $user->profile_photo_file_id) }}">
                         <div id="profilePhotoExisting" class="d-none">
@@ -175,16 +171,7 @@
             <div class="card">
                 <div class="card-header fw-semibold">Location</div>
                 <div class="card-body row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">City (relation)</label>
-                        <select name="city_id" class="form-select">
-                            <option value="">—</option>
-                            @foreach ($cities as $city)
-                                <option value="{{ $city->id }}" @selected(old('city_id', $user->city_id) == $city->id)>{{ $city->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label class="form-label">City (string fallback)</label>
                         <input type="text" name="city" class="form-control" value="{{ old('city', $user->city) }}">
                     </div>

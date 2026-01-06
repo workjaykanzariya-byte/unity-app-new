@@ -10,6 +10,10 @@
     </div>
 </div>
 
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2">

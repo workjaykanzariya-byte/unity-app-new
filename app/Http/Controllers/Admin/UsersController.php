@@ -116,8 +116,9 @@ class UsersController extends Controller
 
         $user = User::create($validated);
 
-        return redirect()->route('admin.users.edit', $user->id)
-            ->with('success', 'User created successfully.');
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'Member created successfully.');
     }
 
     public function edit(string $userId): View
