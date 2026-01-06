@@ -26,6 +26,15 @@
     </div>
 @endif
 
+@php
+    $globalAdminRole = $roles->firstWhere('key', 'global_admin');
+@endphp
+@if ($globalAdminRole)
+    <form id="removeGlobalAdminRoleForm" method="POST" action="{{ route('admin.users.roles.remove', ['user' => $user->id, 'role' => $globalAdminRole->id]) }}">
+        @csrf
+    </form>
+@endif
+
 <form id="userEditForm" action="{{ route('admin.users.update', $user->id) }}" method="POST">
     @csrf
     @method('PUT')
@@ -268,8 +277,7 @@
                 <div class="card-body">
                     @php
                         $currentRoleIds = old('role_ids', $userRoleIds);
-                        $globalRole = $roles->firstWhere('key', 'global_admin');
-                        $hasGlobalAdmin = $globalRole && in_array($globalRole->id, $currentRoleIds);
+                        $hasGlobalAdmin = $globalAdminRole && in_array($globalAdminRole->id, $currentRoleIds);
                     @endphp
                     <div class="row g-3 align-items-center">
                         @foreach ($roles as $role)
@@ -282,10 +290,14 @@
                                             <div class="small text-muted">{{ $role->description }}</div>
                                             <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
                                         </div>
-                                        <form method="POST" action="{{ route('admin.users.roles.remove', [$user->id, $role->id]) }}" class="d-inline">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove Global Admin role from this user?');">Remove Role</button>
-                                        </form>
+                                        @if ($globalAdminRole)
+                                            <button type="submit"
+                                                    form="removeGlobalAdminRoleForm"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Remove Global Admin role from this user?');">
+                                                Remove Role
+                                            </button>
+                                        @endif
                                     </div>
                                 @else
                                     <div class="form-check">
