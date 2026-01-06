@@ -94,6 +94,7 @@ class User extends Authenticatable
         'interests' => 'array',
         'social_links' => 'array',
         'coins_balance' => 'integer',
+        'is_sponsored_member' => 'boolean',
     ];
 
     public function getAuthPassword()
@@ -260,6 +261,11 @@ class User extends Authenticatable
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'admin_user_roles', 'user_id', 'role_id');
     }
 
     public function uploadedFiles(): HasMany

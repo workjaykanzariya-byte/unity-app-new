@@ -22,6 +22,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         })->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [UsersController::class, 'index'])->name('users.index');
+        Route::get('/users/create', [UsersController::class, 'create'])->name('users.create');
+        Route::post('/users', [UsersController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
+        Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
+        Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
+        Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
+        Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
+        Route::post('/users/export/csv', [UsersController::class, 'exportCsv'])->name('users.export.csv');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });
