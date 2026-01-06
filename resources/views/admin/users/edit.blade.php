@@ -160,7 +160,11 @@
                             }
                         @endphp
                         <label class="form-label">Social Links</label>
-                        <textarea name="social_links" class="form-control" rows="2" placeholder="Enter comma separated links, optionally as key=value (e.g. linkedin=https://..., website=https://...)">{{ old('social_links', $socialLinksValue) }}</textarea>
+                        <textarea name="social_links" class="form-control" rows="3" placeholder="Enter social links">{{ old('social_links', $socialLinksValue) }}</textarea>
+                        <small class="text-muted">
+                            Enter comma separated links, optionally as key=value
+                            (e.g. linkedin=https://linkedin.com/..., website=https://example.com)
+                        </small>
                     </div>
                 </div>
             </div>
@@ -233,7 +237,7 @@
 
         <div class="col-12">
             <div class="card">
-                <div class="card-header fw-semibold">JSON Fields</div>
+                <div class="card-header fw-semibold">Additional Details</div>
                 <div class="card-body row g-3">
                     @php
                         $jsonFields = [
