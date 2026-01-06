@@ -22,6 +22,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         })->name('home');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/users', [UsersController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });

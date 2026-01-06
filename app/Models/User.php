@@ -262,6 +262,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class);
     }
 
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'admin_user_roles', 'user_id', 'role_id');
+    }
+
     public function uploadedFiles(): HasMany
     {
         return $this->hasMany(FileModel::class, 'uploader_user_id');

@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\City;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class UsersController extends Controller
@@ -132,5 +135,121 @@ class UsersController extends Controller
                 'dir' => $direction,
             ],
         ]);
+    }
+
+    public function edit(string $userId): View
+    {
+        $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
+        $cities = City::query()->orderBy('name')->get();
+        $roles = Role::query()->orderBy('name')->get();
+        $membershipStatuses = $this->membershipStatuses();
+
+        return view('admin.users.edit', [
+            'user' => $user,
+            'cities' => $cities,
+            'roles' => $roles,
+            'membershipStatuses' => $membershipStatuses,
+            'userRoleIds' => $user->roles->pluck('id')->all(),
+        ]);
+    }
+
+    public function update(Request $request, string $userId)
+    {
+        $user = User::query()->findOrFail($userId);
+
+        $membershipStatuses = $this->membershipStatuses();
+        $validated = $request->validate([
+            'first_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['nullable', 'string', 'max:100'],
+            'display_name' => ['nullable', 'string', 'max:150'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'company_name' => ['nullable', 'string', 'max:150'],
+            'business_type' => ['nullable', 'string', 'max:100'],
+            'turnover_range' => ['nullable', 'string', 'max:100'],
+            'gender' => ['nullable', 'string', 'max:20'],
+            'dob' => ['nullable', 'date'],
+            'experience_years' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'experience_summary' => ['nullable', 'string'],
+            'short_bio' => ['nullable', 'string'],
+            'long_bio_html' => ['nullable', 'string'],
+            'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug,' . $user->id],
+            'membership_status' => ['required', 'in:' . implode(',', $membershipStatuses)],
+            'membership_expiry' => ['nullable', 'date'],
+            'coins_balance' => ['required', 'integer', 'min:0'],
+            'influencer_stars' => ['nullable', 'integer', 'min:0'],
+            'is_sponsored_member' => ['boolean'],
+            'city_id' => ['nullable', 'exists:cities,id'],
+            'city' => ['nullable', 'string', 'max:150'],
+            'introduced_by' => ['nullable', 'exists:users,id'],
+            'members_introduced_count' => ['nullable', 'integer', 'min:0'],
+            'profile_photo_url' => ['nullable', 'string'],
+            'profile_photo_file_id' => ['nullable', 'uuid'],
+            'cover_photo_file_id' => ['nullable', 'uuid'],
+            'is_gdpr_exported' => ['boolean'],
+            'industry_tags' => ['nullable', 'string'],
+            'target_regions' => ['nullable', 'string'],
+            'target_business_categories' => ['nullable', 'string'],
+            'hobbies_interests' => ['nullable', 'string'],
+            'leadership_roles' => ['nullable', 'string'],
+            'special_recognitions' => ['nullable', 'string'],
+            'skills' => ['nullable', 'string'],
+            'interests' => ['nullable', 'string'],
+            'social_links' => ['nullable', 'string'],
+            'role_ids' => ['array'],
+            'role_ids.*' => ['exists:roles,id'],
+        ]);
+
+        $jsonFields = [
+            'industry_tags',
+            'target_regions',
+            'target_business_categories',
+            'hobbies_interests',
+            'leadership_roles',
+            'special_recognitions',
+            'skills',
+            'interests',
+            'social_links',
+        ];
+
+        foreach ($jsonFields as $field) {
+            if ($request->filled($field)) {
+                $decoded = json_decode($request->input($field), true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return back()->withInput()->withErrors([$field => 'Invalid JSON']);
+                }
+                $validated[$field] = $decoded;
+            } else {
+                $validated[$field] = null;
+            }
+        }
+
+        $booleanFields = ['is_sponsored_member', 'is_gdpr_exported'];
+        foreach ($booleanFields as $field) {
+            $validated[$field] = $request->boolean($field);
+        }
+
+        $updatable = Arr::except($validated, ['role_ids']);
+
+        DB::transaction(function () use ($user, $updatable, $validated) {
+            $user->fill($updatable);
+            $user->save();
+
+            $user->roles()->sync($validated['role_ids'] ?? []);
+        });
+
+        return redirect()->route('admin.users.edit', $user->id)
+            ->with('status', 'User updated successfully.');
+    }
+
+    private function membershipStatuses(): array
+    {
+        return [
+            'visitor',
+            'premium',
+            'charter',
+            'suspended',
+        ];
     }
 }
