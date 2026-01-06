@@ -28,7 +28,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
         Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
-        Route::post('/users/export/pdf', [UsersController::class, 'exportPdf'])->name('users.export.pdf');
+        Route::post('/users/export/csv', [UsersController::class, 'exportCsv'])->name('users.export.csv');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });

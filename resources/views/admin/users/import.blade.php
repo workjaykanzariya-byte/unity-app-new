@@ -40,7 +40,7 @@
         <div class="mb-3">
             <label class="form-label">CSV File</label>
             <input type="file" name="file" class="form-control" accept=".csv,text/csv" required>
-            <small class="text-muted">Supported columns: email, first_name, last_name, display_name, phone, company_name, membership_status, city, coins_balance (id optional).</small>
+            <small class="text-muted">CSV only. Supported columns: email, first_name, last_name, display_name, phone, company_name, membership_status, city, coins_balance (id optional).</small>
         </div>
         <button type="submit" class="btn btn-primary">Upload & Import</button>
         <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary">Cancel</a>

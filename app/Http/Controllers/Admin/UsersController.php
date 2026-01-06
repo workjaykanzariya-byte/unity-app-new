@@ -276,23 +276,70 @@ class UsersController extends Controller
         return view('admin.users.import', ['results' => $results]);
     }
 
-    public function exportPdf(Request $request)
+    public function exportCsv(Request $request)
     {
         [$query] = $this->buildUserQuery($request);
 
-        $selectedIds = array_filter(explode(',', (string) $request->input('selected_ids', '')));
+        $selectedIds = $request->input('ids', []);
+        if (is_string($selectedIds)) {
+            $selectedIds = array_filter(explode(',', $selectedIds));
+        }
+
         if (! empty($selectedIds)) {
             $query->whereIn('id', $selectedIds);
         }
 
-        $users = $query->get();
-        $pdfContent = $this->generateSimplePdf($users);
-        $fileName = 'users_export_' . now()->format('Ymd_His') . '.pdf';
+        $users = $query->limit(10000)->get();
+        $fileName = 'users_export_' . now()->format('Ymd_His') . '.csv';
 
-        return response($pdfContent, 200, [
-            'Content-Type' => 'application/pdf',
+        $headers = [
+            'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
-        ]);
+        ];
+
+        $columns = [
+            'id',
+            'first_name',
+            'last_name',
+            'display_name',
+            'email',
+            'phone',
+            'company_name',
+            'membership_status',
+            'city',
+            'coins_balance',
+            'status',
+            'created_at',
+            'updated_at',
+        ];
+
+        $callback = function () use ($users, $columns) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $columns);
+
+            foreach ($users as $user) {
+                $status = $user->deleted_at ? 'deleted' : 'active';
+                fputcsv($handle, [
+                    $user->id,
+                    $user->first_name,
+                    $user->last_name,
+                    $user->display_name,
+                    $user->email,
+                    $user->phone,
+                    $user->company_name,
+                    $user->membership_status,
+                    $user->city?->name ?? $user->city,
+                    $user->coins_balance,
+                    $status,
+                    optional($user->created_at)->toDateTimeString(),
+                    optional($user->updated_at)->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     private function membershipStatuses(): array
@@ -460,76 +507,4 @@ class UsersController extends Controller
         return [$query, $filters, $perPage];
     }
 
-    private function generateSimplePdf($users): string
-    {
-        $lines = [];
-        $header = 'ID | Name | Email | Phone | Company | Membership | City | Coins | Status | Created At';
-        $lines[] = $header;
-
-        foreach ($users as $user) {
-            $status = $user->deleted_at ? 'Deleted' : 'Active';
-            $lines[] = sprintf(
-                '%s | %s | %s | %s | %s | %s | %s | %s | %s | %s',
-                substr((string) $user->id, 0, 8),
-                $user->display_name ?? trim($user->first_name . ' ' . $user->last_name),
-                $user->email,
-                $user->phone,
-                $user->company_name,
-                $user->membership_status,
-                $user->city?->name ?? $user->city ?? '',
-                $user->coins_balance,
-                $status,
-                optional($user->created_at)->format('Y-m-d')
-            );
-        }
-
-        $commands = [
-            'BT',
-            '/F1 10 Tf',
-        ];
-
-        $y = 770;
-        foreach ($lines as $line) {
-            $commands[] = sprintf('1 0 0 1 40 %d Tm (%s) Tj', $y, $this->escapePdfText($line));
-            $y -= 14;
-        }
-        $commands[] = 'ET';
-
-        $stream = implode("\n", $commands);
-
-        $objects = [];
-        $this->appendPdfObject($objects, '<< /Type /Catalog /Pages 2 0 R >>');
-        $this->appendPdfObject($objects, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-        $this->appendPdfObject($objects, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>');
-        $this->appendPdfObject($objects, '<< /Length ' . strlen($stream) . " >>\nstream\n{$stream}\nendstream");
-        $this->appendPdfObject($objects, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-        foreach ($objects as $i => $object) {
-            $offsets[] = strlen($pdf);
-            $pdf .= ($i + 1) . " 0 obj\n{$object}\nendobj\n";
-        }
-
-        $xrefPosition = strlen($pdf);
-        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
-        $pdf .= "0000000000 65535 f \n";
-        foreach (array_slice($offsets, 1) as $offset) {
-            $pdf .= sprintf("%010d 00000 n \n", $offset);
-        }
-
-        $pdf .= "trailer\n<< /Size " . (count($objects) + 1) . " /Root 1 0 R >>\nstartxref\n{$xrefPosition}\n%%EOF";
-
-        return $pdf;
-    }
-
-    private function escapePdfText(string $text): string
-    {
-        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
-    }
-
-    private function appendPdfObject(array &$objects, string $content): void
-    {
-        $objects[] = $content;
-    }
 }

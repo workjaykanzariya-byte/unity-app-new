@@ -29,12 +29,11 @@
         </div>
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('admin.users.import') }}" class="btn btn-outline-primary btn-sm">Import</a>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportPdfBtn">Export PDF</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
         </div>
     </div>
-    <form id="exportPdfForm" method="POST" action="{{ route('admin.users.export.pdf') }}" class="d-none">
+    <form id="exportCsvForm" method="POST" action="{{ route('admin.users.export.csv') }}" class="d-none">
         @csrf
-        <input type="hidden" name="selected_ids" id="export-selected-ids">
         <input type="hidden" name="q" value="{{ $filters['search'] }}">
         <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] ?? '' }}">
         <input type="hidden" name="city_id" value="{{ $filters['city_id'] ?? '' }}">
@@ -88,16 +87,16 @@
                         <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
                     </th>
                     <th>
-                        <input type="text" name="q" form="grid-filters" class="form-control form-control-sm" placeholder="Name or email" value="{{ $filters['search'] }}">
+                        <input type="text" name="q" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Name or email" value="{{ $filters['search'] }}">
                     </th>
                     <th>
-                        <input type="text" name="phone" form="grid-filters" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
+                        <input type="text" name="phone" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
                     </th>
                     <th>
-                        <input type="text" name="company_name" form="grid-filters" class="form-control form-control-sm" placeholder="Company" value="{{ $filters['company_name'] }}">
+                        <input type="text" name="company_name" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Company" value="{{ $filters['company_name'] }}">
                     </th>
                     <th>
-                        <select name="membership_status" form="grid-filters" class="form-select form-select-sm">
+                        <select name="membership_status" form="usersFiltersForm" class="form-select form-select-sm">
                             <option value="all">All</option>
                             @foreach ($membershipStatuses as $status)
                                 <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
@@ -105,7 +104,7 @@
                         </select>
                     </th>
                     <th>
-                        <select name="city_id" form="grid-filters" class="form-select form-select-sm">
+                        <select name="city_id" form="usersFiltersForm" class="form-select form-select-sm">
                             <option value="all">All</option>
                             @foreach ($cities as $city)
                                 <option value="{{ $city->id }}" @selected($filters['city_id'] == $city->id)>{{ $city->name }}</option>
@@ -122,10 +121,9 @@
                         <select class="form-select form-select-sm" disabled><option>Any</option></select>
                     </th>
                     <th class="text-end">
-                        <form id="grid-filters" method="GET" class="d-flex gap-2 justify-content-end">
+                        <form id="usersFiltersForm" method="GET" class="d-flex gap-2 justify-content-end">
                             <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
                             <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
-                            <button class="btn btn-sm btn-primary">Apply</button>
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('admin.users.index') }}">Reset</a>
                         </form>
                     </th>
@@ -313,10 +311,9 @@
         const selectAll = document.getElementById('select-all');
         const checkboxes = document.querySelectorAll('.row-checkbox');
         const perPage = document.getElementById('perPage');
-        const filterForm = document.getElementById('grid-filters');
-        const exportBtn = document.getElementById('exportPdfBtn');
-        const exportForm = document.getElementById('exportPdfForm');
-        const exportIdsInput = document.getElementById('export-selected-ids');
+        const filterForm = document.getElementById('usersFiltersForm');
+        const exportBtn = document.getElementById('exportCsvBtn');
+        const exportForm = document.getElementById('exportCsvForm');
         const debounce = (fn, delay = 300) => {
             let t;
             return (...args) => {
@@ -330,6 +327,7 @@
             for (const [key, value] of formData.entries()) {
                 params.set(key, value);
             }
+            params.delete('page');
             window.location = `${window.location.pathname}?${params.toString()}`;
         };
 
@@ -353,17 +351,24 @@
         });
 
         const autoSubmit = debounce(() => filterForm && submitFilters(filterForm));
-        document.querySelectorAll('#grid-filters input[type="text"]').forEach(input => {
+        document.querySelectorAll('#usersFiltersForm input[type="text"]').forEach(input => {
             input.addEventListener('input', autoSubmit);
         });
-        document.querySelectorAll('#grid-filters select').forEach(select => {
+        document.querySelectorAll('#usersFiltersForm select').forEach(select => {
             select.addEventListener('change', () => submitFilters(filterForm));
         });
 
         exportBtn?.addEventListener('click', () => {
-            if (!exportForm || !exportIdsInput) return;
+            if (!exportForm) return;
+            exportForm.querySelectorAll('input[name="ids[]"]').forEach(el => el.remove());
             const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value).filter(Boolean);
-            exportIdsInput.value = selected.join(',');
+            selected.forEach(id => {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'ids[]';
+                hidden.value = id;
+                exportForm.appendChild(hidden);
+            });
             exportForm.submit();
         });
 
