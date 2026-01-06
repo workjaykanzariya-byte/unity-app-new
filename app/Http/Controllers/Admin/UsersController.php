@@ -187,21 +187,20 @@ class UsersController extends Controller
             'profile_photo_url' => ['nullable', 'string'],
             'profile_photo_file_id' => ['nullable', 'uuid'],
             'cover_photo_file_id' => ['nullable', 'uuid'],
-            'is_gdpr_exported' => ['boolean'],
-            'industry_tags' => ['nullable', 'string'],
-            'target_regions' => ['nullable', 'string'],
-            'target_business_categories' => ['nullable', 'string'],
-            'hobbies_interests' => ['nullable', 'string'],
-            'leadership_roles' => ['nullable', 'string'],
-            'special_recognitions' => ['nullable', 'string'],
-            'skills' => ['nullable', 'string'],
-            'interests' => ['nullable', 'string'],
-            'social_links' => ['nullable', 'string'],
+            'industry_tags' => ['nullable', 'string', 'max:10000'],
+            'target_regions' => ['nullable', 'string', 'max:10000'],
+            'target_business_categories' => ['nullable', 'string', 'max:10000'],
+            'hobbies_interests' => ['nullable', 'string', 'max:10000'],
+            'leadership_roles' => ['nullable', 'string', 'max:10000'],
+            'special_recognitions' => ['nullable', 'string', 'max:10000'],
+            'skills' => ['nullable', 'string', 'max:10000'],
+            'interests' => ['nullable', 'string', 'max:10000'],
+            'social_links' => ['nullable', 'string', 'max:10000'],
             'role_ids' => ['array'],
             'role_ids.*' => ['exists:roles,id'],
         ]);
 
-        $jsonFields = [
+        $csvFields = [
             'industry_tags',
             'target_regions',
             'target_business_categories',
@@ -210,22 +209,15 @@ class UsersController extends Controller
             'special_recognitions',
             'skills',
             'interests',
-            'social_links',
         ];
 
-        foreach ($jsonFields as $field) {
-            if ($request->filled($field)) {
-                $decoded = json_decode($request->input($field), true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    return back()->withInput()->withErrors([$field => 'Invalid JSON']);
-                }
-                $validated[$field] = $decoded;
-            } else {
-                $validated[$field] = null;
-            }
+        foreach ($csvFields as $field) {
+            $validated[$field] = $this->csvToArray($request->input($field, ''));
         }
 
-        $booleanFields = ['is_sponsored_member', 'is_gdpr_exported'];
+        $validated['social_links'] = $this->csvToSocialLinks($request->input('social_links', ''));
+
+        $booleanFields = ['is_sponsored_member'];
         foreach ($booleanFields as $field) {
             $validated[$field] = $request->boolean($field);
         }
@@ -251,5 +243,47 @@ class UsersController extends Controller
             'charter',
             'suspended',
         ];
+    }
+
+    private function csvToArray(?string $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $parts = array_map('trim', explode(',', $value));
+        $parts = array_filter($parts, fn ($v) => $v !== '');
+
+        return array_values($parts);
+    }
+
+    private function csvToSocialLinks(?string $value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        $value = trim($value);
+        if ($value === '') {
+            return [];
+        }
+
+        if (str_contains($value, '=')) {
+            $pairs = array_map('trim', explode(',', $value));
+            $result = [];
+            foreach ($pairs as $pair) {
+                if (! str_contains($pair, '=')) {
+                    continue;
+                }
+                [$key, $val] = array_map('trim', explode('=', $pair, 2));
+                if ($key === '' || $val === '') {
+                    continue;
+                }
+                $result[$key] = $val;
+            }
+            return $result;
+        }
+
+        return $this->csvToArray($value);
     }
 }

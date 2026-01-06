@@ -94,6 +94,7 @@ class User extends Authenticatable
         'interests' => 'array',
         'social_links' => 'array',
         'coins_balance' => 'integer',
+        'is_sponsored_member' => 'boolean',
     ];
 
     public function getAuthPassword()

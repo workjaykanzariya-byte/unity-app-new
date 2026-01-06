@@ -11,7 +11,7 @@
 </div>
 
 <div class="card p-3 mb-3">
-    <form class="row g-2 align-items-end" method="GET">
+    <form class="row g-2 align-items-end" method="GET" id="usersFiltersForm">
         <div class="col-md-4">
             <label class="form-label">Search (name or email)</label>
             <input type="text" name="q" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
@@ -339,6 +339,22 @@
         const checkboxes = document.querySelectorAll('.row-checkbox');
         const perPage = document.getElementById('perPage');
         const filterForm = document.getElementById('grid-filters');
+        const topFiltersForm = document.getElementById('usersFiltersForm');
+        const debounce = (fn, delay = 300) => {
+            let t;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), delay);
+            };
+        };
+        const submitFilters = (form) => {
+            const params = new URLSearchParams(window.location.search);
+            const formData = new FormData(form);
+            for (const [key, value] of formData.entries()) {
+                params.set(key, value);
+            }
+            window.location = `${window.location.pathname}?${params.toString()}`;
+        };
 
         if (selectAll) {
             selectAll.addEventListener('change', () => {
@@ -356,13 +372,23 @@
 
         filterForm?.addEventListener('submit', (e) => {
             e.preventDefault();
-            const formData = new FormData(filterForm);
-            const params = new URLSearchParams(window.location.search);
-            for (const [key, value] of formData.entries()) {
-                params.set(key, value);
+            submitFilters(filterForm);
+        });
+
+        const autoSubmit = debounce(() => filterForm && submitFilters(filterForm));
+        document.querySelectorAll('#grid-filters input[type=\"text\"]').forEach(input => {
+            input.addEventListener('input', autoSubmit);
+        });
+        document.querySelectorAll('#grid-filters select').forEach(select => {
+            select.addEventListener('change', () => submitFilters(filterForm));
+        });
+
+        document.querySelectorAll('#usersFiltersForm input, #usersFiltersForm select').forEach(el => {
+            if (el.tagName.toLowerCase() === 'select') {
+                el.addEventListener('change', () => submitFilters(topFiltersForm));
+            } else {
+                el.addEventListener('input', debounce(() => submitFilters(topFiltersForm)));
             }
-            params.set('per_page', document.getElementById('perPage')?.value || '{{ $filters['per_page'] }}');
-            window.location = `${window.location.pathname}?${params.toString()}`;
         });
 
         const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

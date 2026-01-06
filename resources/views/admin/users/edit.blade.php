@@ -202,43 +202,37 @@
                             'special_recognitions' => $user->special_recognitions,
                             'skills' => $user->skills,
                             'interests' => $user->interests,
-                            'social_links' => $user->social_links,
                         ];
+
+                        $asCsv = function ($value): string {
+                            if (is_array($value)) {
+                                return implode(', ', $value);
+                            }
+                            return '';
+                        };
+
+                        $socialLinksValue = '';
+                        if (is_array($user->social_links) && $user->social_links !== []) {
+                            if (array_keys($user->social_links) !== range(0, count($user->social_links) - 1)) {
+                                $pairs = [];
+                                foreach ($user->social_links as $k => $v) {
+                                    $pairs[] = $k . '=' . $v;
+                                }
+                                $socialLinksValue = implode(', ', $pairs);
+                            } else {
+                                $socialLinksValue = implode(', ', $user->social_links);
+                            }
+                        }
                     @endphp
                     @foreach ($jsonFields as $field => $value)
                         <div class="col-md-6">
                             <label class="form-label text-capitalize">{{ str_replace('_', ' ', $field) }}</label>
-                            <textarea name="{{ $field }}" class="form-control" rows="3" placeholder="Enter valid JSON">{{ old($field, $value ? json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) : '') }}</textarea>
-                            <small class="text-muted">Enter valid JSON.</small>
+                            <textarea name="{{ $field }}" class="form-control" rows="3" placeholder="Enter comma separated values (e.g. IT, Finance, Retail)">{{ old($field, $asCsv($value)) }}</textarea>
                         </div>
                     @endforeach
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header fw-semibold">GDPR</div>
-                <div class="card-body row g-3">
-                    <div class="col-md-4 d-flex align-items-center">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="1" id="isGdprExported" name="is_gdpr_exported" @checked(old('is_gdpr_exported', $user->is_gdpr_exported))>
-                            <label class="form-check-label" for="isGdprExported">
-                                Is GDPR Exported
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">GDPR Deleted At</label>
-                        <input type="text" class="form-control" value="{{ optional($user->gdpr_deleted_at)->toDateTimeString() }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Anonymized At</label>
-                        <input type="text" class="form-control" value="{{ optional($user->anonymized_at)->toDateTimeString() }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Deleted At</label>
-                        <input type="text" class="form-control" value="{{ optional($user->deleted_at)->toDateTimeString() }}" disabled>
+                    <div class="col-md-6">
+                        <label class="form-label">Social Links</label>
+                        <textarea name="social_links" class="form-control" rows="3" placeholder="linkedin=https://..., instagram=https://... or comma separated list">{{ old('social_links', $socialLinksValue) }}</textarea>
                     </div>
                 </div>
             </div>
