@@ -26,6 +26,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
         Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
+        Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
+        Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
+        Route::post('/users/export/pdf', [UsersController::class, 'exportPdf'])->name('users.export.pdf');
         Route::get('/circles', [CirclesController::class, 'index'])->name('circles.index');
     });
 });

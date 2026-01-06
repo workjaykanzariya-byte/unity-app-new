@@ -10,45 +10,6 @@
     </div>
 </div>
 
-<div class="card p-3 mb-3">
-    <form class="row g-2 align-items-end" method="GET" id="usersFiltersForm">
-        <div class="col-md-4">
-            <label class="form-label">Search (name or email)</label>
-            <input type="text" name="q" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Membership</label>
-            <select name="membership_status" class="form-select">
-                <option value="all">All</option>
-                @foreach ($membershipStatuses as $status)
-                    <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">City</label>
-            <select name="city_id" class="form-select">
-                <option value="all">All</option>
-                @foreach ($cities as $city)
-                    <option value="{{ $city->id }}" @selected($filters['city_id'] == $city->id)>{{ $city->name }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Phone</label>
-            <input type="text" name="phone" value="{{ $filters['phone'] }}" class="form-control" placeholder="Phone">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Company</label>
-            <input type="text" name="company_name" value="{{ $filters['company_name'] }}" class="form-control" placeholder="Company name">
-        </div>
-        <div class="col-md-12 d-flex gap-2 mt-2">
-            <button class="btn btn-primary">Filter</button>
-            <a class="btn btn-outline-secondary" href="{{ route('admin.users.index') }}">Reset</a>
-        </div>
-    </form>
-</div>
-
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2">
@@ -66,7 +27,22 @@
                 No records found
             @endif
         </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('admin.users.import') }}" class="btn btn-outline-primary btn-sm">Import</a>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportPdfBtn">Export PDF</button>
+        </div>
     </div>
+    <form id="exportPdfForm" method="POST" action="{{ route('admin.users.export.pdf') }}" class="d-none">
+        @csrf
+        <input type="hidden" name="selected_ids" id="export-selected-ids">
+        <input type="hidden" name="q" value="{{ $filters['search'] }}">
+        <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] ?? '' }}">
+        <input type="hidden" name="city_id" value="{{ $filters['city_id'] ?? '' }}">
+        <input type="hidden" name="phone" value="{{ $filters['phone'] ?? '' }}">
+        <input type="hidden" name="company_name" value="{{ $filters['company_name'] ?? '' }}">
+        <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
+        <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
+    </form>
     <div class="table-responsive">
         <table class="table align-middle">
             <thead class="table-light">
@@ -167,7 +143,7 @@
                     @endphp
                     <tr>
                         <td>
-                            <input type="checkbox" class="form-check-input row-checkbox">
+                            <input type="checkbox" class="form-check-input row-checkbox" value="{{ $user->id }}">
                         </td>
                         <td>
                             <span class="font-monospace" data-bs-toggle="tooltip" title="{{ $user->id }}">{{ $shortId }}</span>
@@ -338,7 +314,9 @@
         const checkboxes = document.querySelectorAll('.row-checkbox');
         const perPage = document.getElementById('perPage');
         const filterForm = document.getElementById('grid-filters');
-        const topFiltersForm = document.getElementById('usersFiltersForm');
+        const exportBtn = document.getElementById('exportPdfBtn');
+        const exportForm = document.getElementById('exportPdfForm');
+        const exportIdsInput = document.getElementById('export-selected-ids');
         const debounce = (fn, delay = 300) => {
             let t;
             return (...args) => {
@@ -375,19 +353,18 @@
         });
 
         const autoSubmit = debounce(() => filterForm && submitFilters(filterForm));
-        document.querySelectorAll('#grid-filters input[type=\"text\"]').forEach(input => {
+        document.querySelectorAll('#grid-filters input[type="text"]').forEach(input => {
             input.addEventListener('input', autoSubmit);
         });
         document.querySelectorAll('#grid-filters select').forEach(select => {
             select.addEventListener('change', () => submitFilters(filterForm));
         });
 
-        document.querySelectorAll('#usersFiltersForm input, #usersFiltersForm select').forEach(el => {
-            if (el.tagName.toLowerCase() === 'select') {
-                el.addEventListener('change', () => submitFilters(topFiltersForm));
-            } else {
-                el.addEventListener('input', debounce(() => submitFilters(topFiltersForm)));
-            }
+        exportBtn?.addEventListener('click', () => {
+            if (!exportForm || !exportIdsInput) return;
+            const selected = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.value).filter(Boolean);
+            exportIdsInput.value = selected.join(',');
+            exportForm.submit();
         });
 
         const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
