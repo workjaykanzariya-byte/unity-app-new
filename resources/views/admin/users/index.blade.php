@@ -124,6 +124,7 @@
                         <form id="usersFiltersForm" method="GET" class="d-flex gap-2 justify-content-end">
                             <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
                             <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
+                            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('admin.users.index') }}">Reset</a>
                         </form>
                     </th>
@@ -314,13 +315,6 @@
         const filterForm = document.getElementById('usersFiltersForm');
         const exportBtn = document.getElementById('exportCsvBtn');
         const exportForm = document.getElementById('exportCsvForm');
-        const debounce = (fn, delay = 300) => {
-            let t;
-            return (...args) => {
-                clearTimeout(t);
-                t = setTimeout(() => fn(...args), delay);
-            };
-        };
         const submitFilters = (form) => {
             const params = new URLSearchParams(window.location.search);
             const formData = new FormData(form);
@@ -348,14 +342,6 @@
         filterForm?.addEventListener('submit', (e) => {
             e.preventDefault();
             submitFilters(filterForm);
-        });
-
-        const autoSubmit = debounce(() => filterForm && submitFilters(filterForm));
-        document.querySelectorAll('#usersFiltersForm input[type="text"]').forEach(input => {
-            input.addEventListener('input', autoSubmit);
-        });
-        document.querySelectorAll('#usersFiltersForm select').forEach(select => {
-            select.addEventListener('change', () => submitFilters(filterForm));
         });
 
         exportBtn?.addEventListener('click', () => {
