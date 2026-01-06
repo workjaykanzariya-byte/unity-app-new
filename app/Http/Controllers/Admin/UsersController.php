@@ -195,6 +195,7 @@ class UsersController extends Controller
             'special_recognitions' => ['nullable', 'string', 'max:10000'],
             'skills' => ['nullable', 'string', 'max:10000'],
             'interests' => ['nullable', 'string', 'max:10000'],
+            'social_links' => ['nullable', 'string', 'max:10000'],
             'role_ids' => ['array'],
             'role_ids.*' => ['exists:roles,id'],
         ]);
@@ -213,6 +214,8 @@ class UsersController extends Controller
         foreach ($csvFields as $field) {
             $validated[$field] = $this->csvToArray($request->input($field, ''));
         }
+
+        $validated['social_links'] = $this->parseSocialLinks($request->input('social_links'));
 
         $booleanFields = ['is_sponsored_member'];
         foreach ($booleanFields as $field) {
@@ -264,7 +267,13 @@ class UsersController extends Controller
 
         $adminUser->roles()->detach($roleId);
 
-        return back()->with('status', 'Role removed successfully.');
+        $remainingRoles = $adminUser->roles()->count();
+
+        if ($remainingRoles === 0) {
+            $adminUser->delete();
+        }
+
+        return back()->with('success', 'Role removed successfully.');
     }
 
     private function membershipStatuses(): array
@@ -285,6 +294,40 @@ class UsersController extends Controller
 
         $parts = array_map('trim', explode(',', $value));
         $parts = array_filter($parts, fn ($v) => $v !== '');
+
+        return array_values($parts);
+    }
+
+    private function parseSocialLinks(?string $value): array
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return [];
+        }
+
+        $parts = array_filter(array_map('trim', explode(',', $value)));
+
+        $isKeyValue = false;
+        foreach ($parts as $p) {
+            if (str_contains($p, '=')) {
+                $isKeyValue = true;
+                break;
+            }
+        }
+
+        if ($isKeyValue) {
+            $obj = [];
+            foreach ($parts as $p) {
+                if (! str_contains($p, '=')) {
+                    continue;
+                }
+                [$k, $v] = array_map('trim', explode('=', $p, 2));
+                if ($k !== '' && $v !== '') {
+                    $obj[$k] = $v;
+                }
+            }
+            return $obj;
+        }
 
         return array_values($parts);
     }

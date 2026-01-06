@@ -144,6 +144,24 @@
                         <label class="form-label">Public Profile Slug</label>
                         <input type="text" name="public_profile_slug" class="form-control" value="{{ old('public_profile_slug', $user->public_profile_slug) }}">
                     </div>
+                    <div class="col-12">
+                        @php
+                            $socialLinksValue = '';
+                            if (is_array($user->social_links) && $user->social_links !== []) {
+                                if (array_keys($user->social_links) !== range(0, count($user->social_links) - 1)) {
+                                    $pairs = [];
+                                    foreach ($user->social_links as $k => $v) {
+                                        $pairs[] = $k . '=' . $v;
+                                    }
+                                    $socialLinksValue = implode(', ', $pairs);
+                                } else {
+                                    $socialLinksValue = implode(', ', $user->social_links);
+                                }
+                            }
+                        @endphp
+                        <label class="form-label">Social Links</label>
+                        <textarea name="social_links" class="form-control" rows="2" placeholder="Enter comma separated links, optionally as key=value (e.g. linkedin=https://..., website=https://...)">{{ old('social_links', $socialLinksValue) }}</textarea>
+                    </div>
                 </div>
             </div>
         </div>
