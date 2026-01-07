@@ -205,7 +205,9 @@ class ChatController extends BaseApiController
                 'updated_at' => now(),
             ]);
 
-        broadcast(new MessagesSeen($chat->id, $authUser->id, now()->toIso8601String()))->toOthers();
+        if ($updated > 0) {
+            broadcast(new MessagesSeen($chat->id, $authUser->id, now()->toIso8601String()))->toOthers();
+        }
 
         return $this->success([
             'updated_count' => $updated,

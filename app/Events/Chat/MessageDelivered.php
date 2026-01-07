@@ -32,13 +32,14 @@ class MessageDelivered implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $sender = $this->message->sender;
+        $senderId = auth()->id() ?? $sender?->id ?? $this->message->sender_id;
 
         return [
             'chat_id' => $this->message->chat_id,
             'message_id' => $this->message->id,
             'content' => $this->message->content,
             'sender' => [
-                'id' => $sender?->id,
+                'id' => $senderId,
                 'display_name' => $sender?->display_name,
                 'profile_photo_url' => $sender?->profile_photo_url,
             ],
