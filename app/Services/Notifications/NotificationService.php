@@ -8,6 +8,7 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\NotificationTypes;
 use Illuminate\Support\Str;
 
 class NotificationService
@@ -16,7 +17,7 @@ class NotificationService
     {
         $notification = Notification::create([
             'user_id' => $receiverUser->id,
-            'type' => 'chat_message',
+            'type' => NotificationTypes::normalize(NotificationTypes::CHAT_MESSAGE),
             'payload' => [
                 'chat_id' => $chat->id,
                 'message_id' => $message->id,
