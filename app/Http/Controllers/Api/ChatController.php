@@ -179,7 +179,7 @@ class ChatController extends BaseApiController
         $chat->last_message_at = $message->created_at;
         $chat->save();
 
-        broadcast(new \App\Events\Chat\MessageDelivered($message))->toOthers();
+        broadcast(new MessageDelivered($message))->toOthers();
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
     }
