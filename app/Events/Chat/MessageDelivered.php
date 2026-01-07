@@ -37,10 +37,13 @@ class MessageDelivered implements ShouldBroadcastNow
         return [
             'chat_id' => $this->message->chat_id,
             'message_id' => $this->message->id,
+            'sender_id' => $senderId,
             'content' => $this->message->content,
             'sender' => [
                 'id' => $senderId,
                 'display_name' => $sender?->display_name,
+                'first_name' => $sender?->first_name,
+                'last_name' => $sender?->last_name,
                 'profile_photo_url' => $sender?->profile_photo_url,
             ],
             'created_at' => $this->message->created_at?->toIso8601String(),
