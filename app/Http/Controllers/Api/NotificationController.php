@@ -62,4 +62,20 @@ class NotificationController extends BaseApiController
 
         return $this->success(new NotificationResource($notification), 'Notification marked as read');
     }
+
+    public function readAll(Request $request)
+    {
+        $authUser = $request->user();
+
+        $updated = Notification::where('user_id', $authUser->id)
+            ->where('is_read', false)
+            ->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
+
+        return $this->success([
+            'updated_count' => $updated,
+        ], 'Notifications marked as read');
+    }
 }

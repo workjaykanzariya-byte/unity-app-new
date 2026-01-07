@@ -10,6 +10,8 @@ class Notification extends Model
 {
     use HasFactory;
 
+    protected $table = 'notifications';
+
     protected $keyType = 'string';
 
     public $incrementing = false;
@@ -21,7 +23,6 @@ class Notification extends Model
         'type',
         'payload',
         'is_read',
-        'created_at',
         'read_at',
     ];
 

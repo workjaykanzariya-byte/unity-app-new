@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AdminActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatTypingController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostSaveController;
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
@@ -178,10 +180,17 @@ Route::prefix('v1')->group(function () {
         Route::get('/chats/{id}/messages', [ChatController::class, 'listMessages']);
         Route::post('/chats/{id}/messages', [ChatController::class, 'storeMessage']);
         Route::post('/chats/{id}/mark-read', [ChatController::class, 'markRead']);
+        Route::post('/chats/{chat}/messages/seen', [ChatController::class, 'markSeen']);
+        Route::post('/chats/{chat}/typing', [ChatTypingController::class, 'store']);
+
+        // Presence
+        Route::post('/presence/ping', [PresenceController::class, 'ping']);
+        Route::post('/presence/offline', [PresenceController::class, 'offline']);
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll']);
 
         // Referrals & Visitors
         Route::post('/referrals/links', [ReferralController::class, 'storeLink']);

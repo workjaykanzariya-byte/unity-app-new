@@ -10,7 +10,10 @@ use App\Http\Resources\MessageResource;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Notifications\NotificationService;
+use App\Services\Realtime\ChatRealtimeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends BaseApiController
 {
@@ -177,6 +180,18 @@ class ChatController extends BaseApiController
         $chat->last_message_at = $message->created_at;
         $chat->save();
 
+        $receiverId = $chat->user1_id === $authUser->id ? $chat->user2_id : $chat->user1_id;
+        $receiverUser = User::find($receiverId);
+
+        DB::afterCommit(function () use ($chat, $message, $authUser, $receiverUser): void {
+            if (! $receiverUser) {
+                return;
+            }
+
+            app(ChatRealtimeService::class)->broadcastMessageDelivered($chat, $message, $authUser);
+            app(NotificationService::class)->createChatMessageNotification($receiverUser, $chat, $message, $authUser);
+        });
+
         return $this->success(new MessageResource($message), 'Message sent', 201);
     }
 
@@ -195,14 +210,63 @@ class ChatController extends BaseApiController
             return $this->error('Chat not found', 404);
         }
 
-        $updated = Message::where('chat_id', $chat->id)
+        $messageIds = Message::where('chat_id', $chat->id)
             ->where('sender_id', '!=', $authUser->id)
             ->where('is_read', false)
             ->whereNull('deleted_at')
-            ->update([
-                'is_read' => true,
-                'updated_at' => now(),
-            ]);
+            ->pluck('id')
+            ->all();
+
+        $updated = 0;
+        if (! empty($messageIds)) {
+            $updated = Message::whereIn('id', $messageIds)
+                ->update([
+                    'is_read' => true,
+                    'updated_at' => now(),
+                ]);
+
+            DB::afterCommit(function () use ($chat, $authUser, $messageIds): void {
+                app(ChatRealtimeService::class)->broadcastMessagesSeen($chat, $authUser->id, $messageIds);
+            });
+        }
+
+        return $this->success([
+            'updated_count' => $updated,
+        ], 'Messages marked as read');
+    }
+
+    public function markSeen(Request $request, Chat $chat)
+    {
+        $authUser = $request->user();
+
+        if (! in_array($authUser->id, [$chat->user1_id, $chat->user2_id], true)) {
+            return $this->error('Chat not found', 404);
+        }
+
+        $data = $request->validate([
+            'message_ids' => ['required', 'array'],
+            'message_ids.*' => ['string'],
+        ]);
+
+        $messageIds = Message::where('chat_id', $chat->id)
+            ->whereIn('id', $data['message_ids'])
+            ->where('sender_id', '!=', $authUser->id)
+            ->whereNull('deleted_at')
+            ->pluck('id')
+            ->all();
+
+        $updated = 0;
+        if (! empty($messageIds)) {
+            $updated = Message::whereIn('id', $messageIds)
+                ->update([
+                    'is_read' => true,
+                    'updated_at' => now(),
+                ]);
+
+            DB::afterCommit(function () use ($chat, $authUser, $messageIds): void {
+                app(ChatRealtimeService::class)->broadcastMessagesSeen($chat, $authUser->id, $messageIds);
+            });
+        }
 
         return $this->success([
             'updated_count' => $updated,
