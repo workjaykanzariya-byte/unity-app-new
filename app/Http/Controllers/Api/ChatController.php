@@ -8,6 +8,7 @@ use App\Http\Requests\Chat\StoreMessageRequest;
 use App\Http\Resources\ChatResource;
 use App\Http\Resources\MessageResource;
 use App\Events\Chat\MessagesSeen;
+use App\Events\Chat\MessageDelivered;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
@@ -177,6 +178,8 @@ class ChatController extends BaseApiController
         $chat->last_message_id = $message->id;
         $chat->last_message_at = $message->created_at;
         $chat->save();
+
+        broadcast(new MessageDelivered($message))->toOthers();
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
     }
