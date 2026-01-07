@@ -9,10 +9,8 @@ class BroadcastServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        // ✅ THIS IS THE FIX
-        Broadcast::routes([
-            'middleware' => ['auth:sanctum'],
-        ]);
+        // MUST use Sanctum so Authorization: Bearer TOKEN works
+        Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
         require base_path('routes/channels.php');
     }
