@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Message;
+use App\Models\Notification;
+use App\Observers\MessageObserver;
+use App\Observers\NotificationObserver;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,5 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+        Message::observe(MessageObserver::class);
+        Notification::observe(NotificationObserver::class);
     }
 }

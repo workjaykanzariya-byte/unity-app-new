@@ -7,6 +7,7 @@ use App\Http\Requests\Chat\StoreChatRequest;
 use App\Http\Requests\Chat\StoreMessageRequest;
 use App\Http\Resources\ChatResource;
 use App\Http\Resources\MessageResource;
+use App\Events\Chat\MessagesSeen;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
@@ -203,6 +204,8 @@ class ChatController extends BaseApiController
                 'is_read' => true,
                 'updated_at' => now(),
             ]);
+
+        broadcast(new MessagesSeen($chat->id, $authUser->id, now()->toIso8601String()))->toOthers();
 
         return $this->success([
             'updated_count' => $updated,
