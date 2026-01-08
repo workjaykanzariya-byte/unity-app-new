@@ -30,6 +30,7 @@
       <button onclick="connect('A')">Connect A</button>
       <button onclick="disconnect('A')">Disconnect A</button>
     </div>
+    <button onclick="pingApi('A')">Ping API (A)</button>
 
     <label>Send Message (A)</label>
     <input id="msgA" placeholder="Type message as A and press Send" />
@@ -53,6 +54,7 @@
       <button onclick="connect('B')">Connect B</button>
       <button onclick="disconnect('B')">Disconnect B</button>
     </div>
+    <button onclick="pingApi('B')">Ping API (B)</button>
 
     <label>Send Message (B)</label>
     <input id="msgB" placeholder="Type message as B and press Send" />
@@ -73,10 +75,10 @@
 <script src="https://unpkg.com/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 
 <script>
-  const REVERB_HOST = "127.0.0.1";
-  const REVERB_PORT = "8080";
-  const REVERB_KEY = "usng6vzqesxebdilitip"; // must match .env REVERB_APP_KEY
-  const APP_BASE = "http://127.0.0.1:8000"; // your laravel serve url
+  const APP_BASE = "http://127.0.0.1:8000";
+  const WS_HOST = "127.0.0.1";
+  const WS_PORT = 8080;
+  const REVERB_KEY = "usng6vzqesxebdilitip";
 
   const echoes = {};
 
@@ -97,12 +99,15 @@
     const echo = new Echo.Echo({
       broadcaster: "pusher",
       key: REVERB_KEY,
-      wsHost: REVERB_HOST,
-      wsPort: parseInt(REVERB_PORT, 10),
-      wssPort: parseInt(REVERB_PORT, 10),
+      wsHost: WS_HOST,
+      wsPort: WS_PORT,
+      wssPort: WS_PORT,
       forceTLS: false,
-      enabledTransports: ["ws", "wss"],
+      enabledTransports: ["ws"],
       disableStats: true,
+      cluster: "mt1",
+      httpHost: "127.0.0.1",
+      httpPort: 8000,
       authEndpoint: APP_BASE + "/api/broadcasting/auth",
       auth: {
         headers: {
@@ -113,19 +118,19 @@
     });
 
     echo.connector.pusher.connection.bind("state_change", (states) => {
-      log(who, { event: "pusher.state_change", states });
+      log(who, { event: "ws.state_change", states });
     });
 
     echo.connector.pusher.connection.bind("connected", () => {
-      log(who, { event: "pusher.connected" });
+      setStatus(who, "Connected (socket open)");
     });
 
     echo.connector.pusher.connection.bind("disconnected", () => {
-      log(who, { event: "pusher.disconnected" });
+      setStatus(who, "Disconnected");
     });
 
-    echo.connector.pusher.connection.bind("error", (err) => {
-      log(who, { event: "pusher.error", err });
+    echo.connector.pusher.connection.bind("error", (error) => {
+      log(who, { event: "ws.error", error });
     });
 
     return echo;
@@ -136,14 +141,14 @@
     const token = document.getElementById("token" + who).value.trim();
     if (!chatId || !token) return alert("Chat ID + Token required");
 
+    setStatus(who, "Connecting...");
+
     if (echoes[who]) {
       disconnect(who);
     }
 
     const echo = makeEcho(token, who);
     echoes[who] = echo;
-
-    setStatus(who, "Connecting...");
 
     echo.private(`private-chat.${chatId}`)
       .listen(".chat.message.sent", (e) => log(who, { event: "chat.message.sent", data: e }))
@@ -157,7 +162,7 @@
       .listen(".chat.typing", (e) => log(who, { event: "chat.typing", data: e }))
       .error((err) => log(who, { event: "presence.error", err }));
 
-    setStatus(who, "Connected (subscribed private + presence)");
+    setStatus(who, "Subscribed (private + presence). Waiting events...");
     log(who, "Subscribed to: private-chat." + chatId + " and presence-chat." + chatId);
   }
 
@@ -177,6 +182,22 @@
     echoes[who] = null;
     setStatus(who, "Not connected");
     log(who, "Disconnected");
+  }
+
+  async function pingApi(who) {
+    const token = document.getElementById("token" + who).value.trim();
+    if (!token) return alert("Token required");
+
+    const res = await fetch(`${APP_BASE}/api/v1/notifications`, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+    log(who, { event: "api.ping", status: res.status, data });
   }
 
   async function sendMsg(who) {
