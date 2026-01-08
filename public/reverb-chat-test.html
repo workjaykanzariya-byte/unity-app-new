@@ -106,14 +106,32 @@
       enabledTransports: ["ws"],
       disableStats: true,
       cluster: "mt1",
-      httpHost: "127.0.0.1",
-      httpPort: 8000,
-      authEndpoint: APP_BASE + "/api/broadcasting/auth",
-      auth: {
-        headers: {
-          Authorization: "Bearer " + token,
-          Accept: "application/json"
-        }
+      authorizer: (channel) => {
+        return {
+          authorize: (socketId, callback) => {
+            fetch("http://127.0.0.1:8000/api/broadcasting/auth", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": "Bearer " + token
+              },
+              body: JSON.stringify({
+                socket_id: socketId,
+                channel_name: channel.name
+              })
+            })
+              .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                log(who, { event: "auth.response", status: res.status, data });
+                callback(false, data);
+              })
+              .catch((err) => {
+                log(who, { event: "auth.error", err: err.toString() });
+                callback(true, err);
+              });
+          }
+        };
       }
     });
 
@@ -122,15 +140,15 @@
     });
 
     echo.connector.pusher.connection.bind("connected", () => {
-      setStatus(who, "Connected (socket open)");
+      setStatus(who, "CONNECTED ✅");
     });
 
     echo.connector.pusher.connection.bind("disconnected", () => {
       setStatus(who, "Disconnected");
     });
 
-    echo.connector.pusher.connection.bind("error", (error) => {
-      log(who, { event: "ws.error", error });
+    echo.connector.pusher.connection.bind("error", (err) => {
+      log(who, { event: "ws.error", err });
     });
 
     return echo;
