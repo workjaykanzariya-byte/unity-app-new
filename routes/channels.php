@@ -28,7 +28,6 @@ Broadcast::channel('presence-chat.{chatId}', function ($user, string $chatId) {
         'id' => (string) $user->id,
         'display_name' => $user->display_name
             ?? trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
-        'profile_photo_url' => $user->profile_photo_url,
     ];
 });
 

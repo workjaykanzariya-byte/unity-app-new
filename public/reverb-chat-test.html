@@ -109,7 +109,7 @@
       authorizer: (channel) => {
         return {
           authorize: (socketId, callback) => {
-            fetch("http://127.0.0.1:8000/api/broadcasting/auth", {
+            fetch(`${APP_BASE}/api/broadcasting/auth`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -133,10 +133,6 @@
           }
         };
       }
-    });
-
-    echo.connector.pusher.connection.bind("state_change", (states) => {
-      log(who, { event: "ws.state_change", states });
     });
 
     echo.connector.pusher.connection.bind("connected", () => {
@@ -256,6 +252,15 @@
     log(who, { event: "api.typing", status: res.status, data });
   }
 </script>
+
+<!--
+Developer steps:
+- php artisan config:clear
+- php artisan cache:clear
+- php artisan serve
+- php artisan reverb:start
+- Open http://127.0.0.1:8000/reverb-chat-test.html
+-->
 
 </body>
 </html>
