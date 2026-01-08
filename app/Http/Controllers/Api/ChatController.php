@@ -14,6 +14,7 @@ use App\Services\Notifications\NotificationService;
 use App\Services\Realtime\ChatRealtimeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ChatController extends BaseApiController
 {
@@ -187,6 +188,11 @@ class ChatController extends BaseApiController
             if (! $receiverUser) {
                 return;
             }
+
+            Log::info('Broadcasting MessageDelivered', [
+                'chat_id' => $chat->id,
+                'receiver_id' => $receiverUser->id,
+            ]);
 
             app(ChatRealtimeService::class)->broadcastMessageDelivered($chat, $message, $authUser);
             app(NotificationService::class)->createChatMessageNotification($receiverUser, $chat, $message, $authUser);

@@ -1,7 +1,11 @@
 <?php
 
-use App\Models\Chat;
 use Illuminate\Support\Facades\Broadcast;
+use App\Models\Chat;
+
+Broadcast::channel('user.{userId}', function ($user, string $userId) {
+    return (string) $user->id === (string) $userId;
+});
 
 Broadcast::channel('chat.{chatId}', function ($user, string $chatId) {
     return Chat::where('id', $chatId)
@@ -10,8 +14,4 @@ Broadcast::channel('chat.{chatId}', function ($user, string $chatId) {
                 ->orWhere('user2_id', $user->id);
         })
         ->exists();
-});
-
-Broadcast::channel('user.{userId}', function ($user, string $userId) {
-    return (string) $user->id === (string) $userId;
 });
