@@ -18,7 +18,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">User</label>
-                    <select name="user_id" class="form-select @error('user_id') is-invalid @enderror" required>
+                    <select name="user_id" class="form-select js-user-select @error('user_id') is-invalid @enderror" required>
                         <option value="">Select a member</option>
                         @foreach ($users as $user)
                             @php
@@ -84,3 +84,17 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.$ && $.fn.select2) {
+            $('.js-user-select').select2({
+                placeholder: 'Select a member',
+                allowClear: true,
+                width: '100%'
+            });
+        }
+    });
+</script>
+@endpush
