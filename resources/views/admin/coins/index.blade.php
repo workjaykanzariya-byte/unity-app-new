@@ -66,11 +66,11 @@
                             $memberName = $member->display_name ?? trim($member->first_name . ' ' . $member->last_name);
                             $coins = $coinsByUserId[$member->id] ?? null;
                             $totalCoins = $coins->total_coins ?? 0;
-                            $testimonialCoins = $coins->testimonials_coins ?? 0;
-                            $referralCoins = $coins->referrals_coins ?? 0;
-                            $businessDealCoins = $coins->business_deals_coins ?? 0;
-                            $p2pMeetingCoins = $coins->p2p_meetings_coins ?? 0;
-                            $requirementCoins = $coins->requirements_coins ?? 0;
+                            $testimonialCoins = $coins->testimonial_coins ?? 0;
+                            $referralCoins = $coins->referral_coins ?? 0;
+                            $businessDealCoins = $coins->business_deal_coins ?? 0;
+                            $p2pMeetingCoins = $coins->p2p_meeting_coins ?? 0;
+                            $requirementCoins = $coins->requirement_coins ?? 0;
                         @endphp
                         <tr>
                             <td>
@@ -81,19 +81,19 @@
                                 <a href="{{ route('admin.coins.ledger', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $totalCoins }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.coins.ledger.type', [$member, 'testimonials']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCoins }}</a>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'testimonial']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCoins }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.coins.ledger.type', [$member, 'referrals']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCoins }}</a>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'referral']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCoins }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.coins.ledger.type', [$member, 'business_deals']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCoins }}</a>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'business_deal']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCoins }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.coins.ledger.type', [$member, 'p2p_meetings']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCoins }}</a>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'p2p_meeting']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCoins }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.coins.ledger.type', [$member, 'requirements']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCoins }}</a>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'requirement']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCoins }}</a>
                             </td>
                         </tr>
                     @empty
