@@ -183,7 +183,8 @@
                         <td class="text-end">
                             <div class="btn-group btn-group-sm" role="group">
                                 <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-outline-secondary">Edit</a>
-                                <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $detailsId }}" aria-expanded="false" aria-controls="{{ $detailsId }}">Details</button>
+                                <a href="{{ route('admin.members.details', $user->id) }}" class="btn btn-outline-primary">Details</a>
+                                <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $detailsId }}" aria-expanded="false" aria-controls="{{ $detailsId }}">Quick View</button>
                             </div>
                         </td>
                     </tr>

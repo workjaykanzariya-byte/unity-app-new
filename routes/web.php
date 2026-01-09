@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\CirclesController;
+use App\Http\Controllers\Admin\MemberActivityController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -27,6 +28,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users/{user}/edit', [UsersController::class, 'edit'])->name('users.edit');
         Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
+        Route::get('/members/{member}/details', [UsersController::class, 'details'])->name('members.details');
+        Route::get('/members/{member}/activities', [MemberActivityController::class, 'index'])->name('members.activities.index');
+        Route::get('/members/{member}/activities/p2p-meetings', [MemberActivityController::class, 'p2pMeetingsIndex'])->name('members.activities.p2p-meetings');
+        Route::get('/members/{member}/activities/referrals', [MemberActivityController::class, 'referralsIndex'])->name('members.activities.referrals');
+        Route::get('/members/{member}/activities/business-deals', [MemberActivityController::class, 'businessDealsIndex'])->name('members.activities.business-deals');
+        Route::get('/members/{member}/activities/requirements', [MemberActivityController::class, 'requirementsIndex'])->name('members.activities.requirements');
+        Route::get('/members/{member}/activities/testimonials', [MemberActivityController::class, 'testimonialsIndex'])->name('members.activities.testimonials');
+        Route::get('/members/{member}/activities/{type}/create', [MemberActivityController::class, 'create'])->name('members.activities.create');
+        Route::post('/members/{member}/activities/{type}', [MemberActivityController::class, 'store'])->name('members.activities.store');
         Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
         Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
