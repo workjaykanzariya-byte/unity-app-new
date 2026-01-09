@@ -53,13 +53,13 @@ class CoinsController extends Controller
         $memberIds = $members->pluck('id')->all();
 
         $totalCoins = $this->sumByUser(DB::table('coins_ledger')
-            ->whereIn('user_id', $memberIds), 'user_id');
+            ->whereIn('user_id', $memberIds), 'user_id', 'user_id');
 
         $activityCoins = [];
         foreach (self::ACTIVITY_TABLES as $type => $table) {
             $activityCoins[$type] = $this->sumByUser(DB::table('coins_ledger')
                 ->join($table, 'coins_ledger.activity_id', '=', $table . '.id')
-                ->whereIn('coins_ledger.user_id', $memberIds), 'coins_ledger.user_id');
+                ->whereIn('coins_ledger.user_id', $memberIds), 'coins_ledger.user_id', 'user_id');
         }
 
         $membershipStatuses = User::query()
@@ -125,12 +125,12 @@ class CoinsController extends Controller
         ));
     }
 
-    private function sumByUser($query, string $column): array
+    private function sumByUser($query, string $column, string $alias): array
     {
         return $query
-            ->select($column, DB::raw('sum(amount) as total'))
+            ->select(DB::raw($column . ' as ' . $alias), DB::raw('sum(amount) as total'))
             ->groupBy($column)
-            ->pluck('total', $column)
+            ->pluck('total', $alias)
             ->all();
     }
 
