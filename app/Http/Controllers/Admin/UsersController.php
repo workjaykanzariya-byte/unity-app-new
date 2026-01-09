@@ -4,13 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
-use App\Models\BusinessDeal;
 use App\Models\City;
-use App\Models\P2pMeeting;
-use App\Models\Referral;
-use App\Models\Requirement;
 use App\Models\Role;
-use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -139,43 +134,6 @@ class UsersController extends Controller
             'roles' => $roles,
             'membershipStatuses' => $membershipStatuses,
             'userRoleIds' => $user->roles->pluck('id')->all(),
-        ]);
-    }
-
-    public function details(string $userId): View
-    {
-        $member = User::query()->with(['city'])->findOrFail($userId);
-
-        $activityCounts = [
-            'p2p_meetings' => P2pMeeting::query()
-                ->where('initiator_user_id', $member->id)
-                ->where('is_deleted', false)
-                ->whereNull('deleted_at')
-                ->count(),
-            'referrals' => Referral::query()
-                ->where('from_user_id', $member->id)
-                ->where('is_deleted', false)
-                ->whereNull('deleted_at')
-                ->count(),
-            'business_deals' => BusinessDeal::query()
-                ->where('from_user_id', $member->id)
-                ->where('is_deleted', false)
-                ->whereNull('deleted_at')
-                ->count(),
-            'requirements' => Requirement::query()
-                ->where('user_id', $member->id)
-                ->whereNull('deleted_at')
-                ->count(),
-            'testimonials' => Testimonial::query()
-                ->where('from_user_id', $member->id)
-                ->where('is_deleted', false)
-                ->whereNull('deleted_at')
-                ->count(),
-        ];
-
-        return view('admin.members.show', [
-            'member' => $member,
-            'activityCounts' => $activityCounts,
         ]);
     }
 
