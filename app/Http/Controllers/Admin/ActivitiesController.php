@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ActivitiesExportRequest;
 use App\Models\BusinessDeal;
 use App\Models\P2pMeeting;
 use App\Models\Referral;
@@ -11,6 +12,9 @@ use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
 class ActivitiesController extends Controller
@@ -183,6 +187,119 @@ class ActivitiesController extends Controller
         ]);
     }
 
+    public function export(ActivitiesExportRequest $request): StreamedResponse
+    {
+        $activityType = $request->string('activity_type')->toString();
+        $scope = $request->string('scope')->toString();
+        $search = trim((string) $request->input('q', ''));
+        $membership = $request->input('membership_status');
+
+        $activityMap = [
+            'testimonials' => Testimonial::class,
+            'referrals' => Referral::class,
+            'business_deals' => BusinessDeal::class,
+            'p2p_meetings' => P2pMeeting::class,
+            'requirements' => Requirement::class,
+        ];
+
+        $modelClass = $activityMap[$activityType] ?? null;
+        abort_if(! $modelClass, 404);
+
+        $table = (new $modelClass())->getTable();
+        $columns = Schema::getColumnListing($table);
+        $memberKey = $this->resolveMemberKey($columns);
+
+        $query = DB::table($table . ' as activity')
+            ->leftJoin('users', 'users.id', '=', 'activity.' . $memberKey)
+            ->leftJoin('cities', 'cities.id', '=', 'users.city_id')
+            ->select([
+                'activity.*',
+                DB::raw('users.id as member_id'),
+                DB::raw('COALESCE(users.display_name, CONCAT(users.first_name, \' \', users.last_name)) as member_display_name'),
+                DB::raw('users.email as member_email'),
+                DB::raw('users.phone as member_phone'),
+                DB::raw('users.company_name as member_company_name'),
+                DB::raw('COALESCE(cities.name, users.city) as member_city_name'),
+                DB::raw('users.membership_status as member_membership_status'),
+            ]);
+
+        if ($scope === 'selected') {
+            $memberIds = $request->input('selected_member_ids', []);
+            $query->whereIn('users.id', $memberIds);
+        } else {
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $like = "%{$search}%";
+                    $q->where('users.display_name', 'ILIKE', $like)
+                        ->orWhere('users.first_name', 'ILIKE', $like)
+                        ->orWhere('users.last_name', 'ILIKE', $like)
+                        ->orWhere('users.email', 'ILIKE', $like);
+                });
+            }
+
+            if ($membership && $membership !== 'all') {
+                $query->where('users.membership_status', $membership);
+            }
+        }
+
+        $headers = array_merge([
+            'member_id',
+            'member_display_name',
+            'member_email',
+            'member_phone',
+            'member_company_name',
+            'member_city_name',
+            'member_membership_status',
+        ], $columns, ['attachment_url']);
+
+        $filename = 'activity_' . $activityType . '_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($query, $columns) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, array_merge([
+                'member_id',
+                'member_display_name',
+                'member_email',
+                'member_phone',
+                'member_company_name',
+                'member_city_name',
+                'member_membership_status',
+            ], $columns, ['attachment_url']));
+
+            $chunkCallback = function ($rows) use ($handle, $columns) {
+                foreach ($rows as $row) {
+                    $rowArray = (array) $row;
+                    $attachmentUrl = $this->resolveAttachmentUrl($rowArray, $columns);
+
+                    $data = [
+                        $rowArray['member_id'] ?? null,
+                        $rowArray['member_display_name'] ?? null,
+                        $rowArray['member_email'] ?? null,
+                        $rowArray['member_phone'] ?? null,
+                        $rowArray['member_company_name'] ?? null,
+                        $rowArray['member_city_name'] ?? null,
+                        $rowArray['member_membership_status'] ?? null,
+                    ];
+
+                    foreach ($columns as $column) {
+                        $data[] = $rowArray[$column] ?? null;
+                    }
+
+                    $data[] = $attachmentUrl;
+                    fputcsv($handle, $data);
+                }
+            };
+
+            if (in_array('id', $columns, true)) {
+                $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
+            } else {
+                $query->orderBy('activity.created_at')->chunk(500, $chunkCallback);
+            }
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
     private function countByUser($query, string $column): array
     {
         return $query
@@ -190,5 +307,65 @@ class ActivitiesController extends Controller
             ->groupBy($column)
             ->pluck('total', $column)
             ->all();
+    }
+
+    private function resolveMemberKey(array $columns): string
+    {
+        foreach (['member_id', 'user_id', 'created_by', 'from_user_id', 'initiator_user_id'] as $column) {
+            if (in_array($column, $columns, true)) {
+                return $column;
+            }
+        }
+
+        return 'user_id';
+    }
+
+    private function resolveAttachmentUrl(array $row, array $columns): ?string
+    {
+        foreach (['file_id', 'image_id', 'attachment_file_id', 'media_file_id', 'photo_file_id'] as $column) {
+            if (in_array($column, $columns, true)) {
+                return $this->formatAttachmentUrl($row[$column] ?? null);
+            }
+        }
+
+        foreach (['attachments', 'media'] as $column) {
+            if (! in_array($column, $columns, true)) {
+                continue;
+            }
+
+            $media = $row[$column] ?? null;
+            if (! $media) {
+                continue;
+            }
+
+            $decoded = is_string($media) ? json_decode($media, true) : $media;
+            if (is_array($decoded)) {
+                $first = $decoded[0] ?? null;
+                if (is_array($first)) {
+                    return $this->formatAttachmentUrl($first['url'] ?? $first['id'] ?? null);
+                }
+            }
+
+            return $this->formatAttachmentUrl($decoded);
+        }
+
+        return null;
+    }
+
+    private function formatAttachmentUrl($value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (is_string($value) && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://'))) {
+            return $value;
+        }
+
+        if (is_string($value) && Str::isUuid($value)) {
+            return url('/api/v1/files/' . $value);
+        }
+
+        return null;
     }
 }

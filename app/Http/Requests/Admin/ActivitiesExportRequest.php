@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class ActivitiesExportRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'activity_type' => ['required', Rule::in(['testimonials', 'referrals', 'business_deals', 'p2p_meetings', 'requirements'])],
+            'scope' => ['required', Rule::in(['selected', 'all'])],
+            'selected_member_ids' => ['nullable', 'array'],
+            'selected_member_ids.*' => ['uuid'],
+            'q' => ['nullable', 'string'],
+            'membership_status' => ['nullable', 'string'],
+        ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->sometimes('selected_member_ids', ['required', 'min:1'], function ($input) {
+            return ($input->scope ?? null) === 'selected';
+        });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'selected_member_ids.required' => 'Please select at least one member.',
+            'selected_member_ids.min' => 'Please select at least one member.',
+        ];
+    }
+}

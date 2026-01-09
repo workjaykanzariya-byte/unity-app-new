@@ -3,6 +3,12 @@
 @section('title', 'Activities')
 
 @section('content')
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     <div class="card shadow-sm">
         <div class="d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
             <div class="d-flex align-items-center gap-2">
@@ -13,11 +19,15 @@
                     @endforeach
                 </select>
             </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#activitiesExportModal">Export</button>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="select-all-members">
+                        </th>
                         <th>User</th>
                         <th>Testimonials</th>
                         <th>Referrals</th>
@@ -26,6 +36,7 @@
                         <th>Requirements</th>
                     </tr>
                     <tr class="bg-light align-middle">
+                        <th></th>
                         <th>
                             <div class="d-flex flex-column gap-2">
                                 <input
@@ -78,6 +89,9 @@
                         @endphp
                         <tr>
                             <td>
+                                <input type="checkbox" class="form-check-input member-checkbox" value="{{ $member->id }}">
+                            </td>
+                            <td>
                                 <div class="fw-semibold">{{ $memberName ?: 'Unnamed Member' }}</div>
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
@@ -99,7 +113,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No members found.</td>
+                            <td colspan="7" class="text-center text-muted">No members found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -107,7 +121,95 @@
         </div>
     </div>
 
+    <div class="modal fade" id="activitiesExportModal" tabindex="-1" aria-labelledby="activitiesExportModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="activitiesExportModalLabel">Export Activities</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{{ route('admin.activities.export') }}" id="activitiesExportForm">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Activity</label>
+                            <select name="activity_type" class="form-select" required>
+                                <option value="testimonials">Testimonials</option>
+                                <option value="referrals">Referrals</option>
+                                <option value="business_deals">Business Deals</option>
+                                <option value="p2p_meetings">P2P Meetings</option>
+                                <option value="requirements">Requirements</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Scope</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="scope" id="scopeSelected" value="selected" checked>
+                                <label class="form-check-label" for="scopeSelected">Selected members only</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="scope" id="scopeAll" value="all">
+                                <label class="form-check-label" for="scopeAll">All members (current filters)</label>
+                            </div>
+                        </div>
+                        <input type="hidden" name="q" value="{{ request('q', $filters['search']) }}">
+                        <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] }}">
+                        <div id="selectedMemberIdsContainer"></div>
+                        <div class="text-danger small d-none" id="exportSelectionError">Please select at least one member.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Export CSV</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div class="mt-3">
         {{ $members->links() }}
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const selectAll = document.getElementById('select-all-members');
+        const checkboxes = document.querySelectorAll('.member-checkbox');
+        const exportForm = document.getElementById('activitiesExportForm');
+        const selectedContainer = document.getElementById('selectedMemberIdsContainer');
+        const selectionError = document.getElementById('exportSelectionError');
+        const scopeSelected = document.getElementById('scopeSelected');
+
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAll.checked;
+                });
+            });
+        }
+
+        exportForm.addEventListener('submit', (event) => {
+            selectionError.classList.add('d-none');
+            selectedContainer.innerHTML = '';
+            const selectedIds = Array.from(checkboxes)
+                .filter((checkbox) => checkbox.checked)
+                .map((checkbox) => checkbox.value);
+
+            if (scopeSelected.checked && selectedIds.length === 0) {
+                event.preventDefault();
+                selectionError.classList.remove('d-none');
+                return;
+            }
+
+            selectedIds.forEach((id) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_member_ids[]';
+                input.value = id;
+                selectedContainer.appendChild(input);
+            });
+        });
+    });
+</script>
+@endpush

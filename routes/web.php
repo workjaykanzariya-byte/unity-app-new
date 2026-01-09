@@ -30,6 +30,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('/users/{user}', [UsersController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
         Route::get('/activities', [ActivitiesController::class, 'index'])->name('activities.index');
+        Route::post('/activities/export', [ActivitiesController::class, 'export'])->name('activities.export');
         Route::get('/activities/{member}/testimonials', [ActivitiesController::class, 'testimonials'])->name('activities.testimonials');
         Route::get('/activities/{member}/referrals', [ActivitiesController::class, 'referrals'])->name('activities.referrals');
         Route::get('/activities/{member}/business-deals', [ActivitiesController::class, 'businessDeals'])->name('activities.business-deals');
