@@ -8,6 +8,22 @@
     </div>
 
     <div class="card shadow-sm">
+        <div class="border-bottom p-3">
+            <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
+                <div>
+                    <label class="form-label small text-muted mb-1">From</label>
+                    <input type="date" name="from" value="{{ $filters['from'] ?? '' }}" class="form-control form-control-sm">
+                </div>
+                <div>
+                    <label class="form-label small text-muted mb-1">To</label>
+                    <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="form-control form-control-sm">
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                    <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
