@@ -308,7 +308,8 @@ class ActivitiesController extends Controller
                 ['key' => 'created_at', 'label' => 'Created At'],
             ],
             'testimonials' => [
-                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'member_name', 'label' => 'From Member Name'],
+                ['key' => 'member_email', 'label' => 'From Member Email'],
                 ['key' => 'related_name', 'label' => 'To Member Name'],
                 ['key' => 'related_email', 'label' => 'To Member Email'],
                 ['key' => 'content', 'label' => 'Content'],
@@ -443,10 +444,11 @@ class ActivitiesController extends Controller
                 DB::raw('member_user.email as member_email'),
             ],
             'testimonials' => [
-                'activity.id',
                 'activity.content',
                 'activity.media',
                 'activity.created_at',
+                DB::raw('COALESCE(member_user.display_name, CONCAT(member_user.first_name, \' \', member_user.last_name)) as member_name'),
+                DB::raw('member_user.email as member_email'),
                 DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name)) as related_name'),
                 DB::raw('related_user.email as related_email'),
             ],
