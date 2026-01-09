@@ -82,19 +82,19 @@
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary">{{ $testimonialCount }}</a>
+                                <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCount }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary">{{ $referralCount }}</a>
+                                <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCount }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary">{{ $businessDealCount }}</a>
+                                <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCount }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary">{{ $p2pMeetingCount }}</a>
+                                <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCount }}</a>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary">{{ $requirementCount }}</a>
+                                <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
                             </td>
                         </tr>
                     @empty

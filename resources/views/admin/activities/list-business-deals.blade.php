@@ -17,6 +17,7 @@
                         <th>Deal Date</th>
                         <th>Amount</th>
                         <th>Type</th>
+                        <th>Comment</th>
                         <th>Created At</th>
                     </tr>
                 </thead>
@@ -31,11 +32,12 @@
                             <td>{{ $deal->deal_date ?? '—' }}</td>
                             <td>{{ $deal->deal_amount !== null ? number_format((float) $deal->deal_amount, 2) : '—' }}</td>
                             <td>{{ $deal->business_type ?? '—' }}</td>
+                            <td class="text-muted">{{ $deal->comment ?? '—' }}</td>
                             <td>{{ optional($deal->created_at)->format('Y-m-d H:i') ?? '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No business deals found.</td>
+                            <td colspan="7" class="text-center text-muted">No business deals found.</td>
                         </tr>
                     @endforelse
                 </tbody>
