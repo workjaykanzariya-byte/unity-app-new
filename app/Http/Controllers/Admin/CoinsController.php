@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\CoinLedger;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -142,7 +141,7 @@ class CoinsController extends Controller
                 'balance_after' => $previousBalance + $amount,
                 'activity_id' => null,
                 'reference' => $reference,
-                'created_by' => Auth::guard('admin')->id(),
+                'created_by' => null,
                 'created_at' => now(),
             ]);
         });
@@ -259,7 +258,7 @@ class CoinsController extends Controller
         }
 
         return $remarks !== ''
-            ? "Admin adjustment: {$remarks}"
+            ? "Admin adjustment | {$remarks}"
             : 'Admin adjustment';
     }
 }
