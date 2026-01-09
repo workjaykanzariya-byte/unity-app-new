@@ -3,15 +3,7 @@
 @section('title', 'Requirements')
 
 @section('content')
-    @php
-        $memberName = $member->display_name ?? trim($member->first_name . ' ' . $member->last_name);
-    @endphp
-
-    <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-            <h1 class="h3 mb-1">Requirements for {{ $memberName ?: 'Member' }}</h1>
-            <p class="text-muted mb-0">All requirements submitted by this member.</p>
-        </div>
+    <div class="d-flex justify-content-end mb-3">
         <a href="{{ route('admin.activities.index') }}" class="btn btn-outline-secondary">Back to Activities</a>
     </div>
 

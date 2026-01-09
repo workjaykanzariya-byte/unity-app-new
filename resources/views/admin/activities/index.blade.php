@@ -3,46 +3,17 @@
 @section('title', 'Activities')
 
 @section('content')
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h1 class="h3 mb-1">Activities</h1>
-            <p class="text-muted mb-0">Summary of activity counts per member.</p>
-        </div>
-    </div>
-
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Search by name or email" value="{{ $filters['search'] }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Membership Status</label>
-                    <select name="membership_status" class="form-select">
-                        <option value="">Any</option>
-                        @foreach ($membershipStatuses as $status)
-                            <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Per Page</label>
-                    <select name="per_page" class="form-select">
-                        @foreach ([10, 20, 25, 50, 100] as $size)
-                            <option value="{{ $size }}" @selected($filters['per_page'] === $size)>{{ $size }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Apply</button>
-                    <a href="{{ route('admin.activities.index') }}" class="btn btn-outline-secondary">Reset</a>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div class="card shadow-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
+                <select id="perPage" name="per_page" form="activitiesFiltersForm" class="form-select form-select-sm" style="width: 90px;">
+                    @foreach ([10, 20, 25, 50, 100] as $size)
+                        <option value="{{ $size }}" @selected($filters['per_page'] === $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
@@ -53,6 +24,46 @@
                         <th>Business Deals</th>
                         <th>P2P Meetings</th>
                         <th>Requirements</th>
+                    </tr>
+                    <tr class="bg-light align-middle">
+                        <th>
+                            <div class="d-flex flex-column gap-2">
+                                <input
+                                    type="text"
+                                    name="q"
+                                    form="activitiesFiltersForm"
+                                    class="form-control form-control-sm"
+                                    placeholder="Name or email"
+                                    value="{{ request('q', $filters['search']) }}"
+                                    oninput="this.form.search.value = this.value"
+                                >
+                                <select name="membership_status" form="activitiesFiltersForm" class="form-select form-select-sm">
+                                    <option value="">Any</option>
+                                    @foreach ($membershipStatuses as $status)
+                                        <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th class="text-end">
+                            <form id="activitiesFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
+                                <input type="hidden" name="search" value="{{ request('q', $filters['search']) }}">
+                                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                                <a href="{{ route('admin.activities.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                            </form>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
