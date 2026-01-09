@@ -48,6 +48,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
+                        <th>User</th>
                         <th>Subject</th>
                         <th>Description</th>
                         <th>Region</th>
@@ -67,6 +68,14 @@
                         @endphp
                         <tr>
                             <td class="font-monospace">{{ substr($requirement->id, 0, 8) }}</td>
+                            <td>
+                                @if ($requirement->user)
+                                    <div class="fw-semibold">{{ $requirement->user->display_name ?? trim($requirement->user->first_name . ' ' . $requirement->user->last_name) }}</div>
+                                    <div class="text-muted small">{{ $requirement->user->email ?? '—' }}</div>
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $requirement->subject ?? '—' }}</td>
                             <td class="text-muted">{{ $requirement->description ?? '—' }}</td>
                             <td>{{ trim(($regionLabel ?? '') . ($cityName ? ', ' . $cityName : '')) ?: '—' }}</td>
@@ -85,7 +94,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No requirements found.</td>
+                            <td colspan="9" class="text-center text-muted">No requirements found.</td>
                         </tr>
                     @endforelse
                 </tbody>

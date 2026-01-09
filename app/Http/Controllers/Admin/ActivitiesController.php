@@ -171,6 +171,7 @@ class ActivitiesController extends Controller
     public function requirements(User $member): View
     {
         $items = Requirement::query()
+            ->with(['user'])
             ->where('user_id', $member->id)
             ->whereNull('deleted_at')
             ->orderByDesc('created_at')
