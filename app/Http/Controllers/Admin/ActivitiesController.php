@@ -206,7 +206,10 @@ class ActivitiesController extends Controller
                 fputcsv($handle, $this->buildHeaderRow($activityType));
                 $this->streamRowsAsCsv($handle, $activityType, $request);
             } catch (\Throwable $e) {
-                fputcsv($handle, ['ERROR', $e->getMessage()]);
+                logger()->error('Activities export failed', [
+                    'activity_type' => $activityType,
+                    'error' => $e->getMessage(),
+                ]);
             } finally {
                 fclose($handle);
             }
@@ -252,7 +255,7 @@ class ActivitiesController extends Controller
             }
         };
 
-        $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
+        $query->orderByDesc('activity.created_at')->chunk(500, $chunkCallback);
     }
 
     private function buildExportQuery(string $activityType, array $filters)
