@@ -12,7 +12,6 @@ use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
@@ -228,106 +227,46 @@ class ActivitiesController extends Controller
             ->all();
     }
 
-    private function resolveMemberKey(array $columns): string
-    {
-        foreach (['member_id', 'user_id', 'created_by', 'from_user_id', 'initiator_user_id'] as $column) {
-            if (in_array($column, $columns, true)) {
-                return $column;
-            }
-        }
-
-        return 'user_id';
-    }
-
     private function buildHeaderRow(string $activityType): array
     {
-        [$columns] = $this->buildExportQuery($activityType, [
-            'scope' => 'all',
-            'q' => null,
-            'membership_status' => null,
-            'selected_member_ids' => [],
-        ]);
-
-        return array_merge([
-            'member_id',
-            'member_display_name',
-            'member_email',
-            'member_phone',
-            'member_company_name',
-            'member_city_name',
-            'member_membership_status',
-        ], $columns, ['attachment_url']);
+        return collect($this->exportColumns($activityType))
+            ->pluck('label')
+            ->all();
     }
 
     private function streamRowsAsCsv($handle, string $activityType, ActivitiesExportRequest $request): void
     {
-        [$columns, $query] = $this->buildExportQuery($activityType, $request->validated());
+        $query = $this->buildExportQuery($activityType, $request->validated());
+        $columns = $this->exportColumns($activityType);
 
         $chunkCallback = function ($rows) use ($handle, $columns) {
             foreach ($rows as $row) {
                 $rowArray = (array) $row;
-                $attachmentUrl = $this->resolveAttachmentUrl($rowArray, $columns);
-
-                $data = [
-                    $rowArray['member_id'] ?? null,
-                    $rowArray['member_display_name'] ?? null,
-                    $rowArray['member_email'] ?? null,
-                    $rowArray['member_phone'] ?? null,
-                    $rowArray['member_company_name'] ?? null,
-                    $rowArray['member_city_name'] ?? null,
-                    $rowArray['member_membership_status'] ?? null,
-                ];
+                $data = [];
 
                 foreach ($columns as $column) {
-                    $data[] = $rowArray[$column] ?? null;
+                    $data[] = $this->resolveExportValue($column['key'], $rowArray);
                 }
 
-                $data[] = $attachmentUrl;
                 fputcsv($handle, $data);
             }
         };
 
-        if (in_array('id', $columns, true)) {
-            $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
-        } else {
-            $query->orderBy('activity.created_at')->chunk(500, $chunkCallback);
-        }
+        $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
     }
 
-    private function buildExportQuery(string $activityType, array $filters): array
+    private function buildExportQuery(string $activityType, array $filters)
     {
-        $activityMap = [
-            'testimonials' => Testimonial::class,
-            'referrals' => Referral::class,
-            'business_deals' => BusinessDeal::class,
-            'p2p_meetings' => P2pMeeting::class,
-            'requirements' => Requirement::class,
-        ];
+        $memberKey = $this->resolveMemberKey($activityType);
 
-        $modelClass = $activityMap[$activityType] ?? null;
-        abort_if(! $modelClass, 404);
-
-        $table = (new $modelClass())->getTable();
-        $columns = Schema::getColumnListing($table);
-        $memberKey = $this->resolveMemberKey($columns);
-
-        $query = DB::table($table . ' as activity')
-            ->leftJoin('users', 'users.id', '=', 'activity.' . $memberKey)
-            ->leftJoin('cities', 'cities.id', '=', 'users.city_id')
-            ->select([
-                'activity.*',
-                DB::raw('users.id as member_id'),
-                DB::raw('COALESCE(users.display_name, CONCAT(users.first_name, \' \', users.last_name)) as member_display_name'),
-                DB::raw('users.email as member_email'),
-                DB::raw('users.phone as member_phone'),
-                DB::raw('users.company_name as member_company_name'),
-                DB::raw('COALESCE(cities.name, users.city) as member_city_name'),
-                DB::raw('users.membership_status as member_membership_status'),
-            ]);
+        $query = DB::table($this->activityTable($activityType) . ' as activity')
+            ->leftJoin('users as member_user', 'member_user.id', '=', 'activity.' . $memberKey)
+            ->leftJoin('users as related_user', 'related_user.id', '=', $this->relatedUserJoinColumn($activityType))
+            ->select($this->exportSelectColumns($activityType));
 
         if (($filters['scope'] ?? null) === 'selected') {
             $memberIds = $filters['selected_member_ids'] ?? [];
-            $query->whereIn('users.id', $memberIds);
+            $query->whereIn('member_user.id', $memberIds);
         } else {
             $search = trim((string) ($filters['q'] ?? ''));
             $membership = $filters['membership_status'] ?? null;
@@ -335,31 +274,226 @@ class ActivitiesController extends Controller
             if ($search !== '') {
                 $query->where(function ($q) use ($search) {
                     $like = "%{$search}%";
-                    $q->where('users.display_name', 'ILIKE', $like)
-                        ->orWhere('users.first_name', 'ILIKE', $like)
-                        ->orWhere('users.last_name', 'ILIKE', $like)
-                        ->orWhere('users.email', 'ILIKE', $like);
+                    $q->where('member_user.display_name', 'ILIKE', $like)
+                        ->orWhere('member_user.first_name', 'ILIKE', $like)
+                        ->orWhere('member_user.last_name', 'ILIKE', $like)
+                        ->orWhere('member_user.email', 'ILIKE', $like);
                 });
             }
 
             if ($membership && $membership !== 'all') {
-                $query->where('users.membership_status', $membership);
+                $query->where('member_user.membership_status', $membership);
             }
         }
 
-        return [$columns, $query];
+        return $query;
     }
 
-    private function resolveAttachmentUrl(array $row, array $columns): ?string
+    private function exportColumns(string $activityType): array
+    {
+        return match ($activityType) {
+            'requirements' => [
+                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'member_name', 'label' => 'User Name'],
+                ['key' => 'member_email', 'label' => 'User Email'],
+                ['key' => 'subject', 'label' => 'Subject'],
+                ['key' => 'description', 'label' => 'Description'],
+                ['key' => 'region', 'label' => 'Region'],
+                ['key' => 'category', 'label' => 'Category'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'attachment_url', 'label' => 'Attachment URL'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'testimonials' => [
+                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'related_name', 'label' => 'To Member Name'],
+                ['key' => 'related_email', 'label' => 'To Member Email'],
+                ['key' => 'content', 'label' => 'Content'],
+                ['key' => 'attachment_url', 'label' => 'Attachment URL'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'referrals' => [
+                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'related_name', 'label' => 'Referred Member Name'],
+                ['key' => 'related_email', 'label' => 'Referred Member Email'],
+                ['key' => 'referral_date', 'label' => 'Referral Date'],
+                ['key' => 'referral_of', 'label' => 'Referral Of'],
+                ['key' => 'referral_type', 'label' => 'Type'],
+                ['key' => 'phone', 'label' => 'Phone'],
+                ['key' => 'email', 'label' => 'Email'],
+                ['key' => 'address', 'label' => 'Address'],
+                ['key' => 'hot_value', 'label' => 'Hot Value'],
+                ['key' => 'remarks', 'label' => 'Remarks'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'business_deals' => [
+                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'related_name', 'label' => 'Deal With Name'],
+                ['key' => 'related_email', 'label' => 'Deal With Email'],
+                ['key' => 'deal_date', 'label' => 'Deal Date'],
+                ['key' => 'deal_amount', 'label' => 'Amount'],
+                ['key' => 'business_type', 'label' => 'Type'],
+                ['key' => 'comment', 'label' => 'Comment'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'p2p_meetings' => [
+                ['key' => 'id', 'label' => 'ID'],
+                ['key' => 'related_name', 'label' => 'Peer Name'],
+                ['key' => 'related_email', 'label' => 'Peer Email'],
+                ['key' => 'meeting_date', 'label' => 'Meeting Date'],
+                ['key' => 'meeting_place', 'label' => 'Meeting Place'],
+                ['key' => 'remarks', 'label' => 'Remarks'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            default => [],
+        };
+    }
+
+    private function resolveExportValue(string $key, array $row)
+    {
+        return match ($key) {
+            'member_name' => $row['member_name'] ?? null,
+            'member_email' => $row['member_email'] ?? null,
+            'related_name' => $row['related_name'] ?? null,
+            'related_email' => $row['related_email'] ?? null,
+            'region' => $this->resolveRegion($row['region_filter'] ?? null),
+            'category' => $this->resolveCategory($row['category_filter'] ?? null),
+            'attachment_url' => $this->resolveAttachmentUrl($row),
+            default => $row[$key] ?? null,
+        };
+    }
+
+    private function resolveRegion($value): ?string
+    {
+        $decoded = is_string($value) ? json_decode($value, true) : $value;
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        $regionLabel = $decoded['region_label'] ?? null;
+        $cityName = $decoded['city_name'] ?? null;
+        $region = trim(($regionLabel ?? '') . ($cityName ? ', ' . $cityName : ''));
+
+        return $region !== '' ? $region : null;
+    }
+
+    private function resolveCategory($value): ?string
+    {
+        $decoded = is_string($value) ? json_decode($value, true) : $value;
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        return $decoded['category'] ?? null;
+    }
+
+    private function resolveMemberKey(string $activityType): string
+    {
+        return match ($activityType) {
+            'testimonials' => 'from_user_id',
+            'referrals' => 'from_user_id',
+            'business_deals' => 'from_user_id',
+            'p2p_meetings' => 'initiator_user_id',
+            'requirements' => 'user_id',
+            default => 'user_id',
+        };
+    }
+
+    private function activityTable(string $activityType): string
+    {
+        $modelClass = match ($activityType) {
+            'testimonials' => Testimonial::class,
+            'referrals' => Referral::class,
+            'business_deals' => BusinessDeal::class,
+            'p2p_meetings' => P2pMeeting::class,
+            'requirements' => Requirement::class,
+            default => Requirement::class,
+        };
+
+        return (new $modelClass())->getTable();
+    }
+
+    private function relatedUserJoinColumn(string $activityType): string
+    {
+        return match ($activityType) {
+            'testimonials' => 'activity.to_user_id',
+            'referrals' => 'activity.to_user_id',
+            'business_deals' => 'activity.to_user_id',
+            'p2p_meetings' => 'activity.peer_user_id',
+            default => 'activity.to_user_id',
+        };
+    }
+
+    private function exportSelectColumns(string $activityType): array
+    {
+        return match ($activityType) {
+            'requirements' => [
+                'activity.id',
+                'activity.subject',
+                'activity.description',
+                'activity.region_filter',
+                'activity.category_filter',
+                'activity.status',
+                'activity.media',
+                'activity.created_at',
+                DB::raw('COALESCE(member_user.display_name, CONCAT(member_user.first_name, \' \', member_user.last_name)) as member_name'),
+                DB::raw('member_user.email as member_email'),
+            ],
+            'testimonials' => [
+                'activity.id',
+                'activity.content',
+                'activity.media',
+                'activity.created_at',
+                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name)) as related_name'),
+                DB::raw('related_user.email as related_email'),
+            ],
+            'referrals' => [
+                'activity.id',
+                'activity.referral_date',
+                'activity.referral_of',
+                'activity.referral_type',
+                'activity.phone',
+                'activity.email',
+                'activity.address',
+                'activity.hot_value',
+                'activity.remarks',
+                'activity.created_at',
+                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name)) as related_name'),
+                DB::raw('related_user.email as related_email'),
+            ],
+            'business_deals' => [
+                'activity.id',
+                'activity.deal_date',
+                'activity.deal_amount',
+                'activity.business_type',
+                'activity.comment',
+                'activity.created_at',
+                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name)) as related_name'),
+                DB::raw('related_user.email as related_email'),
+            ],
+            'p2p_meetings' => [
+                'activity.id',
+                'activity.meeting_date',
+                'activity.meeting_place',
+                'activity.remarks',
+                'activity.created_at',
+                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name)) as related_name'),
+                DB::raw('related_user.email as related_email'),
+            ],
+            default => [],
+        };
+    }
+
+    private function resolveAttachmentUrl(array $row): ?string
     {
         foreach (['file_id', 'image_id', 'attachment_file_id', 'media_file_id', 'photo_file_id'] as $column) {
-            if (in_array($column, $columns, true)) {
+            if (array_key_exists($column, $row)) {
                 return $this->formatAttachmentUrl($row[$column] ?? null);
             }
         }
 
         foreach (['attachments', 'media'] as $column) {
-            if (! in_array($column, $columns, true)) {
+            if (! array_key_exists($column, $row)) {
                 continue;
             }
 
