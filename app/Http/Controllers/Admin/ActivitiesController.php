@@ -243,12 +243,14 @@ class ActivitiesController extends Controller
         $columns = $this->exportColumns($activityType);
 
         $chunkCallback = function ($rows) use ($handle, $columns) {
+            $memberMap = $this->buildMemberMap($rows);
+
             foreach ($rows as $row) {
                 $rowArray = (array) $row;
                 $data = [];
 
                 foreach ($columns as $column) {
-                    $data[] = $this->resolveExportValue($column['key'], $rowArray);
+                    $data[] = $this->resolveExportValue($column['key'], $rowArray, $memberMap);
                 }
 
                 fputcsv($handle, $data);
@@ -353,13 +355,13 @@ class ActivitiesController extends Controller
         };
     }
 
-    private function resolveExportValue(string $key, array $row)
+    private function resolveExportValue(string $key, array $row, array $memberMap)
     {
         return match ($key) {
-            'member_name' => $row['member_name'] ?? null,
-            'member_email' => $row['member_email'] ?? null,
-            'related_name' => $row['related_name'] ?? null,
-            'related_email' => $row['related_email'] ?? null,
+            'member_name' => $this->resolveMemberName($row['member_id'] ?? null, $memberMap),
+            'member_email' => $this->resolveMemberEmail($row['member_id'] ?? null, $memberMap),
+            'related_name' => $this->resolveMemberName($row['related_member_id'] ?? null, $memberMap),
+            'related_email' => $this->resolveMemberEmail($row['related_member_id'] ?? null, $memberMap),
             'region' => $this->resolveRegion($row['region_filter'] ?? null),
             'category' => $this->resolveCategory($row['category_filter'] ?? null),
             'attachment_url' => $this->resolveAttachmentUrl($row),
@@ -440,17 +442,14 @@ class ActivitiesController extends Controller
                 'activity.status',
                 'activity.media',
                 'activity.created_at',
-                DB::raw('COALESCE(member_user.display_name, CONCAT(member_user.first_name, \' \', member_user.last_name), member_user.email) as member_name'),
-                DB::raw('member_user.email as member_email'),
+                DB::raw('member_user.id as member_id'),
             ],
             'testimonials' => [
                 'activity.content',
                 'activity.media',
                 'activity.created_at',
-                DB::raw('COALESCE(member_user.display_name, CONCAT(member_user.first_name, \' \', member_user.last_name), member_user.email) as member_name'),
-                DB::raw('member_user.email as member_email'),
-                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name), related_user.email) as related_name'),
-                DB::raw('related_user.email as related_email'),
+                DB::raw('member_user.id as member_id'),
+                DB::raw('related_user.id as related_member_id'),
             ],
             'referrals' => [
                 'activity.id',
@@ -463,8 +462,7 @@ class ActivitiesController extends Controller
                 'activity.hot_value',
                 'activity.remarks',
                 'activity.created_at',
-                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name), related_user.email) as related_name'),
-                DB::raw('related_user.email as related_email'),
+                DB::raw('related_user.id as related_member_id'),
             ],
             'business_deals' => [
                 'activity.id',
@@ -473,8 +471,7 @@ class ActivitiesController extends Controller
                 'activity.business_type',
                 'activity.comment',
                 'activity.created_at',
-                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name), related_user.email) as related_name'),
-                DB::raw('related_user.email as related_email'),
+                DB::raw('related_user.id as related_member_id'),
             ],
             'p2p_meetings' => [
                 'activity.id',
@@ -482,11 +479,68 @@ class ActivitiesController extends Controller
                 'activity.meeting_place',
                 'activity.remarks',
                 'activity.created_at',
-                DB::raw('COALESCE(related_user.display_name, CONCAT(related_user.first_name, \' \', related_user.last_name), related_user.email) as related_name'),
-                DB::raw('related_user.email as related_email'),
+                DB::raw('related_user.id as related_member_id'),
             ],
             default => [],
         };
+    }
+
+    private function buildMemberMap(iterable $rows): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            $rowArray = (array) $row;
+            if (! empty($rowArray['member_id'])) {
+                $ids[] = $rowArray['member_id'];
+            }
+            if (! empty($rowArray['related_member_id'])) {
+                $ids[] = $rowArray['related_member_id'];
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+        if ($ids === []) {
+            return [];
+        }
+
+        return DB::table('users')
+            ->whereIn('id', $ids)
+            ->get(['id', 'display_name', 'first_name', 'last_name', 'email'])
+            ->mapWithKeys(function ($user) {
+                $name = $user->display_name;
+                if (! $name) {
+                    $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+                }
+
+                $name = $name ?: $user->email;
+
+                return [
+                    $user->id => [
+                        'name' => $name,
+                        'email' => $user->email,
+                    ],
+                ];
+            })
+            ->all();
+    }
+
+    private function resolveMemberName(?string $memberId, array $memberMap): ?string
+    {
+        if (! $memberId) {
+            return null;
+        }
+
+        return $memberMap[$memberId]['name'] ?? null;
+    }
+
+    private function resolveMemberEmail(?string $memberId, array $memberMap): ?string
+    {
+        if (! $memberId) {
+            return null;
+        }
+
+        return $memberMap[$memberId]['email'] ?? null;
     }
 
     private function resolveAttachmentUrl(array $row): ?string
