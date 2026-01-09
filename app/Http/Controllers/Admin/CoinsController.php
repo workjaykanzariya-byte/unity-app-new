@@ -3,7 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BusinessDeal;
 use App\Models\CoinLedger;
+use App\Models\P2pMeeting;
+use App\Models\Referral;
+use App\Models\Requirement;
+use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,14 +57,57 @@ class CoinsController extends Controller
         $members = $query->orderBy('display_name')->paginate($perPage)->withQueryString();
         $memberIds = $members->pluck('id')->all();
 
-        $totalCoins = $this->sumByUser(DB::table('coins_ledger')
-            ->whereIn('user_id', $memberIds), 'user_id', 'user_id');
+        $ledgerTable = (new CoinLedger())->getTable();
+        $testimonialsTable = (new Testimonial())->getTable();
+        $referralsTable = (new Referral())->getTable();
+        $businessDealsTable = (new BusinessDeal())->getTable();
+        $p2pMeetingsTable = (new P2pMeeting())->getTable();
+        $requirementsTable = (new Requirement())->getTable();
 
-        $activityCoins = [];
-        foreach (self::ACTIVITY_TABLES as $type => $table) {
-            $activityCoins[$type] = $this->sumByUser(DB::table('coins_ledger')
-                ->join($table, 'coins_ledger.activity_id', '=', $table . '.id')
-                ->whereIn('coins_ledger.user_id', $memberIds), 'coins_ledger.user_id', 'user_id');
+        $coinsByUserId = DB::table($ledgerTable . ' as cl')
+            ->leftJoin($testimonialsTable . ' as t', 't.id', '=', 'cl.activity_id')
+            ->leftJoin($referralsTable . ' as r', 'r.id', '=', 'cl.activity_id')
+            ->leftJoin($businessDealsTable . ' as bd', 'bd.id', '=', 'cl.activity_id')
+            ->leftJoin($p2pMeetingsTable . ' as pm', 'pm.id', '=', 'cl.activity_id')
+            ->leftJoin($requirementsTable . ' as req', 'req.id', '=', 'cl.activity_id')
+            ->whereIn('cl.user_id', $memberIds)
+            ->select([
+                'cl.user_id',
+                DB::raw('sum(cl.amount) as total_coins'),
+                DB::raw("sum(case when t.id is not null then cl.amount when cl.reference ilike '%testimonial%' then cl.amount else 0 end) as testimonials_coins"),
+                DB::raw("sum(case when r.id is not null then cl.amount when cl.reference ilike '%referral%' then cl.amount else 0 end) as referrals_coins"),
+                DB::raw("sum(case when bd.id is not null then cl.amount when cl.reference ilike '%business deal%' or cl.reference ilike '%deal%' then cl.amount else 0 end) as business_deals_coins"),
+                DB::raw("sum(case when pm.id is not null then cl.amount when cl.reference ilike '%p2p%' or cl.reference ilike '%meeting%' then cl.amount else 0 end) as p2p_meetings_coins"),
+                DB::raw("sum(case when req.id is not null then cl.amount when cl.reference ilike '%requirement%' then cl.amount else 0 end) as requirements_coins"),
+            ])
+            ->groupBy('cl.user_id')
+            ->get()
+            ->keyBy('user_id')
+            ->all();
+
+        $sampleUserId = collect($coinsByUserId)
+            ->first(fn ($row) => (float) ($row->total_coins ?? 0) > 0)
+            ->user_id ?? null;
+
+        if ($sampleUserId) {
+            $nullActivityCount = DB::table($ledgerTable)
+                ->where('user_id', $sampleUserId)
+                ->whereNull('activity_id')
+                ->count();
+
+            $topReferences = DB::table($ledgerTable)
+                ->where('user_id', $sampleUserId)
+                ->whereNotNull('reference')
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->pluck('reference')
+                ->all();
+
+            logger()->info('Admin coins summary debug sample', [
+                'user_id' => $sampleUserId,
+                'null_activity_id_count' => $nullActivityCount,
+                'top_references' => $topReferences,
+            ]);
         }
 
         $membershipStatuses = User::query()
@@ -77,8 +125,7 @@ class CoinsController extends Controller
                 'per_page' => $perPage,
             ],
             'membershipStatuses' => $membershipStatuses,
-            'totals' => $totalCoins,
-            'activityTotals' => $activityCoins,
+            'coinsByUserId' => $coinsByUserId,
         ]);
     }
 
@@ -123,15 +170,6 @@ class CoinsController extends Controller
             $this->ledgerViewData($member, $items, $filters),
             ['activeType' => $type]
         ));
-    }
-
-    private function sumByUser($query, string $column, string $alias): array
-    {
-        return $query
-            ->select(DB::raw($column . ' as ' . $alias), DB::raw('sum(amount) as total'))
-            ->groupBy($column)
-            ->pluck('total', $alias)
-            ->all();
     }
 
     private function ledgerViewData(User $member, $items, array $filters): array

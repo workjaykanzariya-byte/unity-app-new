@@ -64,12 +64,13 @@
                     @forelse ($members as $member)
                         @php
                             $memberName = $member->display_name ?? trim($member->first_name . ' ' . $member->last_name);
-                            $totalCoins = $totals[$member->id] ?? 0;
-                            $testimonialCoins = $activityTotals['testimonials'][$member->id] ?? 0;
-                            $referralCoins = $activityTotals['referrals'][$member->id] ?? 0;
-                            $businessDealCoins = $activityTotals['business_deals'][$member->id] ?? 0;
-                            $p2pMeetingCoins = $activityTotals['p2p_meetings'][$member->id] ?? 0;
-                            $requirementCoins = $activityTotals['requirements'][$member->id] ?? 0;
+                            $coins = $coinsByUserId[$member->id] ?? null;
+                            $totalCoins = $coins->total_coins ?? 0;
+                            $testimonialCoins = $coins->testimonials_coins ?? 0;
+                            $referralCoins = $coins->referrals_coins ?? 0;
+                            $businessDealCoins = $coins->business_deals_coins ?? 0;
+                            $p2pMeetingCoins = $coins->p2p_meetings_coins ?? 0;
+                            $requirementCoins = $coins->requirements_coins ?? 0;
                         @endphp
                         <tr>
                             <td>
