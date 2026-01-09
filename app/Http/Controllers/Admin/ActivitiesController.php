@@ -254,8 +254,14 @@ class ActivitiesController extends Controller
 
         $filename = 'activity_' . $activityType . '_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($query, $columns) {
+        $response = response()->streamDownload(function () use ($query, $columns) {
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
             $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+
             fputcsv($handle, array_merge([
                 'member_id',
                 'member_display_name',
@@ -297,7 +303,13 @@ class ActivitiesController extends Controller
             }
 
             fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv']);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+
+        return $response;
     }
 
     private function countByUser($query, string $column): array
