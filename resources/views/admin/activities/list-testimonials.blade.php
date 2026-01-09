@@ -1,0 +1,91 @@
+@extends('admin.layouts.app')
+
+@section('title', 'Testimonials')
+
+@section('content')
+    @php
+        $resolveFileUrl = function ($value) {
+            if (! $value) {
+                return null;
+            }
+
+            if (is_string($value) && (str_starts_with($value, 'http://') || str_starts_with($value, 'https://'))) {
+                return $value;
+            }
+
+            if (is_string($value) && \Illuminate\Support\Str::isUuid($value)) {
+                return url('/api/v1/files/' . $value);
+            }
+
+            return null;
+        };
+
+        $extractMediaUrl = function ($media) use ($resolveFileUrl) {
+            if (! $media) {
+                return null;
+            }
+
+            if (is_array($media)) {
+                $first = $media[0] ?? null;
+                if (is_array($first)) {
+                    $id = $first['id'] ?? null;
+                    $url = $first['url'] ?? null;
+                    return $resolveFileUrl($url ?: $id);
+                }
+            }
+
+            return $resolveFileUrl($media);
+        };
+    @endphp
+
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ route('admin.activities.index') }}" class="btn btn-outline-secondary">Back to Activities</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>To Member</th>
+                        <th>Content</th>
+                        <th>Attachment</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($items as $testimonial)
+                        @php
+                            $attachmentUrl = $extractMediaUrl($testimonial->media ?? null);
+                        @endphp
+                        <tr>
+                            <td class="font-monospace">{{ substr($testimonial->id, 0, 8) }}</td>
+                            <td>
+                                <div>{{ $testimonial->toUser->display_name ?? trim(($testimonial->toUser->first_name ?? '') . ' ' . ($testimonial->toUser->last_name ?? '')) ?: '—' }}</div>
+                                <div class="text-muted small">{{ $testimonial->toUser->email ?? '—' }}</div>
+                            </td>
+                            <td class="text-muted">{{ $testimonial->content ?? '—' }}</td>
+                            <td>
+                                @if ($attachmentUrl)
+                                    <a href="{{ $attachmentUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">View</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>{{ optional($testimonial->created_at)->format('Y-m-d H:i') ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No testimonials found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        {{ $items->links() }}
+    </div>
+@endsection
