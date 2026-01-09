@@ -3,6 +3,10 @@
 @section('title', 'Coins')
 
 @section('content')
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
     <div class="card shadow-sm">
         <div class="d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
             <div class="d-flex align-items-center gap-2">
@@ -13,6 +17,7 @@
                     @endforeach
                 </select>
             </div>
+            <a href="{{ route('admin.coins.create') }}" class="btn btn-sm btn-primary">Add Coins</a>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">

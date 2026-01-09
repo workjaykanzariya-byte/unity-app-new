@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\CoinLedger;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CoinsController extends Controller
@@ -93,6 +96,60 @@ class CoinsController extends Controller
             'membershipStatuses' => $membershipStatuses,
             'coinsByUserId' => $coinsByUserId,
         ]);
+    }
+
+    public function create(): View
+    {
+        $users = User::query()
+            ->select(['id', 'email', 'first_name', 'last_name', 'display_name'])
+            ->orderBy('display_name')
+            ->get();
+
+        return view('admin.coins.create', [
+            'users' => $users,
+            'activityTypes' => array_keys(self::ACTIVITY_REFERENCE_PATTERNS),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'uuid', 'exists:users,id'],
+            'activity' => ['nullable', 'string', Rule::in(array_keys(self::ACTIVITY_REFERENCE_PATTERNS))],
+            'amount' => ['required', 'integer', 'min:1'],
+            'remarks' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $userId = $validated['user_id'];
+        $amount = (int) $validated['amount'];
+        $activity = $validated['activity'] ?? null;
+        $remarks = trim((string) ($validated['remarks'] ?? ''));
+        $reference = $this->buildReference($activity, $remarks);
+
+        DB::transaction(function () use ($userId, $amount, $reference): void {
+            $latest = DB::table('coins_ledger')
+                ->where('user_id', $userId)
+                ->orderByDesc('created_at')
+                ->lockForUpdate()
+                ->first();
+
+            $previousBalance = $latest?->balance_after ?? 0;
+
+            DB::table('coins_ledger')->insert([
+                'transaction_id' => (string) Str::uuid(),
+                'user_id' => $userId,
+                'amount' => $amount,
+                'balance_after' => $previousBalance + $amount,
+                'activity_id' => null,
+                'reference' => $reference,
+                'created_by' => Auth::guard('admin')->id(),
+                'created_at' => now(),
+            ]);
+        });
+
+        return redirect()
+            ->route('admin.coins.index')
+            ->with('success', 'Coins added successfully.');
     }
 
     public function ledger(User $member, Request $request): View
@@ -191,5 +248,18 @@ class CoinsController extends Controller
             'from' => $request->query('from'),
             'to' => $request->query('to'),
         ];
+    }
+
+    private function buildReference(?string $activity, string $remarks): string
+    {
+        if ($activity) {
+            return $remarks !== ''
+                ? "Activity: {$activity} | Admin: {$remarks}"
+                : "Activity: {$activity} | Admin adjustment";
+        }
+
+        return $remarks !== ''
+            ? "Admin adjustment: {$remarks}"
+            : 'Admin adjustment';
     }
 }
