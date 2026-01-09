@@ -3,16 +3,109 @@
 @section('title', 'Coins')
 
 @section('content')
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-            <h1 class="h3 mb-1">Coins</h1>
-            <p class="text-muted mb-0">Coming soon.</p>
+    <div class="card shadow-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center p-3 gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
+                <select id="perPage" name="per_page" form="coinsFiltersForm" class="form-select form-select-sm" style="width: 90px;">
+                    @foreach ([10, 20, 25, 50, 100] as $size)
+                        <option value="{{ $size }}" @selected($filters['per_page'] === $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Total Coins</th>
+                        <th>Testimonials Coins</th>
+                        <th>Referrals Coins</th>
+                        <th>Business Deals Coins</th>
+                        <th>P2P Meetings Coins</th>
+                        <th>Requirements Coins</th>
+                    </tr>
+                    <tr class="bg-light align-middle">
+                        <th>
+                            <div class="d-flex flex-column gap-2">
+                                <input
+                                    type="text"
+                                    name="q"
+                                    form="coinsFiltersForm"
+                                    class="form-control form-control-sm"
+                                    placeholder="Name or email"
+                                    value="{{ request('q', $filters['search']) }}"
+                                    oninput="this.form.search.value = this.value"
+                                >
+                                <select name="membership_status" form="coinsFiltersForm" class="form-select form-select-sm">
+                                    <option value="">Any</option>
+                                    @foreach ($membershipStatuses as $status)
+                                        <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th class="text-end">
+                            <form id="coinsFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
+                                <input type="hidden" name="search" value="{{ request('q', $filters['search']) }}">
+                                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                                <a href="{{ route('admin.coins.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                            </form>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($members as $member)
+                        @php
+                            $memberName = $member->display_name ?? trim($member->first_name . ' ' . $member->last_name);
+                            $totalCoins = $totals[$member->id] ?? 0;
+                            $testimonialCoins = $activityTotals['testimonials'][$member->id] ?? 0;
+                            $referralCoins = $activityTotals['referrals'][$member->id] ?? 0;
+                            $businessDealCoins = $activityTotals['business_deals'][$member->id] ?? 0;
+                            $p2pMeetingCoins = $activityTotals['p2p_meetings'][$member->id] ?? 0;
+                            $requirementCoins = $activityTotals['requirements'][$member->id] ?? 0;
+                        @endphp
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ $memberName ?: 'Unnamed Member' }}</div>
+                                <div class="text-muted small">{{ $member->email }}</div>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $totalCoins }}</a>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'testimonials']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCoins }}</a>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'referrals']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCoins }}</a>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'business_deals']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCoins }}</a>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'p2p_meetings']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCoins }}</a>
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.coins.ledger.type', [$member, 'requirements']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCoins }}</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No members found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="text-muted">Coin reporting and management will be available here soon.</div>
-        </div>
+    <div class="mt-3">
+        {{ $members->links() }}
     </div>
 @endsection

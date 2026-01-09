@@ -106,83 +106,113 @@ class ActivitiesController extends Controller
         ]);
     }
 
-    public function testimonials(User $member): View
+    public function testimonials(User $member, Request $request): View
     {
+        $filters = $this->dateFilters($request);
+
         $items = Testimonial::query()
             ->with(['toUser'])
             ->where('from_user_id', $member->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
+            ->when($filters['from'], fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'], fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.activities.list-testimonials', [
             'member' => $member,
             'items' => $items,
+            'filters' => $filters,
         ]);
     }
 
-    public function referrals(User $member): View
+    public function referrals(User $member, Request $request): View
     {
+        $filters = $this->dateFilters($request);
+
         $items = Referral::query()
             ->with(['toUser'])
             ->where('from_user_id', $member->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
+            ->when($filters['from'], fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'], fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.activities.list-referrals', [
             'member' => $member,
             'items' => $items,
+            'filters' => $filters,
         ]);
     }
 
-    public function businessDeals(User $member): View
+    public function businessDeals(User $member, Request $request): View
     {
+        $filters = $this->dateFilters($request);
+
         $items = BusinessDeal::query()
             ->with(['toUser'])
             ->where('from_user_id', $member->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
+            ->when($filters['from'], fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'], fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.activities.list-business-deals', [
             'member' => $member,
             'items' => $items,
+            'filters' => $filters,
         ]);
     }
 
-    public function p2pMeetings(User $member): View
+    public function p2pMeetings(User $member, Request $request): View
     {
+        $filters = $this->dateFilters($request);
+
         $items = P2pMeeting::query()
             ->with(['peer'])
             ->where('initiator_user_id', $member->id)
             ->where('is_deleted', false)
             ->whereNull('deleted_at')
+            ->when($filters['from'], fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'], fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->orderByDesc('meeting_date')
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.activities.list-p2p-meetings', [
             'member' => $member,
             'items' => $items,
+            'filters' => $filters,
         ]);
     }
 
-    public function requirements(User $member): View
+    public function requirements(User $member, Request $request): View
     {
+        $filters = $this->dateFilters($request);
+
         $items = Requirement::query()
             ->with(['user'])
             ->where('user_id', $member->id)
             ->whereNull('deleted_at')
+            ->when($filters['from'], fn ($query) => $query->whereDate('created_at', '>=', $filters['from']))
+            ->when($filters['to'], fn ($query) => $query->whereDate('created_at', '<=', $filters['to']))
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         return view('admin.activities.list-requirements', [
             'member' => $member,
             'items' => $items,
+            'filters' => $filters,
         ]);
     }
 
@@ -228,6 +258,14 @@ class ActivitiesController extends Controller
             ->groupBy($column)
             ->pluck('total', $column)
             ->all();
+    }
+
+    private function dateFilters(Request $request): array
+    {
+        return [
+            'from' => $request->query('from'),
+            'to' => $request->query('to'),
+        ];
     }
 
     private function buildHeaderRow(string $activityType): array
