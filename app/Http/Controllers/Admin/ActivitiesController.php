@@ -189,11 +189,113 @@ class ActivitiesController extends Controller
 
     public function export(ActivitiesExportRequest $request): StreamedResponse
     {
-        $activityType = $request->string('activity_type')->toString();
-        $scope = $request->string('scope')->toString();
-        $search = trim((string) $request->input('q', ''));
-        $membership = $request->input('membership_status');
+        $validated = $request->validated();
+        $activityType = $validated['activity_type'];
+        $filename = 'activity_' . $activityType . '_' . now()->format('Ymd_His') . '.csv';
 
+        return response()->streamDownload(function () use ($request, $activityType) {
+            @ini_set('zlib.output_compression', '0');
+            @ini_set('output_buffering', '0');
+            while (ob_get_level() > 0) {
+                @ob_end_clean();
+            }
+
+            $handle = fopen('php://output', 'w');
+
+            try {
+                fwrite($handle, "\xEF\xBB\xBF");
+                fputcsv($handle, $this->buildHeaderRow($activityType));
+                $this->streamRowsAsCsv($handle, $activityType, $request);
+            } catch (\Throwable $e) {
+                fputcsv($handle, ['ERROR', $e->getMessage()]);
+            } finally {
+                fclose($handle);
+            }
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ]);
+    }
+
+    private function countByUser($query, string $column): array
+    {
+        return $query
+            ->select($column, DB::raw('count(*) as total'))
+            ->groupBy($column)
+            ->pluck('total', $column)
+            ->all();
+    }
+
+    private function resolveMemberKey(array $columns): string
+    {
+        foreach (['member_id', 'user_id', 'created_by', 'from_user_id', 'initiator_user_id'] as $column) {
+            if (in_array($column, $columns, true)) {
+                return $column;
+            }
+        }
+
+        return 'user_id';
+    }
+
+    private function buildHeaderRow(string $activityType): array
+    {
+        [$columns] = $this->buildExportQuery($activityType, [
+            'scope' => 'all',
+            'q' => null,
+            'membership_status' => null,
+            'selected_member_ids' => [],
+        ]);
+
+        return array_merge([
+            'member_id',
+            'member_display_name',
+            'member_email',
+            'member_phone',
+            'member_company_name',
+            'member_city_name',
+            'member_membership_status',
+        ], $columns, ['attachment_url']);
+    }
+
+    private function streamRowsAsCsv($handle, string $activityType, ActivitiesExportRequest $request): void
+    {
+        [$columns, $query] = $this->buildExportQuery($activityType, $request->validated());
+
+        $chunkCallback = function ($rows) use ($handle, $columns) {
+            foreach ($rows as $row) {
+                $rowArray = (array) $row;
+                $attachmentUrl = $this->resolveAttachmentUrl($rowArray, $columns);
+
+                $data = [
+                    $rowArray['member_id'] ?? null,
+                    $rowArray['member_display_name'] ?? null,
+                    $rowArray['member_email'] ?? null,
+                    $rowArray['member_phone'] ?? null,
+                    $rowArray['member_company_name'] ?? null,
+                    $rowArray['member_city_name'] ?? null,
+                    $rowArray['member_membership_status'] ?? null,
+                ];
+
+                foreach ($columns as $column) {
+                    $data[] = $rowArray[$column] ?? null;
+                }
+
+                $data[] = $attachmentUrl;
+                fputcsv($handle, $data);
+            }
+        };
+
+        if (in_array('id', $columns, true)) {
+            $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
+        } else {
+            $query->orderBy('activity.created_at')->chunk(500, $chunkCallback);
+        }
+    }
+
+    private function buildExportQuery(string $activityType, array $filters): array
+    {
         $activityMap = [
             'testimonials' => Testimonial::class,
             'referrals' => Referral::class,
@@ -223,10 +325,13 @@ class ActivitiesController extends Controller
                 DB::raw('users.membership_status as member_membership_status'),
             ]);
 
-        if ($scope === 'selected') {
-            $memberIds = $request->input('selected_member_ids', []);
+        if (($filters['scope'] ?? null) === 'selected') {
+            $memberIds = $filters['selected_member_ids'] ?? [];
             $query->whereIn('users.id', $memberIds);
         } else {
+            $search = trim((string) ($filters['q'] ?? ''));
+            $membership = $filters['membership_status'] ?? null;
+
             if ($search !== '') {
                 $query->where(function ($q) use ($search) {
                     $like = "%{$search}%";
@@ -242,94 +347,7 @@ class ActivitiesController extends Controller
             }
         }
 
-        $headers = array_merge([
-            'member_id',
-            'member_display_name',
-            'member_email',
-            'member_phone',
-            'member_company_name',
-            'member_city_name',
-            'member_membership_status',
-        ], $columns, ['attachment_url']);
-
-        $filename = 'activity_' . $activityType . '_' . now()->format('Ymd_His') . '.csv';
-
-        $response = response()->streamDownload(function () use ($query, $columns) {
-            while (ob_get_level() > 0) {
-                ob_end_clean();
-            }
-
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, array_merge([
-                'member_id',
-                'member_display_name',
-                'member_email',
-                'member_phone',
-                'member_company_name',
-                'member_city_name',
-                'member_membership_status',
-            ], $columns, ['attachment_url']));
-
-            $chunkCallback = function ($rows) use ($handle, $columns) {
-                foreach ($rows as $row) {
-                    $rowArray = (array) $row;
-                    $attachmentUrl = $this->resolveAttachmentUrl($rowArray, $columns);
-
-                    $data = [
-                        $rowArray['member_id'] ?? null,
-                        $rowArray['member_display_name'] ?? null,
-                        $rowArray['member_email'] ?? null,
-                        $rowArray['member_phone'] ?? null,
-                        $rowArray['member_company_name'] ?? null,
-                        $rowArray['member_city_name'] ?? null,
-                        $rowArray['member_membership_status'] ?? null,
-                    ];
-
-                    foreach ($columns as $column) {
-                        $data[] = $rowArray[$column] ?? null;
-                    }
-
-                    $data[] = $attachmentUrl;
-                    fputcsv($handle, $data);
-                }
-            };
-
-            if (in_array('id', $columns, true)) {
-                $query->orderBy('activity.id')->chunkById(500, $chunkCallback, 'activity.id');
-            } else {
-                $query->orderBy('activity.created_at')->chunk(500, $chunkCallback);
-            }
-
-            fclose($handle);
-        }, $filename, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Cache-Control' => 'no-store, no-cache',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
-
-        return $response;
-    }
-
-    private function countByUser($query, string $column): array
-    {
-        return $query
-            ->select($column, DB::raw('count(*) as total'))
-            ->groupBy($column)
-            ->pluck('total', $column)
-            ->all();
-    }
-
-    private function resolveMemberKey(array $columns): string
-    {
-        foreach (['member_id', 'user_id', 'created_by', 'from_user_id', 'initiator_user_id'] as $column) {
-            if (in_array($column, $columns, true)) {
-                return $column;
-            }
-        }
-
-        return 'user_id';
+        return [$columns, $query];
     }
 
     private function resolveAttachmentUrl(array $row, array $columns): ?string
