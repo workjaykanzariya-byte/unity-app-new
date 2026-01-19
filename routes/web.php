@@ -6,6 +6,11 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\CirclesController;
 use App\Http\Controllers\Admin\ActivitiesController;
+use App\Http\Controllers\Admin\ActivitiesBusinessDealsController;
+use App\Http\Controllers\Admin\ActivitiesP2PMeetingsController;
+use App\Http\Controllers\Admin\ActivitiesReferralsController;
+use App\Http\Controllers\Admin\ActivitiesRequirementsController;
+use App\Http\Controllers\Admin\ActivitiesTestimonialsController;
 use App\Http\Controllers\Admin\CoinsController;
 
 Route::get('/', function () {
@@ -31,6 +36,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/users/{user}/roles/{role}/remove', [UsersController::class, 'removeRole'])->name('users.roles.remove');
         Route::get('/activities', [ActivitiesController::class, 'index'])->name('activities.index');
         Route::post('/activities/export', [ActivitiesController::class, 'export'])->name('activities.export');
+        Route::get('/activities/testimonials', [ActivitiesTestimonialsController::class, 'index'])->name('activities.testimonials.index');
+        Route::get('/activities/testimonials/export', [ActivitiesTestimonialsController::class, 'export'])->name('activities.testimonials.export');
+        Route::get('/activities/requirements', [ActivitiesRequirementsController::class, 'index'])->name('activities.requirements.index');
+        Route::get('/activities/requirements/export', [ActivitiesRequirementsController::class, 'export'])->name('activities.requirements.export');
+        Route::get('/activities/referrals', [ActivitiesReferralsController::class, 'index'])->name('activities.referrals.index');
+        Route::get('/activities/referrals/export', [ActivitiesReferralsController::class, 'export'])->name('activities.referrals.export');
+        Route::get('/activities/p2p-meetings', [ActivitiesP2PMeetingsController::class, 'index'])->name('activities.p2p-meetings.index');
+        Route::get('/activities/p2p-meetings/export', [ActivitiesP2PMeetingsController::class, 'export'])->name('activities.p2p-meetings.export');
+        Route::get('/activities/business-deals', [ActivitiesBusinessDealsController::class, 'index'])->name('activities.business-deals.index');
+        Route::get('/activities/business-deals/export', [ActivitiesBusinessDealsController::class, 'export'])->name('activities.business-deals.export');
         Route::get('/activities/{member}/testimonials', [ActivitiesController::class, 'testimonials'])->name('activities.testimonials');
         Route::get('/activities/{member}/referrals', [ActivitiesController::class, 'referrals'])->name('activities.referrals');
         Route::get('/activities/{member}/business-deals', [ActivitiesController::class, 'businessDeals'])->name('activities.business-deals');
