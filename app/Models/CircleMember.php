@@ -12,6 +12,16 @@ class CircleMember extends Model
     use HasFactory;
     use SoftDeletes;
 
+    public const ROLE_OPTIONS = [
+        'member',
+        'founder',
+        'director',
+        'chair',
+        'vice_chair',
+        'secretary',
+        'committee_leader',
+    ];
+
     protected $keyType = 'string';
 
     public $incrementing = false;
@@ -30,6 +40,11 @@ class CircleMember extends Model
         'joined_at' => 'datetime',
         'left_at' => 'datetime',
     ];
+
+    public static function roleOptions(): array
+    {
+        return self::ROLE_OPTIONS;
+    }
 
     public function circle(): BelongsTo
     {

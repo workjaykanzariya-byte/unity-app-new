@@ -16,13 +16,13 @@ class City extends Model
 
     protected $fillable = [
         'name',
-        'state_name',
-        'country_name',
-        'is_active',
+        'state',
+        'district',
+        'country',
+        'country_code',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
     ];
 
     public function users(): HasMany
@@ -37,21 +37,31 @@ class City extends Model
 
     public function getStateAttribute(): ?string
     {
-        return $this->state_name;
+        return $this->attributes['state'] ?? $this->state_name ?? null;
     }
 
     public function getDistrictAttribute(): ?string
     {
-        return null;
+        return $this->attributes['district'] ?? null;
     }
 
     public function getCountryAttribute(): ?string
     {
-        return $this->country_name;
+        return $this->attributes['country'] ?? $this->country_name ?? null;
     }
 
     public function getCountryCodeAttribute(): ?string
     {
-        return null;
+        return $this->attributes['country_code'] ?? null;
+    }
+
+    public function getStateNameAttribute(): ?string
+    {
+        return $this->attributes['state_name'] ?? $this->attributes['state'] ?? null;
+    }
+
+    public function getCountryNameAttribute(): ?string
+    {
+        return $this->attributes['country_name'] ?? $this->attributes['country'] ?? null;
     }
 }

@@ -8,15 +8,20 @@
         <h5 class="mb-0">Circles</h5>
         <small class="text-muted">Community circles overview</small>
     </div>
+    <a href="{{ route('admin.circles.create') }}" class="btn btn-primary btn-sm">Create Circle</a>
 </div>
+
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
 
 <div class="card p-3 mb-3">
     <form class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label">Search</label>
-            <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Circle name">
-        </div>
         <div class="col-md-3">
+            <label class="form-label">Search</label>
+            <input type="text" name="q" value="{{ $filters['search'] }}" class="form-control" placeholder="Circle name">
+        </div>
+        <div class="col-md-2">
             <label class="form-label">Status</label>
             <select name="status" class="form-select">
                 <option value="">All</option>
@@ -34,6 +39,15 @@
                 @endforeach
             </select>
         </div>
+        <div class="col-md-2">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select">
+                <option value="">All</option>
+                @foreach ($types as $type)
+                    <option value="{{ $type }}" @selected($filters['type'] === $type)>{{ ucfirst($type) }}</option>
+                @endforeach
+            </select>
+        </div>
         <div class="col-md-2 d-flex gap-2">
             <button class="btn btn-primary w-100">Filter</button>
             <a class="btn btn-outline-secondary w-100" href="{{ route('admin.circles.index') }}">Reset</a>
@@ -42,14 +56,16 @@
 </div>
 
 <div class="card p-3">
-    <div class="table-responsive">
-        <table class="table align-middle">
+    <div class="table-responsive" style="overflow-x: auto;">
+        <table class="table align-middle" style="white-space: nowrap;">
             <thead>
                 <tr>
                     <th>Circle</th>
                     <th>Founder</th>
                     <th>City</th>
-                    <th>Industry</th>
+                    <th>Country</th>
+                    <th>Type</th>
+                    <th>Industry Tags</th>
                     <th>Members</th>
                     <th>Status</th>
                     <th>Created</th>
@@ -62,14 +78,18 @@
                         <td class="fw-semibold">{{ $circle->name }}</td>
                         <td>{{ $circle->founder?->display_name ?? '—' }}</td>
                         <td>{{ $circle->city?->name ?? '—' }}</td>
-                        <td>{{ $circle->business_type ?? '—' }}</td>
-                        <td>{{ $circle->members()->count() }}</td>
+                        <td>{{ $circle->city?->country ?? '—' }}</td>
+                        <td><span class="badge bg-light text-dark text-uppercase">{{ $circle->type ?? '—' }}</span></td>
+                        <td>{{ $circle->industry_tags ? implode(', ', $circle->industry_tags) : '—' }}</td>
+                        <td>{{ $circle->members_count ?? 0 }}</td>
                         <td><span class="badge badge-soft-secondary text-uppercase">{{ $circle->status ?? 'pending' }}</span></td>
                         <td>{{ optional($circle->created_at)->format('Y-m-d') }}</td>
-                        <td class="text-end"><button class="btn btn-sm btn-light">View</button></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-light" href="{{ route('admin.circles.show', $circle) }}">View</a>
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center text-muted py-4">No circles found.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted py-4">No circles found.</td></tr>
                 @endforelse
             </tbody>
         </table>

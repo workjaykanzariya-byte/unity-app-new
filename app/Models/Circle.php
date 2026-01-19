@@ -14,6 +14,9 @@ class Circle extends Model
     use HasFactory;
     use SoftDeletes;
 
+    public const STATUS_OPTIONS = ['pending', 'active', 'archived'];
+    public const TYPE_OPTIONS = ['public', 'private'];
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -31,6 +34,7 @@ class Circle extends Model
         'industry_tags',
         'referral_score',
         'visitor_count',
+        'type',
     ];
 
     protected $casts = [
@@ -56,16 +60,7 @@ class Circle extends Model
                     $base = 'circle';
                 }
 
-                $slug = $base;
-                $i = 1;
-
-                // Ensure uniqueness
-                while (Circle::where('slug', $slug)->exists()) {
-                    $slug = $base . '-' . $i;
-                    $i++;
-                }
-
-                $circle->slug = $slug;
+                $circle->slug = static::generateUniqueSlug($base);
             }
 
             /** Default status */
@@ -76,6 +71,11 @@ class Circle extends Model
     }
 
     public function founder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'founder_user_id');
+    }
+
+    public function founderUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'founder_user_id');
     }
@@ -93,6 +93,35 @@ class Circle extends Model
     public function members(): HasMany
     {
         return $this->hasMany(CircleMember::class);
+    }
+
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(CircleMember::class);
+    }
+
+    public static function generateUniqueSlug(string $name, ?string $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+
+        if ($base === '') {
+            $base = 'circle';
+        }
+
+        $slug = $base;
+        $i = 1;
+
+        while (
+            static::query()
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $i;
+            $i++;
+        }
+
+        return $slug;
     }
 
     public function posts(): HasMany
