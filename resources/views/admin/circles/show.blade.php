@@ -73,31 +73,28 @@
 <div class="card mt-3">
     <div class="card-header fw-semibold">Members</div>
     <div class="card-body">
-        <form method="GET" action="{{ route('admin.circles.show', $circle) }}" class="row g-2 align-items-end mb-3">
-            <div class="col-md-6">
-                <label class="form-label">Search members</label>
-                <input type="text" name="member_search" class="form-control" value="{{ $memberSearch }}" placeholder="Search by name or email">
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-outline-primary w-100">Search</button>
-            </div>
-        </form>
-
         <form action="{{ route('admin.circles.members.store', $circle) }}" method="POST" class="row g-2 align-items-end mb-4">
             @csrf
             <div class="col-md-6">
+                <label class="form-label">Search in dropdown</label>
+                <input type="text" id="userSelectSearch" class="form-control" placeholder="Type to filter users by name or email">
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">Select User</label>
-                <select name="user_id" class="form-select" @disabled($memberCandidates->isEmpty()) required>
-                    <option value="">{{ $memberCandidates->isEmpty() ? 'Search to load users' : 'Select a user' }}</option>
-                    @foreach ($memberCandidates as $candidate)
-                        <option value="{{ $candidate->id }}">
-                            {{ $candidate->display_name ?? trim($candidate->first_name . ' ' . $candidate->last_name) }} ({{ $candidate->email }})
-                        </option>
+                <select id="userSelect" name="user_id" class="form-select" required>
+                    <option value="">Select user</option>
+                    @foreach ($allUsers as $userOption)
+                        @php
+                            $optionName = $userOption->display_name
+                                ?? trim($userOption->first_name . ' ' . ($userOption->last_name ?? ''));
+                            $optionLabel = trim($optionName);
+                            if ($userOption->email) {
+                                $optionLabel = $optionLabel !== '' ? $optionLabel . ' - ' . $userOption->email : $userOption->email;
+                            }
+                        @endphp
+                        <option value="{{ $userOption->id }}">{{ $optionLabel }}</option>
                     @endforeach
                 </select>
-                @if ($memberSearch && $memberCandidates->isEmpty())
-                    <div class="form-text text-danger">No matching users found. Try a different search.</div>
-                @endif
             </div>
             <div class="col-md-3">
                 <label class="form-label">Role</label>
@@ -108,7 +105,7 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100" @disabled($memberCandidates->isEmpty())>Add Member</button>
+                <button class="btn btn-primary w-100">Add Member</button>
             </div>
         </form>
 
@@ -120,6 +117,7 @@
                         <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
+                        <th>Joined At</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -147,6 +145,7 @@
                             <td>
                                 <span class="badge bg-light text-dark text-uppercase">{{ $membership->status ?? 'pending' }}</span>
                             </td>
+                            <td>{{ optional($membership->joined_at ?? $membership->created_at)->format('Y-m-d') ?? '—' }}</td>
                             <td class="text-end">
                                 <form method="POST" action="{{ route('admin.circles.members.destroy', [$circle, $membership]) }}" onsubmit="return confirm('Remove this member from the circle?');">
                                     @csrf
@@ -157,7 +156,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No members assigned yet.</td>
+                            <td colspan="6" class="text-center text-muted py-4">No members assigned yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -166,3 +165,31 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (() => {
+        const searchInput = document.getElementById('userSelectSearch');
+        const select = document.getElementById('userSelect');
+        if (!searchInput || !select) {
+            return;
+        }
+
+        const options = Array.from(select.options);
+
+        const filterOptions = () => {
+            const query = searchInput.value.trim().toLowerCase();
+            options.forEach((option, index) => {
+                if (index === 0) {
+                    option.style.display = '';
+                    return;
+                }
+                const text = option.text.toLowerCase();
+                option.style.display = text.includes(query) ? '' : 'none';
+            });
+        };
+
+        searchInput.addEventListener('keyup', filterOptions);
+    })();
+</script>
+@endpush

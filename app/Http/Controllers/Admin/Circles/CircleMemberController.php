@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\Circles\UpdateCircleMemberRequest;
 use App\Models\Circle;
 use App\Models\CircleMember;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Schema;
 
 class CircleMemberController extends Controller
 {
@@ -15,11 +16,17 @@ class CircleMemberController extends Controller
     {
         $data = $request->validated();
 
-        $circle->members()->create([
+        $payload = [
             'user_id' => $data['user_id'],
             'role' => $data['role'],
             'status' => 'approved',
-        ]);
+        ];
+
+        if (Schema::hasColumn('circle_members', 'joined_at')) {
+            $payload['joined_at'] = now();
+        }
+
+        $circle->members()->create($payload);
 
         return redirect()
             ->route('admin.circles.show', $circle)

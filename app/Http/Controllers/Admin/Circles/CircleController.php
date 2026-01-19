@@ -112,28 +112,15 @@ class CircleController extends Controller
     {
         $circle->load(['city', 'founder', 'members.user']);
 
-        $memberSearch = $request->input('member_search');
-        $memberCandidates = collect();
-
-        if ($memberSearch) {
-            $existingMemberIds = $circle->members->pluck('user_id');
-            $memberCandidates = User::query()
-                ->where(function ($query) use ($memberSearch) {
-                    $query->where('display_name', 'ILIKE', "%{$memberSearch}%")
-                        ->orWhere('first_name', 'ILIKE', "%{$memberSearch}%")
-                        ->orWhere('last_name', 'ILIKE', "%{$memberSearch}%")
-                        ->orWhere('email', 'ILIKE', "%{$memberSearch}%");
-                })
-                ->when($existingMemberIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $existingMemberIds))
-                ->orderBy('display_name')
-                ->limit(25)
-                ->get();
-        }
+        $allUsers = User::query()
+            ->whereNull('deleted_at')
+            ->orderBy('display_name')
+            ->limit(2000)
+            ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
 
         return view('admin.circles.show', [
             'circle' => $circle,
-            'memberCandidates' => $memberCandidates,
-            'memberSearch' => $memberSearch,
+            'allUsers' => $allUsers,
             'roles' => CircleMember::roleOptions(),
         ]);
     }
