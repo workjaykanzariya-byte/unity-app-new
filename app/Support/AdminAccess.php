@@ -195,4 +195,13 @@ class AdminAccess
 
         return self::CIRCLE_ROLE_LABELS[$roleKey] ?? 'Circle Leader';
     }
+
+    public static function canEditUsers(?AdminUser $admin): bool
+    {
+        if (! $admin) {
+            return false;
+        }
+
+        return in_array('global_admin', self::adminRoleKeys($admin), true);
+    }
 }

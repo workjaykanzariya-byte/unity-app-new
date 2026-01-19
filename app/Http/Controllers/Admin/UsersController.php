@@ -7,9 +7,11 @@ use App\Models\AdminUser;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\AdminAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -22,6 +24,7 @@ class UsersController extends Controller
         [$query, $filters, $perPage] = $this->buildUserQuery($request);
 
         $users = $query->paginate($perPage)->withQueryString();
+        $canEditUsers = AdminAccess::canEditUsers(Auth::guard('admin')->user());
 
         $membershipStatuses = User::query()
             ->whereNotNull('membership_status')
@@ -37,6 +40,7 @@ class UsersController extends Controller
             'membershipStatuses' => $membershipStatuses,
             'cities' => $cities,
             'filters' => $filters,
+            'canEditUsers' => $canEditUsers,
         ]);
     }
 
@@ -123,6 +127,10 @@ class UsersController extends Controller
 
     public function edit(string $userId): View
     {
+        if (! AdminAccess::canEditUsers(Auth::guard('admin')->user())) {
+            abort(403);
+        }
+
         $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
         $cities = City::query()->orderBy('name')->get();
         $roles = Role::query()->orderBy('name')->get();
@@ -139,6 +147,10 @@ class UsersController extends Controller
 
     public function update(Request $request, string $userId)
     {
+        if (! AdminAccess::canEditUsers(Auth::guard('admin')->user())) {
+            abort(403);
+        }
+
         $user = User::query()->findOrFail($userId);
 
         $membershipStatuses = $this->membershipStatuses();
