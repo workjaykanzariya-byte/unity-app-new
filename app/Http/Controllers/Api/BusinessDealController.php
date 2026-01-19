@@ -43,8 +43,12 @@ class BusinessDealController extends BaseApiController
             $mediaForPost = [];
 
             $toUser = User::find($deal->to_user_id);
+            $fromUser = User::find($deal->from_user_id ?? $deal->user_id ?? $deal->created_by ?? $deal->to_user_id);
 
-            $contentText = $this->buildActivityPostMessage('business_deal', $toUser);
+            $contentText = $this->buildActivityPostMessage('business_deal', $toUser, [
+                'actor_user' => $fromUser,
+                'amount' => $deal->deal_amount ?? null,
+            ]);
 
             Post::create([
                 'user_id'           => $deal->from_user_id ?? $deal->user_id ?? $deal->created_by ?? $deal->to_user_id,

@@ -44,7 +44,9 @@ class TestimonialController extends BaseApiController
             // Optionally include the receiver's name in content
             $toUser = User::find($testimonial->to_user_id);
 
-            $contentText = $this->buildActivityPostMessage('testimonial', $toUser);
+            $contentText = $this->buildActivityPostMessage('testimonial', $toUser, [
+                'testimonial_message' => $testimonial->content ?? '',
+            ]);
 
             Post::create([
                 'user_id'           => $testimonial->from_user_id,

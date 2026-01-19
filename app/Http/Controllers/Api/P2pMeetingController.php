@@ -5,44 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreP2pMeetingRequest;
 use App\Models\P2pMeeting;
-use App\Models\Post;
-use App\Models\User;
 use App\Events\ActivityCreated;
 use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class P2pMeetingController extends BaseApiController
 {
-    /**
-     * Create a feed post for a newly created P2P meeting.
-     */
-    protected function createPostForP2pMeeting(P2pMeeting $meeting): void
-    {
-        try {
-            $peerUser = $meeting->peer_user_id ? User::find($meeting->peer_user_id) : null;
-            $contentText = $this->buildActivityPostMessage('p2p_meeting', $peerUser);
-
-            Post::create([
-                'user_id'           => $meeting->initiator_user_id,
-                'circle_id'         => null,
-                'content_text'      => $contentText,
-                'media'             => [],
-                'tags'              => ['p2p_meeting'],
-                'visibility'        => 'public',
-                'moderation_status' => 'pending',
-                'sponsored'         => false,
-                'is_deleted'        => false,
-            ]);
-        } catch (Throwable $e) {
-            Log::error('Failed to create post for P2P meeting', [
-                'p2p_meeting_id' => $meeting->id,
-                'error'          => $e->getMessage(),
-            ]);
-        }
-    }
-
     public function index(Request $request)
     {
         $authUser = $request->user();
@@ -110,8 +79,6 @@ class P2pMeetingController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
-
-            $this->createPostForP2pMeeting($meeting);
 
             event(new ActivityCreated(
                 'P2P Meeting',

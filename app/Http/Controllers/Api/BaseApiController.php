@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 class BaseApiController extends Controller
@@ -27,27 +27,27 @@ class BaseApiController extends Controller
         ], $status);
     }
 
-    protected function buildActivityPostMessage(string $activityType, ?User $otherUser): string
+    protected function buildActivityPostMessage(string $activityType, ?User $otherUser, array $context = []): string
     {
         $normalizedType = Str::of($activityType)->lower()->replace(' ', '_')->toString();
-        $peerName = $this->resolvePeerName($otherUser);
+        $peerName = $this->resolveDisplayName($otherUser);
+        $actorName = $this->resolveDisplayName($context['actor_user'] ?? null);
+        $testimonialMessage = trim((string) ($context['testimonial_message'] ?? ''));
+        $amountText = trim((string) ($context['amount'] ?? ''));
+        $amountText = $amountText !== '' ? $amountText : '0';
 
         return match ($normalizedType) {
-            'testimonial' => $peerName
-                ? 'Hey Peers, sharing a moment of gratitude to ' . $peerName . '.'
-                : 'Hey Peers, sharing a moment of gratitude.',
-            'business_deal' => 'Hey Peers, another business connection and handshake turned into real results.',
-            'p2p_meeting' => $peerName
-                ? 'Hey Peers, I have connected with ' . $peerName . ', exchanged ideas, and discussed collaboration.'
-                : 'Hey Peers, I had a peer-to-peer meeting and discussed collaboration.',
+            'testimonial' => $this->buildTestimonialPostMessage($peerName, $testimonialMessage),
+            'business_deal' => "Hey Peers, another business connection and handshake turned into real results.\n"
+                . $actorName . ' made a deal with ' . $peerName . ' of amount ' . $amountText . '.',
             default => '',
         };
     }
 
-    protected function resolvePeerName(?User $user): ?string
+    protected function resolveDisplayName(?User $user): string
     {
         if (! $user) {
-            return null;
+            return 'Peer';
         }
 
         if (! empty($user->display_name)) {
@@ -57,5 +57,16 @@ class BaseApiController extends Controller
         $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
 
         return $fullName !== '' ? $fullName : 'Peer';
+    }
+
+    protected function buildTestimonialPostMessage(string $peerName, string $testimonialMessage): string
+    {
+        $message = 'Hey Peers, sharing a moment of gratitude to ' . $peerName . '.';
+
+        if ($testimonialMessage !== '') {
+            $message .= ' ' . ltrim($testimonialMessage);
+        }
+
+        return $message;
     }
 }
