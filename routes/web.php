@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\Circles\CircleController;
 use App\Http\Controllers\Admin\Circles\CircleMemberController;
+use App\Http\Controllers\Admin\Users\UserSearchController;
 use App\Http\Controllers\Admin\ActivitiesController;
 use App\Http\Controllers\Admin\ActivitiesBusinessDealsController;
 use App\Http\Controllers\Admin\ActivitiesP2PMeetingsController;
@@ -61,6 +62,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
         Route::post('/users/export/csv', [UsersController::class, 'exportCsv'])->name('users.export.csv');
+        Route::get('/users/search', UserSearchController::class)->name('users.search');
         Route::get('/circles', [CircleController::class, 'index'])->name('circles.index');
         Route::get('/circles/create', [CircleController::class, 'create'])->name('circles.create');
         Route::post('/circles', [CircleController::class, 'store'])->name('circles.store');

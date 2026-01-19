@@ -11,6 +11,7 @@ use App\Models\City;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class CircleController extends Controller
@@ -69,6 +70,7 @@ class CircleController extends Controller
 
     public function create(Request $request): View
     {
+        $defaultFounder = $this->defaultFounderUser();
         $countries = $this->countriesList();
         $selectedCountry = $request->input('country', $countries->first() ?? 'India');
 
@@ -84,6 +86,8 @@ class CircleController extends Controller
             'cities' => $cities,
             'statuses' => Circle::STATUS_OPTIONS,
             'types' => Circle::TYPE_OPTIONS,
+            'defaultFounder' => $defaultFounder,
+            'defaultFounderLabel' => $this->founderLabel($defaultFounder),
         ]);
     }
 
@@ -138,6 +142,7 @@ class CircleController extends Controller
     {
         $circle->load('city');
 
+        $defaultFounder = $circle->founder ?? $this->defaultFounderUser();
         $countries = $this->countriesList();
         $selectedCountry = $request->input('country', $circle->city?->country ?? $countries->first() ?? 'India');
 
@@ -153,6 +158,8 @@ class CircleController extends Controller
             'cities' => $cities,
             'statuses' => Circle::STATUS_OPTIONS,
             'types' => Circle::TYPE_OPTIONS,
+            'defaultFounder' => $defaultFounder,
+            'defaultFounderLabel' => $this->founderLabel($defaultFounder),
         ]);
     }
 
@@ -204,5 +211,34 @@ class CircleController extends Controller
         }
 
         return $countries->unique()->values();
+    }
+
+    private function defaultFounderUser(): ?User
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (! $admin) {
+            return null;
+        }
+
+        return User::query()->where('email', $admin->email)->first();
+    }
+
+    private function founderLabel(?User $user): string
+    {
+        if (! $user) {
+            return '';
+        }
+
+        $name = $user->display_name
+            ?? trim($user->first_name . ' ' . ($user->last_name ?? ''));
+
+        $label = trim($name);
+
+        if ($user->email) {
+            $label = $label !== '' ? $label . " ({$user->email})" : $user->email;
+        }
+
+        return $label;
     }
 }
