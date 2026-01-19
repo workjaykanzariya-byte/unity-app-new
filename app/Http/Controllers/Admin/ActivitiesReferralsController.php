@@ -175,7 +175,7 @@ class ActivitiesReferralsController extends Controller
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false);
 
-        $query = $this->applyCircleScopeToActivitiesQuery($query, 'activity.from_user_id');
+        $query = $this->scopeActivitiesQuery($query, 'activity.from_user_id');
 
         if ($filters['search'] !== '') {
             $like = '%' . $filters['search'] . '%';
@@ -209,7 +209,7 @@ class ActivitiesReferralsController extends Controller
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false)
             ->when(! $this->isGlobalAdmin(), function ($query) {
-                return $this->applyCircleScopeToActivitiesQuery($query, 'activity.from_user_id');
+                return $this->scopeActivitiesQuery($query, 'activity.from_user_id');
             })
             ->groupBy(
                 'activity.from_user_id',

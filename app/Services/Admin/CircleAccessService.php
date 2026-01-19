@@ -4,6 +4,7 @@ namespace App\Services\Admin;
 
 use App\Models\AdminUser;
 use App\Models\CircleMember;
+use Illuminate\Support\Facades\Schema;
 
 class CircleAccessService
 {
@@ -14,6 +15,11 @@ class CircleAccessService
         'secretary',
         'circle_director',
     ];
+
+    public function currentAdmin(): ?AdminUser
+    {
+        return auth('admin')->user();
+    }
 
     public function isGlobalAdmin(?AdminUser $adminUser): bool
     {
@@ -32,8 +38,10 @@ class CircleAccessService
             return false;
         }
 
+        $memberColumn = $this->memberIdColumn();
+
         return CircleMember::query()
-            ->where('user_id', $adminUser->id)
+            ->where($memberColumn, $adminUser->id)
             ->whereIn('role', self::LEADER_ROLES)
             ->exists();
     }
@@ -44,9 +52,39 @@ class CircleAccessService
             return [];
         }
 
+        $memberColumn = $this->memberIdColumn();
+
         return CircleMember::query()
-            ->where('user_id', $adminUser->id)
+            ->where($memberColumn, $adminUser->id)
+            ->distinct()
             ->pluck('circle_id')
             ->all();
+    }
+
+    public function allowedMemberIds(?AdminUser $adminUser): array
+    {
+        if (! $adminUser) {
+            return [];
+        }
+
+        $memberColumn = $this->memberIdColumn();
+        $circleIds = $this->allowedCircleIds($adminUser);
+
+        if ($circleIds === []) {
+            return [];
+        }
+
+        return CircleMember::query()
+            ->whereIn('circle_id', $circleIds)
+            ->distinct()
+            ->pluck($memberColumn)
+            ->all();
+    }
+
+    private function memberIdColumn(): string
+    {
+        return Schema::hasColumn('circle_members', 'member_id')
+            ? 'member_id'
+            : 'user_id';
     }
 }

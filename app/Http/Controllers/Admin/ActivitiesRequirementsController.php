@@ -145,7 +145,7 @@ class ActivitiesRequirementsController extends Controller
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at');
 
-        $query = $this->applyCircleScopeToActivitiesQuery($query, 'activity.user_id');
+        $query = $this->scopeActivitiesQuery($query, 'activity.user_id');
 
         if ($filters['search'] !== '') {
             $like = '%' . $filters['search'] . '%';
@@ -178,7 +178,7 @@ class ActivitiesRequirementsController extends Controller
             ->join('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at')
             ->when(! $this->isGlobalAdmin(), function ($query) {
-                return $this->applyCircleScopeToActivitiesQuery($query, 'activity.user_id');
+                return $this->scopeActivitiesQuery($query, 'activity.user_id');
             })
             ->groupBy(
                 'activity.user_id',

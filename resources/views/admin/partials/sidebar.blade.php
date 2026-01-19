@@ -15,9 +15,9 @@
     ];
 
     $isGlobalAdmin = $is_global_admin ?? false;
-    if (! $isGlobalAdmin) {
+    $isCircleLeader = $is_circle_leader ?? false;
+    if (! $isGlobalAdmin && $isCircleLeader) {
         $navItems = array_filter($navItems, fn ($item) => in_array($item['route'], [
-            'admin.dashboard',
             'admin.users.index',
             'admin.circles.index',
             'admin.coins.index',

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Middleware\Admin\EnsureAdminHasAccess;
+use App\Http\Middleware\Admin\EnsureAdminCircleAccess;
 use App\Http\Middleware\EnsureAdminAuthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin.auth' => EnsureAdminAuthenticated::class,
-            'admin.access' => EnsureAdminHasAccess::class,
+            'admin.circle-access' => EnsureAdminCircleAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

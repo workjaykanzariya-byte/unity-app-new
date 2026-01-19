@@ -14,7 +14,9 @@ trait AppliesCircleScope
 
     protected function isGlobalAdmin(): bool
     {
-        return app(CircleAccessService::class)->isGlobalAdmin($this->currentAdmin());
+        $circleAccess = app(CircleAccessService::class);
+
+        return $circleAccess->isGlobalAdmin($circleAccess->currentAdmin());
     }
 
     protected function allowedCircleIds(): array
@@ -25,52 +27,50 @@ trait AppliesCircleScope
             return (array) $request->attributes->get('allowed_circle_ids', []);
         }
 
-        return app(CircleAccessService::class)->allowedCircleIds($this->currentAdmin());
+        $circleAccess = app(CircleAccessService::class);
+
+        return $circleAccess->allowedCircleIds($circleAccess->currentAdmin());
     }
 
-    protected function applyCircleScopeToUsersQuery($query)
+    protected function allowedMemberIds(): array
+    {
+        $request = request();
+
+        if ($request->attributes->has('allowed_member_ids')) {
+            return (array) $request->attributes->get('allowed_member_ids', []);
+        }
+
+        $circleAccess = app(CircleAccessService::class);
+
+        return $circleAccess->allowedMemberIds($circleAccess->currentAdmin());
+    }
+
+    protected function scopeUsersQuery($query)
     {
         if ($this->isGlobalAdmin()) {
             return $query;
         }
 
-        $allowedCircleIds = $this->allowedCircleIds();
         $table = $query->getModel()->getTable();
 
-        return $query->whereIn("{$table}.id", function ($sub) use ($allowedCircleIds) {
-            $sub->select('user_id')
-                ->from('circle_members')
-                ->whereIn('circle_id', $allowedCircleIds);
-        });
+        return $query->whereIn("{$table}.id", $this->allowedMemberIds());
     }
 
-    protected function applyCircleScopeToActivitiesQuery($query, string $userColumn = 'user_id')
+    protected function scopeActivitiesQuery($query, string $memberColumn)
     {
         if ($this->isGlobalAdmin()) {
             return $query;
         }
 
-        $allowedCircleIds = $this->allowedCircleIds();
-
-        return $query->whereIn($userColumn, function ($sub) use ($allowedCircleIds) {
-            $sub->select('user_id')
-                ->from('circle_members')
-                ->whereIn('circle_id', $allowedCircleIds);
-        });
+        return $query->whereIn($memberColumn, $this->allowedMemberIds());
     }
 
-    protected function applyCircleScopeToCoinsQuery($query, string $userColumn = 'user_id')
+    protected function scopeCoinsQuery($query, string $memberColumn = 'user_id')
     {
         if ($this->isGlobalAdmin()) {
             return $query;
         }
 
-        $allowedCircleIds = $this->allowedCircleIds();
-
-        return $query->whereIn($userColumn, function ($sub) use ($allowedCircleIds) {
-            $sub->select('user_id')
-                ->from('circle_members')
-                ->whereIn('circle_id', $allowedCircleIds);
-        });
+        return $query->whereIn($memberColumn, $this->allowedMemberIds());
     }
 }

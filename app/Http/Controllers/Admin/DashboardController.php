@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Circle;
-use App\Models\User;
+use App\Services\Admin\CircleAccessService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
+        $circleAccess = app(CircleAccessService::class);
+        if (! $circleAccess->isGlobalAdmin($circleAccess->currentAdmin())) {
+            return redirect()->route('admin.activities.index');
+        }
+
         $today = now();
 
         $totalUsers = $this->safeCountTable('users');

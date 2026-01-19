@@ -37,7 +37,7 @@ class ActivitiesController extends Controller
             'membership_status',
         ]);
 
-        $query = $this->applyCircleScopeToUsersQuery($query);
+        $query = $this->scopeUsersQuery($query);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -339,7 +339,7 @@ class ActivitiesController extends Controller
             }
         }
 
-        return $this->applyCircleScopeToActivitiesQuery($query, 'activity.' . $memberKey);
+        return $this->scopeActivitiesQuery($query, 'activity.' . $memberKey);
     }
 
     private function exportColumns(string $activityType): array
@@ -459,10 +459,7 @@ class ActivitiesController extends Controller
             return;
         }
 
-        $hasAccess = \App\Models\CircleMember::query()
-            ->where('user_id', $memberId)
-            ->whereIn('circle_id', $this->allowedCircleIds())
-            ->exists();
+        $hasAccess = in_array($memberId, $this->allowedMemberIds(), true);
 
         if (! $hasAccess) {
             abort(403);

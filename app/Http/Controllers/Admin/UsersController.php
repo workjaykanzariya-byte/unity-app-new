@@ -6,7 +6,6 @@ use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\City;
-use App\Models\CircleMember;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -538,7 +537,7 @@ class UsersController extends Controller
             ])
             ->with('city');
 
-        $query = $this->applyCircleScopeToUsersQuery($query);
+        $query = $this->scopeUsersQuery($query);
 
         $search = trim((string) $request->query('q', $request->input('search', '')));
         $membership = $request->input('membership_status');
@@ -606,10 +605,7 @@ class UsersController extends Controller
             return;
         }
 
-        $hasAccess = CircleMember::query()
-            ->where('user_id', $userId)
-            ->whereIn('circle_id', $this->allowedCircleIds())
-            ->exists();
+        $hasAccess = in_array($userId, $this->allowedMemberIds(), true);
 
         if (! $hasAccess) {
             abort(403);

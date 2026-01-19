@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Models\CoinLedger;
-use App\Models\CircleMember;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +48,7 @@ class CoinsController extends Controller
             'membership_status',
         ]);
 
-        $query = $this->applyCircleScopeToUsersQuery($query);
+        $query = $this->scopeUsersQuery($query);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -68,8 +67,12 @@ class CoinsController extends Controller
         $members = $query->orderBy('display_name')->paginate($perPage)->withQueryString();
         $memberIds = $members->pluck('id')->all();
 
-        $coinsByUserId = DB::table('coins_ledger as cl')
-            ->whereIn('cl.user_id', $memberIds)
+        $coinsQuery = DB::table('coins_ledger as cl')
+            ->whereIn('cl.user_id', $memberIds);
+
+        $coinsQuery = $this->scopeCoinsQuery($coinsQuery, 'cl.user_id');
+
+        $coinsByUserId = $coinsQuery
             ->select([
                 'cl.user_id',
                 DB::raw('sum(cl.amount) as total_coins'),
@@ -108,7 +111,7 @@ class CoinsController extends Controller
         $usersQuery = User::query()
             ->select(['id', 'email', 'first_name', 'last_name', 'display_name']);
 
-        $users = $this->applyCircleScopeToUsersQuery($usersQuery)
+        $users = $this->scopeUsersQuery($usersQuery)
             ->orderBy('display_name')
             ->get();
 
@@ -128,6 +131,11 @@ class CoinsController extends Controller
         ]);
 
         $userId = $validated['user_id'];
+
+        if (! $this->isGlobalAdmin() && ! in_array($userId, $this->allowedMemberIds(), true)) {
+            abort(403);
+        }
+
         $amount = (int) $validated['amount'];
         $activity = $validated['activity'] ?? null;
         $remarks = trim((string) ($validated['remarks'] ?? ''));
@@ -221,10 +229,7 @@ class CoinsController extends Controller
             return;
         }
 
-        $hasAccess = CircleMember::query()
-            ->where('user_id', $memberId)
-            ->whereIn('circle_id', $this->allowedCircleIds())
-            ->exists();
+        $hasAccess = in_array($memberId, $this->allowedMemberIds(), true);
 
         if (! $hasAccess) {
             abort(403);

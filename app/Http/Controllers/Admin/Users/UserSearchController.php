@@ -32,7 +32,7 @@ class UserSearchController extends Controller
             ->limit(10)
             ->select(['id', 'display_name', 'first_name', 'last_name', 'email']);
 
-        $users = $this->applyCircleScopeToUsersQuery($query)->get();
+        $users = $this->scopeUsersQuery($query)->get();
 
         $results = $users->map(function (User $user): array {
             $name = $user->display_name

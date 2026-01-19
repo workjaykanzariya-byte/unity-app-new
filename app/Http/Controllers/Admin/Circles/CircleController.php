@@ -125,7 +125,7 @@ class CircleController extends Controller
             ->orderBy('display_name')
             ->limit(2000);
 
-        $allUsers = $this->applyCircleScopeToUsersQuery($usersQuery)
+        $allUsers = $this->scopeUsersQuery($usersQuery)
             ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
 
         return view('admin.circles.show', [
