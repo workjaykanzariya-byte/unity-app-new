@@ -149,6 +149,31 @@ class AdminAccess
         });
     }
 
+    public static function allowedUserIds(?AdminUser $admin): array
+    {
+        if (! $admin) {
+            return [];
+        }
+
+        $cacheKey = 'admin-access:allowed-users:' . $admin->id;
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($admin) {
+            $allowedCircleIds = self::allowedCircleIds($admin);
+            if ($allowedCircleIds === []) {
+                return [];
+            }
+
+            return CircleMember::query()
+                ->whereIn('circle_id', $allowedCircleIds)
+                ->where('status', 'approved')
+                ->whereNull('deleted_at')
+                ->pluck('user_id')
+                ->unique()
+                ->values()
+                ->all();
+        });
+    }
+
     public static function primaryCircleRoleKey(?AdminUser $admin): ?string
     {
         if (! $admin) {

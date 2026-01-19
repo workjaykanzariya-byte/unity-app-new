@@ -6,7 +6,6 @@
     $navItems = $isCircleScoped
         ? [
             ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
-            ['icon' => 'bi-activity', 'label' => 'Activities', 'route' => 'admin.activities.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
         ]
         : [

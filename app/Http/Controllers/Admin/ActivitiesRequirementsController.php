@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class ActivitiesRequirementsController extends Controller
     {
         $filters = $this->filters($request);
 
-        $items = $this->baseQuery($filters)
+        $items = $this->baseQuery($request, $filters)
             ->select([
                 'activity.id',
                 'activity.subject',
@@ -34,7 +35,7 @@ class ActivitiesRequirementsController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $topMembers = $this->topMembers();
+        $topMembers = $this->topMembers($request);
 
         return view('admin.activities.requirements.index', [
             'items' => $items,
@@ -48,7 +49,7 @@ class ActivitiesRequirementsController extends Controller
         $filters = $this->filters($request);
         $filename = 'requirements_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($filters) {
+        return response()->streamDownload(function () use ($request, $filters) {
             @ini_set('zlib.output_compression', '0');
             @ini_set('output_buffering', '0');
             while (ob_get_level() > 0) {
@@ -74,7 +75,7 @@ class ActivitiesRequirementsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($filters)
+                $this->baseQuery($request, $filters)
                     ->select([
                         'activity.id',
                         'activity.subject',
@@ -136,7 +137,7 @@ class ActivitiesRequirementsController extends Controller
         ];
     }
 
-    private function baseQuery(array $filters)
+    private function baseQuery(Request $request, array $filters)
     {
         $query = DB::table('requirements as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.user_id')
@@ -164,14 +165,20 @@ class ActivitiesRequirementsController extends Controller
             $query->whereDate('activity.created_at', '<=', $filters['to']);
         }
 
+        $this->applyScopeToActivityQuery($query, $request, 'activity.user_id');
+
         return $query;
     }
 
-    private function topMembers()
+    private function topMembers(Request $request)
     {
-        return DB::table('requirements as activity')
+        $query = DB::table('requirements as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.user_id')
-            ->whereNull('activity.deleted_at')
+            ->whereNull('activity.deleted_at');
+
+        $this->applyScopeToActivityQuery($query, $request, 'activity.user_id');
+
+        return $query
             ->groupBy(
                 'activity.user_id',
                 'actor.display_name',
@@ -190,6 +197,22 @@ class ActivitiesRequirementsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+    }
+
+    private function applyScopeToActivityQuery($query, Request $request, string $primaryColumn): void
+    {
+        if (! $request->attributes->get('is_circle_scoped')) {
+            return;
+        }
+
+        $allowedUserIds = AdminAccess::allowedUserIds(auth('admin')->user());
+
+        if ($allowedUserIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereIn($primaryColumn, $allowedUserIds);
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class ActivitiesP2PMeetingsController extends Controller
     {
         $filters = $this->filters($request);
 
-        $items = $this->baseQuery($filters)
+        $items = $this->baseQuery($request, $filters)
             ->select([
                 'activity.id',
                 'activity.meeting_date',
@@ -36,7 +37,7 @@ class ActivitiesP2PMeetingsController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $topMembers = $this->topMembers();
+        $topMembers = $this->topMembers($request);
 
         return view('admin.activities.p2p_meetings.index', [
             'items' => $items,
@@ -50,7 +51,7 @@ class ActivitiesP2PMeetingsController extends Controller
         $filters = $this->filters($request);
         $filename = 'p2p_meetings_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($filters) {
+        return response()->streamDownload(function () use ($request, $filters) {
             @ini_set('zlib.output_compression', '0');
             @ini_set('output_buffering', '0');
             while (ob_get_level() > 0) {
@@ -76,7 +77,7 @@ class ActivitiesP2PMeetingsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($filters)
+                $this->baseQuery($request, $filters)
                     ->select([
                         'activity.id',
                         'activity.meeting_date',
@@ -144,7 +145,7 @@ class ActivitiesP2PMeetingsController extends Controller
         ];
     }
 
-    private function baseQuery(array $filters)
+    private function baseQuery(Request $request, array $filters)
     {
         $query = DB::table('p2p_meetings as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.initiator_user_id')
@@ -170,15 +171,21 @@ class ActivitiesP2PMeetingsController extends Controller
             $query->whereDate('activity.created_at', '<=', $filters['to']);
         }
 
+        $this->applyScopeToActivityQuery($query, $request, 'activity.initiator_user_id', 'activity.peer_user_id');
+
         return $query;
     }
 
-    private function topMembers()
+    private function topMembers(Request $request)
     {
-        return DB::table('p2p_meetings as activity')
+        $query = DB::table('p2p_meetings as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.initiator_user_id')
             ->whereNull('activity.deleted_at')
-            ->where('activity.is_deleted', false)
+            ->where('activity.is_deleted', false);
+
+        $this->applyScopeToActivityQuery($query, $request, 'activity.initiator_user_id', 'activity.peer_user_id');
+
+        return $query
             ->groupBy(
                 'activity.initiator_user_id',
                 'actor.display_name',
@@ -197,6 +204,26 @@ class ActivitiesP2PMeetingsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+    }
+
+    private function applyScopeToActivityQuery($query, Request $request, string $primaryColumn, ?string $peerColumn): void
+    {
+        if (! $request->attributes->get('is_circle_scoped')) {
+            return;
+        }
+
+        $allowedUserIds = AdminAccess::allowedUserIds(auth('admin')->user());
+
+        if ($allowedUserIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereIn($primaryColumn, $allowedUserIds);
+
+        if ($peerColumn) {
+            $query->whereIn($peerColumn, $allowedUserIds);
+        }
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string
