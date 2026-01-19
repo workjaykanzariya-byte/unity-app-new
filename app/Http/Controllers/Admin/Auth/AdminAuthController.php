@@ -198,7 +198,7 @@ class AdminAuthController extends Controller
         $isEligibleLeader = CircleMember::query()
             ->where('user_id', $user->id)
             ->where('status', 'approved')
-            ->whereIn('role', $eligibleRoles)
+            ->whereIn(DB::raw('circle_members.role::text'), $eligibleRoles)
             ->exists();
 
         if (! $isEligibleLeader) {
