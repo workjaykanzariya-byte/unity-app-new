@@ -100,8 +100,8 @@
     </div>
 
     <div class="card shadow-sm">
-        <div class="table-responsive activities-table-wrapper">
-            <table class="table mb-0 align-middle activities-table">
+        <div class="activity-table-scroll">
+            <table class="table mb-0 align-middle activity-table-nowrap">
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
