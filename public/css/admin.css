@@ -119,3 +119,15 @@ body {
     display: inline-block;
     margin-right: 6px;
 }
+
+.activities-table-wrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.activities-table,
+.activities-table th,
+.activities-table td {
+    white-space: nowrap;
+    vertical-align: middle;
+}

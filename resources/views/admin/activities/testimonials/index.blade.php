@@ -96,8 +96,8 @@
     </div>
 
     <div class="card shadow-sm">
-        <div class="table-responsive">
-            <table class="table mb-0 align-middle">
+        <div class="table-responsive activities-table-wrapper">
+            <table class="table mb-0 align-middle activities-table">
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
