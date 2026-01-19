@@ -119,15 +119,3 @@ body {
     display: inline-block;
     margin-right: 6px;
 }
-
-.activity-table-scroll {
-    width: 100%;
-    overflow-x: auto;
-}
-
-.activity-table-nowrap,
-.activity-table-nowrap th,
-.activity-table-nowrap td {
-    white-space: nowrap;
-    vertical-align: middle;
-}
