@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\AdminLoginOtp;
 use App\Models\AdminUser;
+use App\Models\CircleMember;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +16,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -175,15 +177,63 @@ class AdminAuthController extends Controller
 
     private function eligibleAdmin(string $email): ?AdminUser
     {
-        return AdminUser::query()
-            ->where('email', $email)
-            ->whereExists(function ($query) {
-                $query->selectRaw(1)
-                    ->from('admin_user_roles')
-                    ->join('roles', 'roles.id', '=', 'admin_user_roles.role_id')
-                    ->whereColumn('admin_user_roles.user_id', 'admin_users.id')
-                    ->where('roles.key', 'global_admin');
-            })
+        $adminUser = AdminUser::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
+
+        if ($adminUser) {
+            return $adminUser;
+        }
+
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if (! $user) {
+            return null;
+        }
+
+        $eligibleRoles = ['chair', 'vice_chair', 'secretary', 'founder', 'director'];
+
+        $isEligibleLeader = CircleMember::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->whereIn('role', $eligibleRoles)
+            ->exists();
+
+        if (! $isEligibleLeader) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($user): AdminUser {
+            $adminUser = AdminUser::query()
+                ->whereRaw('LOWER(email) = ?', [strtolower($user->email)])
+                ->first();
+
+            if (! $adminUser) {
+                $adminUser = AdminUser::create([
+                    'id' => (string) Str::uuid(),
+                    'name' => $this->resolveAdminName($user),
+                    'email' => strtolower($user->email),
+                ]);
+            }
+
+            $circleLeaderRoleId = Role::mustIdByKey('circle_leader');
+
+            $adminUser->roles()->syncWithoutDetaching([$circleLeaderRoleId]);
+
+            return $adminUser;
+        });
+    }
+
+    private function resolveAdminName(User $user): string
+    {
+        if (! empty($user->display_name)) {
+            return $user->display_name;
+        }
+
+        $fullName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+        return $fullName !== '' ? $fullName : $user->email;
     }
 }
