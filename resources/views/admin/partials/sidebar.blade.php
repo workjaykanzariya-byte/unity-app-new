@@ -24,7 +24,7 @@
             ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
         ];
 
-    $activityMenu = $isSuper ? [
+    $activityMenu = ($isSuper || $isCircleScoped) ? [
         ['label' => 'Summary', 'route' => 'admin.activities.index'],
         ['label' => 'Testimonials', 'route' => 'admin.activities.testimonials.index'],
         ['label' => 'Requirements', 'route' => 'admin.activities.requirements.index'],
