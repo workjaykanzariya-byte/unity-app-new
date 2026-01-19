@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -62,13 +63,16 @@ class ActivitiesP2PMeetingsController extends Controller
                 fwrite($handle, "\xEF\xBB\xBF");
                 fputcsv($handle, [
                     'ID',
-                    'Actor Name',
-                    'Actor Email',
-                    'Peer Name',
-                    'Peer Email',
+                    'Created By Name',
+                    'Created By Email',
+                    'Connected With Name',
+                    'Connected With Email',
                     'Meeting Date',
                     'Meeting Place',
                     'Remarks',
+                    'Media Count',
+                    'Media URLs',
+                    'Media JSON',
                     'Created At',
                 ]);
 
@@ -87,6 +91,7 @@ class ActivitiesP2PMeetingsController extends Controller
                         'peer.first_name as peer_first_name',
                         'peer.last_name as peer_last_name',
                         'peer.email as peer_email',
+                        DB::raw('NULL as media'),
                     ])
                     ->orderBy('activity.created_at')
                     ->orderBy('activity.id')
@@ -112,6 +117,9 @@ class ActivitiesP2PMeetingsController extends Controller
                                 $row->meeting_date ?? '',
                                 $row->meeting_place ?? '',
                                 $row->remarks ?? '',
+                                $this->mediaCount($row->media ?? null),
+                                $this->mediaUrls($row->media ?? null),
+                                $this->mediaJson($row->media ?? null),
                                 $row->created_at ?? '',
                             ]);
                         }
@@ -200,5 +208,85 @@ class ActivitiesP2PMeetingsController extends Controller
         $name = trim(($firstName ?? '') . ' ' . ($lastName ?? ''));
 
         return $name !== '' ? $name : '—';
+    }
+
+    private function mediaCount($media): int
+    {
+        return count($this->normalizeMedia($media));
+    }
+
+    private function mediaUrls($media): string
+    {
+        $urls = [];
+
+        foreach ($this->normalizeMedia($media) as $item) {
+            $url = $this->resolveMediaUrl($item);
+            if ($url) {
+                $urls[] = $url;
+            }
+        }
+
+        return implode(',', $urls);
+    }
+
+    private function mediaJson($media): string
+    {
+        $normalized = $this->normalizeMedia($media);
+
+        return $normalized ? json_encode($normalized) : '';
+    }
+
+    private function normalizeMedia($media): array
+    {
+        if (! $media) {
+            return [];
+        }
+
+        if (is_string($media)) {
+            $decoded = json_decode($media, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+
+            return [$media];
+        }
+
+        if (is_array($media)) {
+            return $media;
+        }
+
+        return [$media];
+    }
+
+    private function resolveMediaUrl($item): ?string
+    {
+        if (is_array($item)) {
+            $url = $item['url'] ?? null;
+            $id = $item['id'] ?? null;
+
+            if ($url) {
+                return $url;
+            }
+
+            if ($id && Str::isUuid($id)) {
+                return url('/api/v1/files/' . $id);
+            }
+
+            return $id ?: null;
+        }
+
+        if (is_string($item)) {
+            if (str_starts_with($item, 'http://') || str_starts_with($item, 'https://')) {
+                return $item;
+            }
+
+            if (Str::isUuid($item)) {
+                return url('/api/v1/files/' . $item);
+            }
+
+            return $item;
+        }
+
+        return null;
     }
 }
