@@ -34,12 +34,13 @@ class BaseApiController extends Controller
         $actorName = $this->resolveDisplayName($context['actor_user'] ?? null);
         $testimonialMessage = trim((string) ($context['testimonial_message'] ?? ''));
         $amountText = trim((string) ($context['amount'] ?? ''));
-        $amountText = $amountText !== '' ? $amountText : '0';
 
         return match ($normalizedType) {
             'testimonial' => $this->buildTestimonialPostMessage($peerName, $testimonialMessage),
             'business_deal' => "Hey Peers, another business connection and handshake turned into real results.\n"
                 . $actorName . ' made a deal with ' . $peerName . ' of amount ' . $amountText . '.',
+            'p2p_meeting' => 'Hey Peers, I have connected with ' . $peerName
+                . ', exchanged ideas, and discussed to have collaboration.',
             default => '',
         };
     }
