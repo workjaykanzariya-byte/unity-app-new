@@ -29,7 +29,7 @@
 @php
     $globalAdminRole = $roles->firstWhere('key', 'global_admin');
 @endphp
-@if ($canManageRoles && $globalAdminRole)
+@if ($globalAdminRole)
     <form id="removeGlobalAdminRoleForm" method="POST" action="{{ route('admin.users.roles.remove', ['user' => $user->id, 'role' => $globalAdminRole->id]) }}">
         @csrf
     </form>
@@ -280,57 +280,49 @@
             </div>
         </div>
 
-        @if ($canManageRoles)
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header fw-semibold">Roles</div>
-                    <div class="card-body">
-                        @php
-                            $currentRoleIds = old('role_ids', $userRoleIds);
-                            $hasGlobalAdmin = $globalAdminRole && in_array($globalAdminRole->id, $currentRoleIds);
-                        @endphp
-                        <div class="row g-3 align-items-center">
-                            @foreach ($roles as $role)
-                                @php $isGlobal = $role->key === 'global_admin'; @endphp
-                                <div class="col-md-4 d-flex align-items-start">
-                                    @if ($isGlobal && $hasGlobalAdmin)
-                                        <div class="w-100 d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <div class="fw-semibold">{{ $role->name }}</div>
-                                                <div class="small text-muted">{{ $role->description }}</div>
-                                                <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
-                                            </div>
-                                            @if ($globalAdminRole)
-                                                <button type="submit"
-                                                        form="removeGlobalAdminRoleForm"
-                                                        class="btn btn-sm btn-outline-danger"
-                                                        onclick="return confirm('Remove Global Admin role from this user?');">
-                                                    Remove Role
-                                                </button>
-                                            @endif
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header fw-semibold">Roles</div>
+                <div class="card-body">
+                    @php
+                        $currentRoleIds = old('role_ids', $userRoleIds);
+                        $hasGlobalAdmin = $globalAdminRole && in_array($globalAdminRole->id, $currentRoleIds);
+                    @endphp
+                    <div class="row g-3 align-items-center">
+                        @foreach ($roles as $role)
+                            @php $isGlobal = $role->key === 'global_admin'; @endphp
+                            <div class="col-md-4 d-flex align-items-start">
+                                @if ($isGlobal && $hasGlobalAdmin)
+                                    <div class="w-100 d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="fw-semibold">{{ $role->name }}</div>
+                                            <div class="small text-muted">{{ $role->description }}</div>
+                                            <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
                                         </div>
-                                    @else
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}" id="role-{{ $role->id }}" @checked(in_array($role->id, $currentRoleIds))>
-                                            <label class="form-check-label" for="role-{{ $role->id }}">
-                                                <strong>{{ $role->name }}</strong>
-                                                <div class="small text-muted">{{ $role->description }}</div>
-                                            </label>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
+                                        @if ($globalAdminRole)
+                                            <button type="submit"
+                                                    form="removeGlobalAdminRoleForm"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Remove Global Admin role from this user?');">
+                                                Remove Role
+                                            </button>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}" id="role-{{ $role->id }}" @checked(in_array($role->id, $currentRoleIds))>
+                                        <label class="form-check-label" for="role-{{ $role->id }}">
+                                            <strong>{{ $role->name }}</strong>
+                                            <div class="small text-muted">{{ $role->description }}</div>
+                                        </label>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
-        @else
-            <div class="col-12">
-                <div class="alert alert-info">
-                    Role management is restricted to Global Admins.
-                </div>
-            </div>
-        @endif
+        </div>
     </div>
 
     <div class="mt-4">

@@ -11,19 +11,11 @@ class CircleMemberResource extends JsonResource
         return [
             'id' => $this->id,
             'role' => $this->role,
-            'role_id' => $this->role_id,
             'status' => $this->status,
             'substitute_count' => $this->substitute_count,
             'joined_at' => $this->joined_at,
             'left_at' => $this->left_at,
             'created_at' => $this->created_at,
-            'role_ref' => $this->whenLoaded('roleRef', function () {
-                return [
-                    'id' => $this->roleRef?->id,
-                    'key' => $this->roleRef?->key,
-                    'name' => $this->roleRef?->name,
-                ];
-            }),
             'user' => $this->whenLoaded('user', function () {
                 return [
                     'id' => $this->user->id,

@@ -1,33 +1,29 @@
 @php
     $adminUser = Auth::guard('admin')->user();
-    $adminUser?->loadMissing('roles:id,key');
-    $adminRoleKeys = $adminUser?->roles?->pluck('key')->all() ?? [];
-    $isGlobalAdmin = in_array('global_admin', $adminRoleKeys, true);
-    $isIndustryDirector = in_array('industry_director', $adminRoleKeys, true);
-    $isDed = in_array('ded', $adminRoleKeys, true);
-    $isCircleLeader = in_array('circle_leader', $adminRoleKeys, true);
+    $isSuper = \App\Support\AdminAccess::isSuper($adminUser);
+    $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($adminUser);
 
-    $canViewUsers = $isGlobalAdmin || $isIndustryDirector || $isDed;
-    $canViewCircles = $isGlobalAdmin || $isIndustryDirector || $isCircleLeader;
-    $canViewActivities = $isGlobalAdmin || $isIndustryDirector || $isDed;
-    $canViewCoins = $isGlobalAdmin;
+    $navItems = $isCircleScoped
+        ? [
+            ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
+            ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
+        ]
+        : [
+            ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
+            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
+            ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
+            ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
+            ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
+            ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
+            ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
+            ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],
+            ['icon' => 'bi-shield-lock', 'label' => 'Audit & Compliance', 'route' => '#'],
+            ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
+        ];
 
-    $navItems = array_filter([
-        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
-        $canViewUsers ? ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'] : null,
-        $canViewCircles ? ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'] : null,
-        $canViewCoins ? ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'] : null,
-        ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
-        ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
-        ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
-        ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
-        ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
-        ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],
-        ['icon' => 'bi-shield-lock', 'label' => 'Audit & Compliance', 'route' => '#'],
-        ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
-    ]);
-
-    $activityMenu = $canViewActivities ? [
+    $activityMenu = $isSuper ? [
         ['label' => 'Summary', 'route' => 'admin.activities.index'],
         ['label' => 'Testimonials', 'route' => 'admin.activities.testimonials.index'],
         ['label' => 'Requirements', 'route' => 'admin.activities.requirements.index'],
@@ -48,7 +44,7 @@
     </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
-            @if ($canViewActivities)
+            @if ($activityMenu)
                 <li class="nav-item">
                     <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
                         <span><i class="bi bi-activity me-2"></i>Activities</span>

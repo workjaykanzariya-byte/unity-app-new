@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -128,7 +127,6 @@ class UsersController extends Controller
         $cities = City::query()->orderBy('name')->get();
         $roles = Role::query()->orderBy('name')->get();
         $membershipStatuses = $this->membershipStatuses();
-        $canManageRoles = $this->canManageAdminRoles();
 
         return view('admin.users.edit', [
             'user' => $user,
@@ -136,7 +134,6 @@ class UsersController extends Controller
             'roles' => $roles,
             'membershipStatuses' => $membershipStatuses,
             'userRoleIds' => $user->roles->pluck('id')->all(),
-            'canManageRoles' => $canManageRoles,
         ]);
     }
 
@@ -210,9 +207,7 @@ class UsersController extends Controller
 
         $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id']);
 
-        $canManageRoles = $this->canManageAdminRoles();
-
-        DB::transaction(function () use ($user, $updatable, $validated, $request, $canManageRoles) {
+        DB::transaction(function () use ($user, $updatable, $validated, $request) {
             $user->fill($updatable);
 
             if ($request->filled('profile_photo_file_id')) {
@@ -225,7 +220,7 @@ class UsersController extends Controller
 
             $user->save();
 
-            if ($canManageRoles && $request->filled('role_ids')) {
+            if ($request->filled('role_ids')) {
                 $adminUser = AdminUser::find($user->id);
 
                 if (! $adminUser) {
@@ -483,19 +478,6 @@ class UsersController extends Controller
         }
 
         return array_values($parts);
-    }
-
-    private function canManageAdminRoles(): bool
-    {
-        $admin = Auth::guard('admin')->user();
-
-        if (! $admin) {
-            return false;
-        }
-
-        $admin->loadMissing('roles:id,key');
-
-        return $admin->roles->contains('key', 'global_admin');
     }
 
     private function buildUserQuery(Request $request): array

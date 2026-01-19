@@ -11,6 +11,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminRoleMiddleware
 {
+    private const CORE_ADMIN_ROLES = [
+        'global_admin',
+        'industry_director',
+        'ded',
+        'circle_leader',
+    ];
+
     public function handle(Request $request, Closure $next, string ...$allowedRoles): Response
     {
         $admin = Auth::guard('admin')->user();
@@ -23,7 +30,8 @@ class AdminRoleMiddleware
         $adminRoleKeys = $admin->roles->pluck('key')->all();
 
         $requiredRoles = $this->normalizedRoles($allowedRoles);
-        $missingRoles = $this->missingRoleKeys($requiredRoles);
+        $roleCheckKeys = $requiredRoles ?: self::CORE_ADMIN_ROLES;
+        $missingRoles = $this->missingRoleKeys($roleCheckKeys);
 
         if ($missingRoles) {
             Log::error('Required admin role keys missing from roles table.', [
@@ -34,6 +42,10 @@ class AdminRoleMiddleware
                 ->view('admin.errors.roles-missing', [
                     'missingRoles' => $missingRoles,
                 ], 500);
+        }
+
+        if (empty($requiredRoles)) {
+            return $next($request);
         }
 
         if (in_array('global_admin', $adminRoleKeys, true)) {

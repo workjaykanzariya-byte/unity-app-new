@@ -1,11 +1,8 @@
 @php
     $admin = auth('admin')->user();
-    $admin?->loadMissing('roles:id,key,name');
-    $adminRoleKeys = $admin?->roles?->pluck('key')->all() ?? [];
-    $isGlobalAdmin = in_array('global_admin', $adminRoleKeys, true);
-    $canViewUsers = $isGlobalAdmin || in_array('industry_director', $adminRoleKeys, true) || in_array('ded', $adminRoleKeys, true);
-    $canViewCircles = $isGlobalAdmin || in_array('industry_director', $adminRoleKeys, true) || in_array('circle_leader', $adminRoleKeys, true);
-    $roleBadge = $isGlobalAdmin ? 'Global Admin' : ($admin?->roles?->first()?->name ?? 'Admin');
+    $isSuper = \App\Support\AdminAccess::isSuper($admin);
+    $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($admin);
+    $roleBadge = $isSuper ? 'Global Admin' : 'Admin';
 @endphp
 <header class="admin-topbar d-flex align-items-center justify-content-between px-4 py-3 border-bottom bg-white">
     <div class="d-flex align-items-center gap-3 flex-grow-1">
@@ -23,10 +20,10 @@
                     Quick Actions
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    @if ($canViewUsers)
+                    @if ($isSuper && ! $isCircleScoped)
                         <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Users</a></li>
                     @endif
-                    @if ($canViewCircles)
+                    @if ($isSuper || $isCircleScoped)
                         <li><a class="dropdown-item" href="{{ route('admin.circles.index') }}">View Circles</a></li>
                     @endif
                     <li><a class="dropdown-item disabled" href="#">Create Announcement</a></li>
