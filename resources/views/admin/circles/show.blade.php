@@ -137,6 +137,14 @@
                                     </select>
                                     <button class="btn btn-sm btn-outline-primary">Update</button>
                                 </form>
+                                @if ($membership->roleRef)
+                                    <div class="small text-muted mt-1">
+                                        {{ $membership->roleRef->name }} ({{ $membership->roleRef->key }})
+                                    </div>
+                                @endif
+                                @if ($membership->role_id)
+                                    <div class="small text-muted">Role ID: {{ $membership->role_id }}</div>
+                                @endif
                             </td>
                             <td>
                                 <span class="badge bg-light text-dark text-uppercase">{{ $membership->status ?? 'pending' }}</span>

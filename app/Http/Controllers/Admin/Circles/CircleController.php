@@ -110,7 +110,7 @@ class CircleController extends Controller
 
     public function show(Request $request, Circle $circle): View
     {
-        $circle->load(['city', 'founder', 'members.user']);
+        $circle->load(['city', 'founder', 'members.user', 'members.roleRef']);
 
         $allUsers = User::query()
             ->whereNull('deleted_at')

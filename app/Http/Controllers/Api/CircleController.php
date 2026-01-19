@@ -209,7 +209,7 @@ class CircleController extends BaseApiController
 
         $status = $request->input('status', 'approved');
 
-        $membersQuery = CircleMember::with('user')
+        $membersQuery = CircleMember::with(['user', 'roleRef'])
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at');
 
@@ -245,7 +245,7 @@ class CircleController extends BaseApiController
             return $this->error('You are not allowed to manage circle members', 403);
         }
 
-        $member = CircleMember::with('user')
+        $member = CircleMember::with(['user', 'roleRef'])
             ->where('circle_id', $circle->id)
             ->where('id', $memberId)
             ->whereNull('deleted_at')
