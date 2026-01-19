@@ -482,6 +482,9 @@ class UsersController extends Controller
 
     private function buildUserQuery(Request $request): array
     {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
         $query = User::query()
             ->select([
                 'id',
@@ -530,6 +533,21 @@ class UsersController extends Controller
                 'deleted_at',
             ])
             ->with('city');
+
+        if ($isCircleScoped && is_array($allowedCircleIds)) {
+            if ($allowedCircleIds === []) {
+                $query->whereRaw('1=0');
+            } else {
+                $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
+                    $subQuery->selectRaw(1)
+                        ->from('circle_members as cm')
+                        ->whereColumn('cm.user_id', 'users.id')
+                        ->where('cm.status', 'approved')
+                        ->whereNull('cm.deleted_at')
+                        ->whereIn('cm.circle_id', $allowedCircleIds);
+                });
+            }
+        }
 
         $search = trim((string) $request->query('q', $request->input('search', '')));
         $membership = $request->input('membership_status');

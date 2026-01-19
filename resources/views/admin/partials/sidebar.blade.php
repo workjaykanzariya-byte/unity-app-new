@@ -5,8 +5,9 @@
 
     $navItems = $isCircleScoped
         ? [
-            ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
-            ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
+            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-activity', 'label' => 'Activities', 'route' => 'admin.activities.index'],
+            ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
         ]
         : [
             ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],

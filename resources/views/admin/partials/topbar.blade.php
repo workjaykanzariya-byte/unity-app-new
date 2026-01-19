@@ -2,7 +2,9 @@
     $admin = auth('admin')->user();
     $isSuper = \App\Support\AdminAccess::isSuper($admin);
     $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($admin);
-    $roleBadge = $isSuper ? 'Global Admin' : 'Admin';
+    $roleBadge = $isSuper
+        ? 'Global Admin'
+        : ($isCircleScoped ? \App\Support\AdminAccess::primaryCircleRoleLabel($admin) : 'Admin');
 @endphp
 <header class="admin-topbar d-flex align-items-center justify-content-between px-4 py-3 border-bottom bg-white">
     <div class="d-flex align-items-center gap-3 flex-grow-1">
@@ -23,7 +25,11 @@
                     @if ($isSuper && ! $isCircleScoped)
                         <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Users</a></li>
                     @endif
-                    @if ($isSuper || $isCircleScoped)
+                    @if ($isCircleScoped)
+                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Users</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.activities.index') }}">View Activities</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.coins.index') }}">View Coins</a></li>
+                    @else
                         <li><a class="dropdown-item" href="{{ route('admin.circles.index') }}">View Circles</a></li>
                     @endif
                     <li><a class="dropdown-item disabled" href="#">Create Announcement</a></li>

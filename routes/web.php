@@ -24,7 +24,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login/send-otp', [AdminAuthController::class, 'requestOtp'])->name('login.send-otp');
     Route::post('/login/verify', [AdminAuthController::class, 'verifyOtp'])->name('login.verify');
 
-    Route::middleware(['admin.auth', 'admin.role'])->group(function () {
+    Route::middleware(['admin.auth', 'admin.role', 'admin.circle'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/', function () {
             return redirect()->route('admin.dashboard');
@@ -63,16 +63,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
         Route::post('/users/export/csv', [UsersController::class, 'exportCsv'])->name('users.export.csv');
         Route::get('/users/search', UserSearchController::class)->name('users.search');
-        Route::middleware('admin.circle')->group(function () {
-            Route::get('/circles', [CircleController::class, 'index'])->name('circles.index');
-            Route::get('/circles/create', [CircleController::class, 'create'])->name('circles.create');
-            Route::post('/circles', [CircleController::class, 'store'])->name('circles.store');
-            Route::get('/circles/{circle}', [CircleController::class, 'show'])->name('circles.show');
-            Route::get('/circles/{circle}/edit', [CircleController::class, 'edit'])->name('circles.edit');
-            Route::put('/circles/{circle}', [CircleController::class, 'update'])->name('circles.update');
-            Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('circles.members.store');
-            Route::put('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'update'])->name('circles.members.update');
-            Route::delete('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'destroy'])->name('circles.members.destroy');
-        });
+        Route::get('/circles', [CircleController::class, 'index'])->name('circles.index');
+        Route::get('/circles/create', [CircleController::class, 'create'])->name('circles.create');
+        Route::post('/circles', [CircleController::class, 'store'])->name('circles.store');
+        Route::get('/circles/{circle}', [CircleController::class, 'show'])->name('circles.show');
+        Route::get('/circles/{circle}/edit', [CircleController::class, 'edit'])->name('circles.edit');
+        Route::put('/circles/{circle}', [CircleController::class, 'update'])->name('circles.update');
+        Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('circles.members.store');
+        Route::put('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'update'])->name('circles.members.update');
+        Route::delete('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'destroy'])->name('circles.members.destroy');
     });
 });

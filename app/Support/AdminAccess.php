@@ -6,6 +6,7 @@ use App\Models\AdminUser;
 use App\Models\CircleMember;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
 class AdminAccess
@@ -26,6 +27,26 @@ class AdminAccess
         'founder',
         'director',
         'member',
+    ];
+
+    private const CIRCLE_ROLE_PRIORITY = [
+        'chair' => 1,
+        'vice_chair' => 2,
+        'secretary' => 3,
+        'founder' => 4,
+        'director' => 5,
+        'committee_leader' => 6,
+        'member' => 7,
+    ];
+
+    private const CIRCLE_ROLE_LABELS = [
+        'chair' => 'Chair',
+        'vice_chair' => 'Vice Chair',
+        'secretary' => 'Secretary',
+        'founder' => 'Founder',
+        'director' => 'Director',
+        'committee_leader' => 'Committee Leader',
+        'member' => 'Member',
     ];
 
     public static function resolveAppUser(?AdminUser $admin): ?User
@@ -81,8 +102,26 @@ class AdminAccess
         }
 
         $roleKeys = self::adminRoleKeys($admin);
+        $hasCircleRoleKey = (bool) array_intersect(self::CIRCLE_SCOPED_KEYS, $roleKeys);
 
-        return (bool) array_intersect(self::CIRCLE_SCOPED_KEYS, $roleKeys);
+        if ($hasCircleRoleKey) {
+            return true;
+        }
+
+        $user = self::resolveAppUser($admin);
+
+        if (! $user) {
+            return false;
+        }
+
+        $allowedRoles = array_keys(self::CIRCLE_ROLE_PRIORITY);
+
+        return CircleMember::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->whereNull('deleted_at')
+            ->whereIn(DB::raw('circle_members.role::text'), $allowedRoles)
+            ->exists();
     }
 
     public static function allowedCircleIds(?AdminUser $admin): array
@@ -101,10 +140,59 @@ class AdminAccess
 
             return CircleMember::query()
                 ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereNull('deleted_at')
                 ->pluck('circle_id')
                 ->unique()
                 ->values()
                 ->all();
         });
+    }
+
+    public static function primaryCircleRoleKey(?AdminUser $admin): ?string
+    {
+        if (! $admin) {
+            return null;
+        }
+
+        $cacheKey = 'admin-access:primary-role:' . $admin->id;
+
+        return Cache::remember($cacheKey, self::CACHE_TTL, function () use ($admin) {
+            $user = self::resolveAppUser($admin);
+            if (! $user) {
+                return null;
+            }
+
+            $allowedCircleIds = self::allowedCircleIds($admin);
+            if ($allowedCircleIds === []) {
+                return null;
+            }
+
+            $roles = array_keys(self::CIRCLE_ROLE_PRIORITY);
+            $orderCases = collect(self::CIRCLE_ROLE_PRIORITY)
+                ->map(fn ($priority, $role) => "when '{$role}' then {$priority}")
+                ->implode(' ');
+
+            return CircleMember::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereNull('deleted_at')
+                ->whereIn('circle_id', $allowedCircleIds)
+                ->whereIn(DB::raw('circle_members.role::text'), $roles)
+                ->orderByRaw("case circle_members.role::text {$orderCases} else 999 end")
+                ->limit(1)
+                ->value(DB::raw('circle_members.role::text'));
+        });
+    }
+
+    public static function primaryCircleRoleLabel(?AdminUser $admin): string
+    {
+        $roleKey = self::primaryCircleRoleKey($admin);
+
+        if (! $roleKey) {
+            return 'Circle Leader';
+        }
+
+        return self::CIRCLE_ROLE_LABELS[$roleKey] ?? 'Circle Leader';
     }
 }

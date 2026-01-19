@@ -34,6 +34,8 @@ class ActivitiesController extends Controller
             'membership_status',
         ]);
 
+        $this->applyCircleScopeToUsersQuery($query, $request);
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $like = "%{$search}%";
@@ -108,6 +110,7 @@ class ActivitiesController extends Controller
 
     public function testimonials(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Testimonial::query()
@@ -130,6 +133,7 @@ class ActivitiesController extends Controller
 
     public function referrals(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Referral::query()
@@ -152,6 +156,7 @@ class ActivitiesController extends Controller
 
     public function businessDeals(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = BusinessDeal::query()
@@ -174,6 +179,7 @@ class ActivitiesController extends Controller
 
     public function p2pMeetings(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = P2pMeeting::query()
@@ -197,6 +203,7 @@ class ActivitiesController extends Controller
 
     public function requirements(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Requirement::query()
@@ -277,7 +284,7 @@ class ActivitiesController extends Controller
 
     private function streamRowsAsCsv($handle, string $activityType, ActivitiesExportRequest $request): void
     {
-        $query = $this->buildExportQuery($activityType, $request->validated());
+        $query = $this->buildExportQuery($activityType, $request, $request->validated());
         $columns = $this->exportColumns($activityType);
 
         $chunkCallback = function ($rows) use ($handle, $columns) {
@@ -298,7 +305,7 @@ class ActivitiesController extends Controller
         $query->orderByDesc('activity.created_at')->chunk(500, $chunkCallback);
     }
 
-    private function buildExportQuery(string $activityType, array $filters)
+    private function buildExportQuery(string $activityType, ActivitiesExportRequest $request, array $filters)
     {
         $memberKey = $this->resolveMemberKey($activityType);
 
@@ -306,6 +313,24 @@ class ActivitiesController extends Controller
             ->leftJoin('users as member_user', 'member_user.id', '=', 'activity.' . $memberKey)
             ->leftJoin('users as related_user', 'related_user.id', '=', $this->relatedUserJoinColumn($activityType))
             ->select($this->exportSelectColumns($activityType));
+
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
+        if ($isCircleScoped && is_array($allowedCircleIds)) {
+            if ($allowedCircleIds === []) {
+                $query->whereRaw('1=0');
+            } else {
+                $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
+                    $subQuery->selectRaw(1)
+                        ->from('circle_members as cm')
+                        ->whereColumn('cm.user_id', 'member_user.id')
+                        ->where('cm.status', 'approved')
+                        ->whereNull('cm.deleted_at')
+                        ->whereIn('cm.circle_id', $allowedCircleIds);
+                });
+            }
+        }
 
         if (($filters['scope'] ?? null) === 'selected') {
             $memberIds = $filters['selected_member_ids'] ?? [];
@@ -330,6 +355,55 @@ class ActivitiesController extends Controller
         }
 
         return $query;
+    }
+
+    private function applyCircleScopeToUsersQuery($query, Request $request): void
+    {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
+        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
+            return;
+        }
+
+        if ($allowedCircleIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
+            $subQuery->selectRaw(1)
+                ->from('circle_members as cm')
+                ->whereColumn('cm.user_id', 'users.id')
+                ->where('cm.status', 'approved')
+                ->whereNull('cm.deleted_at')
+                ->whereIn('cm.circle_id', $allowedCircleIds);
+        });
+    }
+
+    private function ensureMemberInScope(User $member, Request $request): void
+    {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
+        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
+            return;
+        }
+
+        if ($allowedCircleIds === []) {
+            abort(403);
+        }
+
+        $isMemberInScope = DB::table('circle_members')
+            ->where('user_id', $member->id)
+            ->where('status', 'approved')
+            ->whereNull('deleted_at')
+            ->whereIn('circle_id', $allowedCircleIds)
+            ->exists();
+
+        if (! $isMemberInScope) {
+            abort(403);
+        }
     }
 
     private function exportColumns(string $activityType): array
