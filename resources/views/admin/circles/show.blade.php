@@ -76,10 +76,6 @@
         <form action="{{ route('admin.circles.members.store', $circle) }}" method="POST" class="row g-2 align-items-end mb-4">
             @csrf
             <div class="col-md-6">
-                <label class="form-label">Search in dropdown</label>
-                <input type="text" id="userSelectSearch" class="form-control" placeholder="Type to filter users by name or email">
-            </div>
-            <div class="col-md-6">
                 <label class="form-label">Select User</label>
                 <select id="userSelect" name="user_id" class="form-select" required>
                     <option value="">Select user</option>
@@ -168,28 +164,13 @@
 
 @push('scripts')
 <script>
-    (() => {
-        const searchInput = document.getElementById('userSelectSearch');
-        const select = document.getElementById('userSelect');
-        if (!searchInput || !select) {
-            return;
-        }
-
-        const options = Array.from(select.options);
-
-        const filterOptions = () => {
-            const query = searchInput.value.trim().toLowerCase();
-            options.forEach((option, index) => {
-                if (index === 0) {
-                    option.style.display = '';
-                    return;
-                }
-                const text = option.text.toLowerCase();
-                option.style.display = text.includes(query) ? '' : 'none';
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.$ && $('#userSelect').length) {
+            $('#userSelect').select2({
+                width: '100%',
+                placeholder: 'Select user',
             });
-        };
-
-        searchInput.addEventListener('keyup', filterOptions);
-    })();
+        }
+    });
 </script>
 @endpush
