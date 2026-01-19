@@ -10,6 +10,7 @@ use App\Models\Referral;
 use App\Models\Requirement;
 use App\Models\Testimonial;
 use App\Models\User;
+use App\Support\AdminAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -24,6 +25,9 @@ class ActivitiesController extends Controller
         $membership = $request->query('membership_status');
         $perPage = $request->integer('per_page') ?: 20;
         $perPage = in_array($perPage, [10, 20, 25, 50, 100], true) ? $perPage : 20;
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+        $allowedUserIds = $this->allowedUserIds($request);
 
         $query = User::query()->select([
             'id',
@@ -33,6 +37,8 @@ class ActivitiesController extends Controller
             'display_name',
             'membership_status',
         ]);
+
+        $this->applyCircleScopeToUsersQuery($query, $request);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -52,34 +58,47 @@ class ActivitiesController extends Controller
 
         $memberIds = $members->pluck('id')->all();
 
-        $testimonialCounts = $this->countByUser(Testimonial::query()
-            ->whereIn('from_user_id', $memberIds)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at'),
-            'from_user_id');
+        if ($memberIds === []) {
+            $testimonialCounts = [];
+            $referralCounts = [];
+            $businessDealCounts = [];
+            $p2pMeetingCounts = [];
+            $requirementCounts = [];
+        } else {
+            $testimonialQuery = Testimonial::query()
+                ->whereIn('from_user_id', $memberIds)
+                ->where('is_deleted', false)
+                ->whereNull('deleted_at');
+            $this->applyCircleScopeToActivityQuery($testimonialQuery, 'from_user_id', 'to_user_id', $allowedUserIds, $isCircleScoped);
+            $testimonialCounts = $this->countByUser($testimonialQuery, 'from_user_id');
 
-        $referralCounts = $this->countByUser(Referral::query()
-            ->whereIn('from_user_id', $memberIds)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at'),
-            'from_user_id');
+            $referralQuery = Referral::query()
+                ->whereIn('from_user_id', $memberIds)
+                ->where('is_deleted', false)
+                ->whereNull('deleted_at');
+            $this->applyCircleScopeToActivityQuery($referralQuery, 'from_user_id', 'to_user_id', $allowedUserIds, $isCircleScoped);
+            $referralCounts = $this->countByUser($referralQuery, 'from_user_id');
 
-        $businessDealCounts = $this->countByUser(BusinessDeal::query()
-            ->whereIn('from_user_id', $memberIds)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at'),
-            'from_user_id');
+            $businessDealQuery = BusinessDeal::query()
+                ->whereIn('from_user_id', $memberIds)
+                ->where('is_deleted', false)
+                ->whereNull('deleted_at');
+            $this->applyCircleScopeToActivityQuery($businessDealQuery, 'from_user_id', 'to_user_id', $allowedUserIds, $isCircleScoped);
+            $businessDealCounts = $this->countByUser($businessDealQuery, 'from_user_id');
 
-        $p2pMeetingCounts = $this->countByUser(P2pMeeting::query()
-            ->whereIn('initiator_user_id', $memberIds)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at'),
-            'initiator_user_id');
+            $p2pMeetingQuery = P2pMeeting::query()
+                ->whereIn('initiator_user_id', $memberIds)
+                ->where('is_deleted', false)
+                ->whereNull('deleted_at');
+            $this->applyCircleScopeToActivityQuery($p2pMeetingQuery, 'initiator_user_id', 'peer_user_id', $allowedUserIds, $isCircleScoped);
+            $p2pMeetingCounts = $this->countByUser($p2pMeetingQuery, 'initiator_user_id');
 
-        $requirementCounts = $this->countByUser(Requirement::query()
-            ->whereIn('user_id', $memberIds)
-            ->whereNull('deleted_at'),
-            'user_id');
+            $requirementQuery = Requirement::query()
+                ->whereIn('user_id', $memberIds)
+                ->whereNull('deleted_at');
+            $this->applyCircleScopeToActivityQuery($requirementQuery, 'user_id', null, $allowedUserIds, $isCircleScoped);
+            $requirementCounts = $this->countByUser($requirementQuery, 'user_id');
+        }
 
         $membershipStatuses = User::query()
             ->whereNotNull('membership_status')
@@ -108,6 +127,7 @@ class ActivitiesController extends Controller
 
     public function testimonials(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Testimonial::query()
@@ -130,6 +150,7 @@ class ActivitiesController extends Controller
 
     public function referrals(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Referral::query()
@@ -152,6 +173,7 @@ class ActivitiesController extends Controller
 
     public function businessDeals(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = BusinessDeal::query()
@@ -174,6 +196,7 @@ class ActivitiesController extends Controller
 
     public function p2pMeetings(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = P2pMeeting::query()
@@ -197,6 +220,7 @@ class ActivitiesController extends Controller
 
     public function requirements(User $member, Request $request): View
     {
+        $this->ensureMemberInScope($member, $request);
         $filters = $this->dateFilters($request);
 
         $items = Requirement::query()
@@ -277,7 +301,7 @@ class ActivitiesController extends Controller
 
     private function streamRowsAsCsv($handle, string $activityType, ActivitiesExportRequest $request): void
     {
-        $query = $this->buildExportQuery($activityType, $request->validated());
+        $query = $this->buildExportQuery($activityType, $request, $request->validated());
         $columns = $this->exportColumns($activityType);
 
         $chunkCallback = function ($rows) use ($handle, $columns) {
@@ -298,7 +322,7 @@ class ActivitiesController extends Controller
         $query->orderByDesc('activity.created_at')->chunk(500, $chunkCallback);
     }
 
-    private function buildExportQuery(string $activityType, array $filters)
+    private function buildExportQuery(string $activityType, ActivitiesExportRequest $request, array $filters)
     {
         $memberKey = $this->resolveMemberKey($activityType);
 
@@ -306,6 +330,21 @@ class ActivitiesController extends Controller
             ->leftJoin('users as member_user', 'member_user.id', '=', 'activity.' . $memberKey)
             ->leftJoin('users as related_user', 'related_user.id', '=', $this->relatedUserJoinColumn($activityType))
             ->select($this->exportSelectColumns($activityType));
+
+        $allowedUserIds = $this->allowedUserIds($request);
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+        $requiresPeer = $this->activityRequiresPeer($activityType);
+
+        if ($isCircleScoped && is_array($allowedUserIds)) {
+            if ($allowedUserIds === []) {
+                $query->whereRaw('1=0');
+            } else {
+                $query->whereIn('member_user.id', $allowedUserIds);
+                if ($requiresPeer) {
+                    $query->whereIn('related_user.id', $allowedUserIds);
+                }
+            }
+        }
 
         if (($filters['scope'] ?? null) === 'selected') {
             $memberIds = $filters['selected_member_ids'] ?? [];
@@ -330,6 +369,89 @@ class ActivitiesController extends Controller
         }
 
         return $query;
+    }
+
+    private function applyCircleScopeToUsersQuery($query, Request $request): void
+    {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
+        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
+            return;
+        }
+
+        if ($allowedCircleIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
+            $subQuery->selectRaw(1)
+                ->from('circle_members as cm')
+                ->whereColumn('cm.user_id', 'users.id')
+                ->where('cm.status', 'approved')
+                ->whereNull('cm.deleted_at')
+                ->whereIn('cm.circle_id', $allowedCircleIds);
+        });
+    }
+
+    private function ensureMemberInScope(User $member, Request $request): void
+    {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
+        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
+            return;
+        }
+
+        if ($allowedCircleIds === []) {
+            abort(403);
+        }
+
+        $isMemberInScope = DB::table('circle_members')
+            ->where('user_id', $member->id)
+            ->where('status', 'approved')
+            ->whereNull('deleted_at')
+            ->whereIn('circle_id', $allowedCircleIds)
+            ->exists();
+
+        if (! $isMemberInScope) {
+            abort(403);
+        }
+    }
+
+    private function applyCircleScopeToActivityQuery($query, string $userColumn, ?string $peerColumn, ?array $allowedUserIds, bool $isCircleScoped): void
+    {
+        if (! $isCircleScoped || ! is_array($allowedUserIds)) {
+            return;
+        }
+
+        if ($allowedUserIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereIn($userColumn, $allowedUserIds);
+
+        if ($peerColumn) {
+            $query->whereIn($peerColumn, $allowedUserIds);
+        }
+    }
+
+    private function allowedUserIds(Request $request): array
+    {
+        if (! $request->attributes->get('is_circle_scoped')) {
+            return [];
+        }
+
+        $admin = auth('admin')->user();
+
+        return AdminAccess::allowedUserIds($admin);
+    }
+
+    private function activityRequiresPeer(string $activityType): bool
+    {
+        return in_array($activityType, ['testimonials', 'referrals', 'business_deals', 'p2p_meetings'], true);
     }
 
     private function exportColumns(string $activityType): array

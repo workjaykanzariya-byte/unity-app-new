@@ -24,7 +24,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/login/send-otp', [AdminAuthController::class, 'requestOtp'])->name('login.send-otp');
     Route::post('/login/verify', [AdminAuthController::class, 'verifyOtp'])->name('login.verify');
 
-    Route::middleware('admin.auth')->group(function () {
+    Route::middleware(['admin.auth', 'admin.role', 'admin.circle'])->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/', function () {
             return redirect()->route('admin.dashboard');

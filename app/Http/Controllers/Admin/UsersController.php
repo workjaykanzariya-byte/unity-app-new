@@ -7,9 +7,11 @@ use App\Models\AdminUser;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\AdminAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -22,6 +24,7 @@ class UsersController extends Controller
         [$query, $filters, $perPage] = $this->buildUserQuery($request);
 
         $users = $query->paginate($perPage)->withQueryString();
+        $canEditUsers = AdminAccess::canEditUsers(Auth::guard('admin')->user());
 
         $membershipStatuses = User::query()
             ->whereNotNull('membership_status')
@@ -37,6 +40,7 @@ class UsersController extends Controller
             'membershipStatuses' => $membershipStatuses,
             'cities' => $cities,
             'filters' => $filters,
+            'canEditUsers' => $canEditUsers,
         ]);
     }
 
@@ -123,6 +127,10 @@ class UsersController extends Controller
 
     public function edit(string $userId): View
     {
+        if (! AdminAccess::canEditUsers(Auth::guard('admin')->user())) {
+            abort(403);
+        }
+
         $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
         $cities = City::query()->orderBy('name')->get();
         $roles = Role::query()->orderBy('name')->get();
@@ -139,6 +147,10 @@ class UsersController extends Controller
 
     public function update(Request $request, string $userId)
     {
+        if (! AdminAccess::canEditUsers(Auth::guard('admin')->user())) {
+            abort(403);
+        }
+
         $user = User::query()->findOrFail($userId);
 
         $membershipStatuses = $this->membershipStatuses();
@@ -482,6 +494,9 @@ class UsersController extends Controller
 
     private function buildUserQuery(Request $request): array
     {
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
+
         $query = User::query()
             ->select([
                 'id',
@@ -530,6 +545,21 @@ class UsersController extends Controller
                 'deleted_at',
             ])
             ->with('city');
+
+        if ($isCircleScoped && is_array($allowedCircleIds)) {
+            if ($allowedCircleIds === []) {
+                $query->whereRaw('1=0');
+            } else {
+                $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
+                    $subQuery->selectRaw(1)
+                        ->from('circle_members as cm')
+                        ->whereColumn('cm.user_id', 'users.id')
+                        ->where('cm.status', 'approved')
+                        ->whereNull('cm.deleted_at')
+                        ->whereIn('cm.circle_id', $allowedCircleIds);
+                });
+            }
+        }
 
         $search = trim((string) $request->query('q', $request->input('search', '')));
         $membership = $request->input('membership_status');

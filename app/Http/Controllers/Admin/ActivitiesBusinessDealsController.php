@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\AdminAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class ActivitiesBusinessDealsController extends Controller
     {
         $filters = $this->filters($request);
 
-        $items = $this->baseQuery($filters)
+        $items = $this->baseQuery($request, $filters)
             ->select([
                 'activity.id',
                 'activity.deal_date',
@@ -37,7 +38,7 @@ class ActivitiesBusinessDealsController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $topMembers = $this->topMembers();
+        $topMembers = $this->topMembers($request);
 
         return view('admin.activities.business_deals.index', [
             'items' => $items,
@@ -51,7 +52,7 @@ class ActivitiesBusinessDealsController extends Controller
         $filters = $this->filters($request);
         $filename = 'business_deals_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($filters) {
+        return response()->streamDownload(function () use ($request, $filters) {
             @ini_set('zlib.output_compression', '0');
             @ini_set('output_buffering', '0');
             while (ob_get_level() > 0) {
@@ -78,7 +79,7 @@ class ActivitiesBusinessDealsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($filters)
+                $this->baseQuery($request, $filters)
                     ->select([
                         'activity.id',
                         'activity.deal_date',
@@ -148,7 +149,7 @@ class ActivitiesBusinessDealsController extends Controller
         ];
     }
 
-    private function baseQuery(array $filters)
+    private function baseQuery(Request $request, array $filters)
     {
         $query = DB::table('business_deals as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.from_user_id')
@@ -174,15 +175,21 @@ class ActivitiesBusinessDealsController extends Controller
             $query->whereDate('activity.created_at', '<=', $filters['to']);
         }
 
+        $this->applyScopeToActivityQuery($query, $request, 'activity.from_user_id', 'activity.to_user_id');
+
         return $query;
     }
 
-    private function topMembers()
+    private function topMembers(Request $request)
     {
-        return DB::table('business_deals as activity')
+        $query = DB::table('business_deals as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.from_user_id')
             ->whereNull('activity.deleted_at')
-            ->where('activity.is_deleted', false)
+            ->where('activity.is_deleted', false);
+
+        $this->applyScopeToActivityQuery($query, $request, 'activity.from_user_id', 'activity.to_user_id');
+
+        return $query
             ->groupBy(
                 'activity.from_user_id',
                 'actor.display_name',
@@ -201,6 +208,26 @@ class ActivitiesBusinessDealsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+    }
+
+    private function applyScopeToActivityQuery($query, Request $request, string $primaryColumn, ?string $peerColumn): void
+    {
+        if (! $request->attributes->get('is_circle_scoped')) {
+            return;
+        }
+
+        $allowedUserIds = AdminAccess::allowedUserIds(auth('admin')->user());
+
+        if ($allowedUserIds === []) {
+            $query->whereRaw('1=0');
+            return;
+        }
+
+        $query->whereIn($primaryColumn, $allowedUserIds);
+
+        if ($peerColumn) {
+            $query->whereIn($peerColumn, $allowedUserIds);
+        }
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string

@@ -1,27 +1,36 @@
 @php
-    $navItems = [
-        ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
-        ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
-        ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
-        ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
-        ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
-        ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
-        ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
-        ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
-        ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
-        ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],
-        ['icon' => 'bi-shield-lock', 'label' => 'Audit & Compliance', 'route' => '#'],
-        ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
-    ];
+    $adminUser = Auth::guard('admin')->user();
+    $isSuper = \App\Support\AdminAccess::isSuper($adminUser);
+    $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($adminUser);
 
-    $activityMenu = [
+    $navItems = $isCircleScoped
+        ? [
+            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+        ]
+        : [
+            ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
+            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
+            ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
+            ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
+            ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
+            ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
+            ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
+            ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],
+            ['icon' => 'bi-shield-lock', 'label' => 'Audit & Compliance', 'route' => '#'],
+            ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
+        ];
+
+    $activityMenu = ($isSuper || $isCircleScoped) ? [
         ['label' => 'Summary', 'route' => 'admin.activities.index'],
         ['label' => 'Testimonials', 'route' => 'admin.activities.testimonials.index'],
         ['label' => 'Requirements', 'route' => 'admin.activities.requirements.index'],
         ['label' => 'Referrals', 'route' => 'admin.activities.referrals.index'],
         ['label' => 'P2P Meetings', 'route' => 'admin.activities.p2p-meetings.index'],
         ['label' => 'Business Deals', 'route' => 'admin.activities.business-deals.index'],
-    ];
+    ] : [];
 
     $activityActive = request()->routeIs('admin.activities.*');
 @endphp
@@ -35,23 +44,25 @@
     </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
-                    <span><i class="bi bi-activity me-2"></i>Activities</span>
-                    <i class="bi {{ $activityActive ? 'bi-chevron-down' : 'bi-chevron-right' }}"></i>
-                </a>
-                <div class="collapse {{ $activityActive ? 'show' : '' }}" id="activitiesSubmenu">
-                    <ul class="nav flex-column ms-3">
-                        @foreach ($activityMenu as $item)
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
-                                    {{ $item['label'] }}
-                                </a>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-            </li>
+            @if ($activityMenu)
+                <li class="nav-item">
+                    <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
+                        <span><i class="bi bi-activity me-2"></i>Activities</span>
+                        <i class="bi {{ $activityActive ? 'bi-chevron-down' : 'bi-chevron-right' }}"></i>
+                    </a>
+                    <div class="collapse {{ $activityActive ? 'show' : '' }}" id="activitiesSubmenu">
+                        <ul class="nav flex-column ms-3">
+                            @foreach ($activityMenu as $item)
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
+                                        {{ $item['label'] }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </li>
+            @endif
             @foreach ($navItems as $item)
                 <li class="nav-item">
                     @if ($item['route'] === '#')

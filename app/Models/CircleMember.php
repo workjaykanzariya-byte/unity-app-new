@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class CircleMember extends Model
 {
@@ -30,6 +32,7 @@ class CircleMember extends Model
         'circle_id',
         'user_id',
         'role',
+        'role_id',
         'status',
         'substitute_count',
         'joined_at',
@@ -46,6 +49,32 @@ class CircleMember extends Model
         return self::ROLE_OPTIONS;
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (CircleMember $member): void {
+            if (! $member->role) {
+                return;
+            }
+
+            if ($member->role_id && ! $member->isDirty('role')) {
+                return;
+            }
+
+            try {
+                $member->role_id = Role::mustIdByKey($member->role);
+            } catch (RuntimeException $exception) {
+                Log::error('Circle member role key missing in roles table.', [
+                    'circle_member_id' => $member->id,
+                    'circle_id' => $member->circle_id,
+                    'user_id' => $member->user_id,
+                    'role' => $member->role,
+                ]);
+
+                throw $exception;
+            }
+        });
+    }
+
     public function circle(): BelongsTo
     {
         return $this->belongsTo(Circle::class);
@@ -54,5 +83,10 @@ class CircleMember extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function roleRef(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
     }
 }

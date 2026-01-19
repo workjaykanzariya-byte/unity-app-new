@@ -22,8 +22,17 @@ class CircleController extends Controller
         $status = $request->input('status');
         $cityId = $request->input('city_id');
         $type = $request->input('type');
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
 
         $query = Circle::query()->with(['founder', 'city'])->withCount('members');
+
+        if (is_array($allowedCircleIds)) {
+            if ($allowedCircleIds === []) {
+                $query->whereRaw('1=0');
+            } else {
+                $query->whereIn('id', $allowedCircleIds);
+            }
+        }
 
         if ($search) {
             $query->where('name', 'ILIKE', "%{$search}%");
@@ -110,7 +119,13 @@ class CircleController extends Controller
 
     public function show(Request $request, Circle $circle): View
     {
-        $circle->load(['city', 'founder', 'members.user']);
+        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
+
+        if (is_array($allowedCircleIds) && ! in_array($circle->id, $allowedCircleIds, true)) {
+            abort(403);
+        }
+
+        $circle->load(['city', 'founder', 'members.user', 'members.roleRef']);
 
         $allUsers = User::query()
             ->whereNull('deleted_at')
