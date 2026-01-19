@@ -44,15 +44,7 @@ class BusinessDealController extends BaseApiController
 
             $toUser = User::find($deal->to_user_id);
 
-            $contentText = 'Closed a business deal';
-            if ($toUser) {
-                $displayName = trim($toUser->first_name . ' ' . $toUser->last_name);
-                $contentText = 'Closed a ' . ($deal->business_type ?? 'business') . ' deal with ' . $displayName
-                    . ' for amount ' . ($deal->deal_amount ?? 0)
-                    . '. ' . ($deal->comment ?? '');
-            } else {
-                $contentText = ($deal->comment ?: $contentText);
-            }
+            $contentText = $this->buildActivityPostMessage('business_deal', $toUser);
 
             Post::create([
                 'user_id'           => $deal->from_user_id ?? $deal->user_id ?? $deal->created_by ?? $deal->to_user_id,
