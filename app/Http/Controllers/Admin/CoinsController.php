@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Models\CoinLedger;
+use App\Models\CircleMember;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +15,8 @@ use Illuminate\View\View;
 
 class CoinsController extends Controller
 {
+    use AppliesCircleScope;
+
     private const ACTIVITY_TABLES = [
         'testimonials' => 'testimonials',
         'referrals' => 'referrals',
@@ -44,6 +48,8 @@ class CoinsController extends Controller
             'display_name',
             'membership_status',
         ]);
+
+        $query = $this->applyCircleScopeToUsersQuery($query);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -99,8 +105,10 @@ class CoinsController extends Controller
 
     public function create(): View
     {
-        $users = User::query()
-            ->select(['id', 'email', 'first_name', 'last_name', 'display_name'])
+        $usersQuery = User::query()
+            ->select(['id', 'email', 'first_name', 'last_name', 'display_name']);
+
+        $users = $this->applyCircleScopeToUsersQuery($usersQuery)
             ->orderBy('display_name')
             ->get();
 
@@ -153,6 +161,7 @@ class CoinsController extends Controller
 
     public function ledger(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $query = CoinLedger::query()
@@ -172,6 +181,7 @@ class CoinsController extends Controller
             abort(404);
         }
 
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
         $referencePattern = self::ACTIVITY_REFERENCE_PATTERNS[$type];
 
@@ -203,6 +213,22 @@ class CoinsController extends Controller
             'createdByUsers' => $createdBy,
             'activeType' => null,
         ];
+    }
+
+    private function ensureMemberAccess(string $memberId): void
+    {
+        if ($this->isGlobalAdmin()) {
+            return;
+        }
+
+        $hasAccess = CircleMember::query()
+            ->where('user_id', $memberId)
+            ->whereIn('circle_id', $this->allowedCircleIds())
+            ->exists();
+
+        if (! $hasAccess) {
+            abort(403);
+        }
     }
 
     private function resolveActivityTypes(array $activityIds): array

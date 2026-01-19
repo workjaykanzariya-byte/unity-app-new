@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Circles;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Circles\StoreCircleRequest;
 use App\Http\Requests\Admin\Circles\UpdateCircleRequest;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class CircleController extends Controller
 {
+    use AppliesCircleScope;
+
     public function index(Request $request): View
     {
         $search = $request->input('q', $request->input('search'));
@@ -24,6 +27,10 @@ class CircleController extends Controller
         $type = $request->input('type');
 
         $query = Circle::query()->with(['founder', 'city'])->withCount('members');
+
+        if (! $this->isGlobalAdmin()) {
+            $query->whereIn('circles.id', $this->allowedCircleIds());
+        }
 
         if ($search) {
             $query->where('name', 'ILIKE', "%{$search}%");
@@ -110,12 +117,15 @@ class CircleController extends Controller
 
     public function show(Request $request, Circle $circle): View
     {
+        $this->ensureCircleAccess($circle->id);
         $circle->load(['city', 'founder', 'members.user']);
 
-        $allUsers = User::query()
+        $usersQuery = User::query()
             ->whereNull('deleted_at')
             ->orderBy('display_name')
-            ->limit(2000)
+            ->limit(2000);
+
+        $allUsers = $this->applyCircleScopeToUsersQuery($usersQuery)
             ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
 
         return view('admin.circles.show', [
@@ -127,6 +137,7 @@ class CircleController extends Controller
 
     public function edit(Request $request, Circle $circle): View
     {
+        $this->ensureCircleAccess($circle->id);
         $circle->load('city');
 
         $defaultFounder = $circle->founder ?? $this->defaultFounderUser();
@@ -152,6 +163,7 @@ class CircleController extends Controller
 
     public function update(UpdateCircleRequest $request, Circle $circle): RedirectResponse
     {
+        $this->ensureCircleAccess($circle->id);
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
 
@@ -168,6 +180,17 @@ class CircleController extends Controller
         return redirect()
             ->route('admin.circles.show', $circle)
             ->with('success', 'Circle updated successfully.');
+    }
+
+    private function ensureCircleAccess(string $circleId): void
+    {
+        if ($this->isGlobalAdmin()) {
+            return;
+        }
+
+        if (! in_array($circleId, $this->allowedCircleIds(), true)) {
+            abort(403);
+        }
     }
 
     private function normalizeIndustryTags(null|string|array $tags): ?array

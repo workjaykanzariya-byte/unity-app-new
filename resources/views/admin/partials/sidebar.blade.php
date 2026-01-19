@@ -14,6 +14,16 @@
         ['icon' => 'bi-gear', 'label' => 'System Settings', 'route' => '#'],
     ];
 
+    $isGlobalAdmin = $is_global_admin ?? false;
+    if (! $isGlobalAdmin) {
+        $navItems = array_filter($navItems, fn ($item) => in_array($item['route'], [
+            'admin.dashboard',
+            'admin.users.index',
+            'admin.circles.index',
+            'admin.coins.index',
+        ], true));
+    }
+
     $activityMenu = [
         ['label' => 'Summary', 'route' => 'admin.activities.index'],
         ['label' => 'Testimonials', 'route' => 'admin.activities.testimonials.index'],

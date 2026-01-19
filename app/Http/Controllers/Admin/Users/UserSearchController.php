@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Users;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -9,6 +10,8 @@ use Illuminate\Http\Request;
 
 class UserSearchController extends Controller
 {
+    use AppliesCircleScope;
+
     public function __invoke(Request $request): JsonResponse
     {
         $search = trim((string) $request->query('q', ''));
@@ -17,7 +20,7 @@ class UserSearchController extends Controller
             return response()->json([]);
         }
 
-        $users = User::query()
+        $query = User::query()
             ->whereNull('deleted_at')
             ->where(function ($query) use ($search): void {
                 $query->where('display_name', 'ILIKE', "%{$search}%")
@@ -27,7 +30,9 @@ class UserSearchController extends Controller
             })
             ->orderBy('display_name')
             ->limit(10)
-            ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
+            ->select(['id', 'display_name', 'first_name', 'last_name', 'email']);
+
+        $users = $this->applyCircleScopeToUsersQuery($query)->get();
 
         $results = $users->map(function (User $user): array {
             $name = $user->display_name

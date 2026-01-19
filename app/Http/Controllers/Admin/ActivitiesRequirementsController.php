@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ use Illuminate\View\View;
 
 class ActivitiesRequirementsController extends Controller
 {
+    use AppliesCircleScope;
+
     public function index(Request $request): View
     {
         $filters = $this->filters($request);
@@ -142,6 +145,8 @@ class ActivitiesRequirementsController extends Controller
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at');
 
+        $query = $this->applyCircleScopeToActivitiesQuery($query, 'activity.user_id');
+
         if ($filters['search'] !== '') {
             $like = '%' . $filters['search'] . '%';
             $query->where(function ($q) use ($like) {
@@ -169,9 +174,12 @@ class ActivitiesRequirementsController extends Controller
 
     private function topMembers()
     {
-        return DB::table('requirements as activity')
+        $query = DB::table('requirements as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at')
+            ->when(! $this->isGlobalAdmin(), function ($query) {
+                return $this->applyCircleScopeToActivitiesQuery($query, 'activity.user_id');
+            })
             ->groupBy(
                 'activity.user_id',
                 'actor.display_name',
@@ -190,6 +198,8 @@ class ActivitiesRequirementsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+
+        return $query;
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string

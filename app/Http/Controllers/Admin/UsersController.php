@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\City;
+use App\Models\CircleMember;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +19,7 @@ use Illuminate\View\View;
 
 class UsersController extends Controller
 {
+    use AppliesCircleScope;
     public function index(Request $request): View
     {
         [$query, $filters, $perPage] = $this->buildUserQuery($request);
@@ -124,6 +127,7 @@ class UsersController extends Controller
     public function edit(string $userId): View
     {
         $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
+        $this->ensureUserIsInAllowedCircles($userId);
         $cities = City::query()->orderBy('name')->get();
         $roles = Role::query()->orderBy('name')->get();
         $membershipStatuses = $this->membershipStatuses();
@@ -140,6 +144,7 @@ class UsersController extends Controller
     public function update(Request $request, string $userId)
     {
         $user = User::query()->findOrFail($userId);
+        $this->ensureUserIsInAllowedCircles($userId);
 
         $membershipStatuses = $this->membershipStatuses();
         $validated = $request->validate([
@@ -241,6 +246,8 @@ class UsersController extends Controller
 
     public function removeRole(Request $request, string $userId, string $roleId): RedirectResponse
     {
+        $this->ensureUserIsInAllowedCircles($userId);
+
         $user = User::query()->findOrFail($userId);
         $adminUser = AdminUser::find($user->id);
 
@@ -531,6 +538,8 @@ class UsersController extends Controller
             ])
             ->with('city');
 
+        $query = $this->applyCircleScopeToUsersQuery($query);
+
         $search = trim((string) $request->query('q', $request->input('search', '')));
         $membership = $request->input('membership_status');
         $cityId = $request->input('city_id', $request->input('city'));
@@ -589,6 +598,22 @@ class UsersController extends Controller
         ];
 
         return [$query, $filters, $perPage];
+    }
+
+    private function ensureUserIsInAllowedCircles(string $userId): void
+    {
+        if ($this->isGlobalAdmin()) {
+            return;
+        }
+
+        $hasAccess = CircleMember::query()
+            ->where('user_id', $userId)
+            ->whereIn('circle_id', $this->allowedCircleIds())
+            ->exists();
+
+        if (! $hasAccess) {
+            abort(403);
+        }
     }
 
 }

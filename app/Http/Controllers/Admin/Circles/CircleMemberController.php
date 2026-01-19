@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Circles;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Circles\StoreCircleMemberRequest;
 use App\Http\Requests\Admin\Circles\UpdateCircleMemberRequest;
@@ -12,8 +13,11 @@ use Illuminate\Support\Facades\Schema;
 
 class CircleMemberController extends Controller
 {
+    use AppliesCircleScope;
+
     public function store(StoreCircleMemberRequest $request, Circle $circle): RedirectResponse
     {
+        $this->ensureCircleAccess($circle->id);
         $data = $request->validated();
 
         $payload = [
@@ -35,6 +39,7 @@ class CircleMemberController extends Controller
 
     public function update(UpdateCircleMemberRequest $request, Circle $circle, CircleMember $circleMember): RedirectResponse
     {
+        $this->ensureCircleAccess($circle->id);
         if ($circleMember->circle_id !== $circle->id) {
             abort(404);
         }
@@ -50,6 +55,7 @@ class CircleMemberController extends Controller
 
     public function destroy(Circle $circle, CircleMember $circleMember): RedirectResponse
     {
+        $this->ensureCircleAccess($circle->id);
         if ($circleMember->circle_id !== $circle->id) {
             abort(404);
         }
@@ -59,5 +65,16 @@ class CircleMemberController extends Controller
         return redirect()
             ->route('admin.circles.show', $circle)
             ->with('success', 'Member removed from the circle.');
+    }
+
+    private function ensureCircleAccess(string $circleId): void
+    {
+        if ($this->isGlobalAdmin()) {
+            return;
+        }
+
+        if (! in_array($circleId, $this->allowedCircleIds(), true)) {
+            abort(403);
+        }
     }
 }

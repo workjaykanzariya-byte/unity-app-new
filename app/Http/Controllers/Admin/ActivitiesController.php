@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Concerns\AppliesCircleScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActivitiesExportRequest;
 use App\Models\BusinessDeal;
@@ -18,6 +19,8 @@ use Illuminate\View\View;
 
 class ActivitiesController extends Controller
 {
+    use AppliesCircleScope;
+
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
@@ -33,6 +36,8 @@ class ActivitiesController extends Controller
             'display_name',
             'membership_status',
         ]);
+
+        $query = $this->applyCircleScopeToUsersQuery($query);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -108,6 +113,7 @@ class ActivitiesController extends Controller
 
     public function testimonials(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $items = Testimonial::query()
@@ -130,6 +136,7 @@ class ActivitiesController extends Controller
 
     public function referrals(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $items = Referral::query()
@@ -152,6 +159,7 @@ class ActivitiesController extends Controller
 
     public function businessDeals(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $items = BusinessDeal::query()
@@ -174,6 +182,7 @@ class ActivitiesController extends Controller
 
     public function p2pMeetings(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $items = P2pMeeting::query()
@@ -197,6 +206,7 @@ class ActivitiesController extends Controller
 
     public function requirements(User $member, Request $request): View
     {
+        $this->ensureMemberAccess($member->id);
         $filters = $this->dateFilters($request);
 
         $items = Requirement::query()
@@ -329,7 +339,7 @@ class ActivitiesController extends Controller
             }
         }
 
-        return $query;
+        return $this->applyCircleScopeToActivitiesQuery($query, 'activity.' . $memberKey);
     }
 
     private function exportColumns(string $activityType): array
@@ -441,6 +451,22 @@ class ActivitiesController extends Controller
             'requirements' => 'user_id',
             default => 'user_id',
         };
+    }
+
+    private function ensureMemberAccess(string $memberId): void
+    {
+        if ($this->isGlobalAdmin()) {
+            return;
+        }
+
+        $hasAccess = \App\Models\CircleMember::query()
+            ->where('user_id', $memberId)
+            ->whereIn('circle_id', $this->allowedCircleIds())
+            ->exists();
+
+        if (! $hasAccess) {
+            abort(403);
+        }
     }
 
     private function activityTable(string $activityType): string
