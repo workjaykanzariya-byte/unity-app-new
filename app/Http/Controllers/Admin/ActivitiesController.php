@@ -288,23 +288,8 @@ class ActivitiesController extends Controller
             ->whereIn($primaryColumn, $memberIds)
             ->selectRaw("{$primaryColumn} as member_id");
 
-        if (! $peerColumn) {
-            return DB::query()
-                ->fromSub($primaryQuery, 'activity_members')
-                ->select('member_id', DB::raw('count(*) as total'))
-                ->groupBy('member_id')
-                ->pluck('total', 'member_id')
-                ->all();
-        }
-
-        $peerQuery = (clone $query)
-            ->whereIn($peerColumn, $memberIds)
-            ->selectRaw("{$peerColumn} as member_id");
-
-        $unionQuery = $primaryQuery->unionAll($peerQuery);
-
         return DB::query()
-            ->fromSub($unionQuery, 'activity_members')
+            ->fromSub($primaryQuery, 'activity_members')
             ->select('member_id', DB::raw('count(*) as total'))
             ->groupBy('member_id')
             ->pluck('total', 'member_id')
