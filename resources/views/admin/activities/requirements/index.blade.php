@@ -31,6 +31,16 @@
             return ['has' => true, 'count' => 1];
         };
 
+        $normalizeMedia = function ($media): array {
+            if (! $media) {
+                return [];
+            }
+
+            $decoded = is_string($media) ? json_decode($media, true) : $media;
+
+            return is_array($decoded) ? array_values($decoded) : [$decoded];
+        };
+
         $decodeFilter = function ($value): array {
             if (is_array($value)) {
                 return $value;
@@ -132,6 +142,7 @@
                         @php
                             $actorName = $displayName($requirement->actor_display_name ?? null, $requirement->actor_first_name ?? null, $requirement->actor_last_name ?? null);
                             $mediaInfo = $mediaSummary($requirement->media ?? null);
+                            $mediaItems = $normalizeMedia($requirement->media ?? null);
                             $regionFilter = $decodeFilter($requirement->region_filter ?? null);
                             $categoryFilter = $decodeFilter($requirement->category_filter ?? null);
                             $regionLabel = $regionFilter['region_label'] ?? $regionFilter['region_name'] ?? $regionFilter['city_name'] ?? null;
@@ -150,8 +161,7 @@
                             <td>
                                 @if ($mediaInfo['has'])
                                     <span class="badge bg-success">Yes ({{ $mediaInfo['count'] }})</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#mediaViewerModal" data-media-source="media-json-{{ $requirement->id }}">View</button>
-                                    <script type="application/json" id="media-json-{{ $requirement->id }}">{{ e(json_encode(is_string($requirement->media ?? null) ? json_decode($requirement->media ?? '[]', true) : ($requirement->media ?? []))) }}</script>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2 js-view-media" data-media='@json($mediaItems)'>View</button>
                                 @else
                                     <span class="text-muted">No</span>
                                 @endif
@@ -172,14 +182,14 @@
         {{ $items->links() }}
     </div>
 
-    <div class="modal fade" id="mediaViewerModal" tabindex="-1" aria-labelledby="mediaViewerModalLabel" aria-hidden="true">
+    <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="mediaViewerModalLabel">Media</h5>
+                    <h5 class="modal-title" id="mediaModalLabel">Media</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body" data-media-container>
+                <div class="modal-body" id="mediaModalBody">
                     <p class="text-muted mb-0">No media available.</p>
                 </div>
             </div>
@@ -187,71 +197,88 @@
     </div>
 
     <script>
-        document.querySelectorAll('[data-media-source]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const modal = document.getElementById('mediaViewerModal');
-                const container = modal.querySelector('[data-media-container]');
-                const sourceId = button.getAttribute('data-media-source');
-                const scriptTag = document.getElementById(sourceId);
-                let items = [];
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('.js-view-media');
+            if (!button) {
+                return;
+            }
 
-                if (scriptTag) {
-                    try {
-                        items = JSON.parse(scriptTag.textContent || '[]');
-                    } catch (error) {
-                        items = [];
+            let items = [];
+            const payload = button.getAttribute('data-media') || '[]';
+
+            try {
+                items = JSON.parse(payload);
+            } catch (error) {
+                items = [];
+            }
+
+            const modalElement = document.getElementById('mediaModal');
+            const container = document.getElementById('mediaModalBody');
+            container.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                container.innerHTML = '<p class="text-muted mb-0">No media available.</p>';
+                new bootstrap.Modal(modalElement).show();
+                return;
+            }
+
+            items.forEach((item, index) => {
+                let fileId = null;
+                let type = null;
+                let thumbnailId = null;
+
+                if (typeof item === 'string') {
+                    fileId = item;
+                } else if (item && typeof item === 'object') {
+                    fileId = item.file_id || item.fileId || item.id || null;
+                    type = item.type || item.media_type || item.mime_type || null;
+                    thumbnailId = item.thumbnail_file_id || item.thumbnail_id || null;
+
+                    if (!fileId && item.url && typeof item.url === 'string') {
+                        const match = item.url.match(/[0-9a-fA-F-]{36}/);
+                        fileId = match ? match[0] : null;
                     }
                 }
 
-                container.innerHTML = '';
-
-                if (!Array.isArray(items) || items.length === 0) {
-                    container.innerHTML = '<p class="text-muted mb-0">No media available.</p>';
+                if (!fileId) {
                     return;
                 }
 
-                items.forEach((item, index) => {
-                    let url = null;
+                const url = `/api/v1/files/${fileId}`;
+                const wrapper = document.createElement('div');
+                wrapper.classList.add('border', 'rounded', 'p-2', 'mb-3');
 
-                    if (typeof item === 'string') {
-                        url = item;
-                    } else if (item && typeof item === 'object') {
-                        url = item.url || item.id || null;
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.textContent = `Media ${index + 1}`;
+                link.classList.add('d-block', 'mb-2');
+                wrapper.appendChild(link);
+
+                const isVideo = type && type.toString().toLowerCase().includes('video');
+
+                if (isVideo) {
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.controls = true;
+                    video.classList.add('w-100', 'mb-3');
+                    if (thumbnailId) {
+                        video.poster = `/api/v1/files/${thumbnailId}`;
                     }
+                    wrapper.appendChild(video);
+                } else {
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = `Media ${index + 1}`;
+                    img.classList.add('img-fluid', 'rounded', 'mb-3');
+                    wrapper.appendChild(img);
+                }
 
-                    if (!url) {
-                        return;
-                    }
-
-                    if (!url.startsWith('http') && /^[0-9a-fA-F-]{36}$/.test(url)) {
-                        url = `/api/v1/files/${url}`;
-                    }
-
-                    const wrapper = document.createElement('div');
-                    wrapper.classList.add('border', 'rounded', 'p-2', 'mb-3');
-
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener';
-                    link.textContent = `Media ${index + 1}`;
-                    link.classList.add('d-block', 'mb-2');
-
-                    wrapper.appendChild(link);
-
-                    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url)) {
-                        const img = document.createElement('img');
-                        img.src = url;
-                        img.alt = `Media ${index + 1}`;
-                        img.classList.add('img-thumbnail');
-                        img.style.maxWidth = '200px';
-                        img.style.maxHeight = '200px';
-                        wrapper.appendChild(img);
-                    }
-
-                    container.appendChild(wrapper);
-                });
+                container.appendChild(wrapper);
             });
+
+            new bootstrap.Modal(modalElement).show();
         });
     </script>
 @endsection
