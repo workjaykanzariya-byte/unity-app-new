@@ -35,6 +35,14 @@
     $activityActive = request()->routeIs('admin.activities.*');
 @endphp
 <aside class="admin-sidebar d-flex flex-column">
+    <div class="text-center mb-2">
+        <img
+            src="/api/v1/files/019bd9ab-3cdd-733d-964b-b072134268e2"
+            alt="Peers Global Unity"
+            style="max-height:52px; width:auto;"
+            loading="lazy"
+        />
+    </div>
     <div class="sidebar-brand d-flex align-items-center">
         <div class="brand-mark me-2"></div>
         <div>

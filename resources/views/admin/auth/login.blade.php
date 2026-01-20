@@ -6,6 +6,14 @@
 <div class="page-container auth-wrapper">
     <div class="card">
         <div class="card-header">
+            <div class="text-center mb-3">
+                <img
+                    src="/api/v1/files/019bd9ab-3cdd-733d-964b-b072134268e2"
+                    alt="Peers Global Unity"
+                    style="max-height:60px; width:auto;"
+                    loading="lazy"
+                />
+            </div>
             <p class="eyebrow">Peers Global Unity</p>
             <h1>Admin Access</h1>
             <p>Use your admin email to request a 4-digit OTP for secure access.</p>
