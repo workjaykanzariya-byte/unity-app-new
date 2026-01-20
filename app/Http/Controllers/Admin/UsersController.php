@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Models\CircleMember;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class UsersController extends Controller
@@ -133,15 +135,22 @@ class UsersController extends Controller
 
         $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
         $cities = City::query()->orderBy('name')->get();
-        $roles = Role::query()->orderBy('name')->get();
+        $roles = Role::query()
+            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->orderBy('name')
+            ->get();
         $membershipStatuses = $this->membershipStatuses();
+        $adminRoleIds = $roles->pluck('id')->all();
+        $assignedAdminRoles = $user->roles->whereIn('id', $adminRoleIds)->values();
 
         return view('admin.users.edit', [
             'user' => $user,
             'cities' => $cities,
             'roles' => $roles,
             'membershipStatuses' => $membershipStatuses,
-            'userRoleIds' => $user->roles->pluck('id')->all(),
+            'userRoleIds' => $assignedAdminRoles->pluck('id')->all(),
+            'assignedAdminRoleNames' => $assignedAdminRoles->pluck('name')->implode(', '),
+            'hasAssignedAdminRole' => $assignedAdminRoles->isNotEmpty(),
         ]);
     }
 
@@ -154,6 +163,11 @@ class UsersController extends Controller
         $user = User::query()->findOrFail($userId);
 
         $membershipStatuses = $this->membershipStatuses();
+        $adminRoleIds = Role::query()
+            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->pluck('id')
+            ->all();
+
         $validated = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['nullable', 'string', 'max:100'],
@@ -191,8 +205,8 @@ class UsersController extends Controller
             'skills' => ['nullable', 'string', 'max:10000'],
             'interests' => ['nullable', 'string', 'max:10000'],
             'social_links' => ['nullable', 'string', 'max:10000'],
-            'role_ids' => ['array'],
-            'role_ids.*' => ['exists:roles,id'],
+            'role_ids' => ['array', 'max:1'],
+            'role_ids.*' => ['exists:roles,id', Rule::in($adminRoleIds)],
         ]);
 
         $csvFields = [
@@ -218,6 +232,13 @@ class UsersController extends Controller
         }
 
         $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id']);
+        $currentAdminRoleIds = $user->roles()->whereIn('roles.id', $adminRoleIds)->pluck('roles.id');
+
+        if ($request->filled('role_ids') && $currentAdminRoleIds->isNotEmpty()) {
+            return back()
+                ->withErrors(['role_ids' => 'Please remove existing role first.'])
+                ->withInput();
+        }
 
         DB::transaction(function () use ($user, $updatable, $validated, $request) {
             $user->fill($updatable);
@@ -251,7 +272,7 @@ class UsersController extends Controller
             ->with('status', 'User updated successfully.');
     }
 
-    public function removeRole(Request $request, string $userId, string $roleId): RedirectResponse
+    public function removeRole(Request $request, string $userId): RedirectResponse
     {
         $user = User::query()->findOrFail($userId);
         $adminUser = AdminUser::find($user->id);
@@ -260,7 +281,12 @@ class UsersController extends Controller
             return back()->withErrors(['roles' => 'Admin user record not found for this user.']);
         }
 
-        $adminUser->roles()->detach($roleId);
+        $adminRoleIds = Role::query()
+            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->pluck('id')
+            ->all();
+
+        $adminUser->roles()->detach($adminRoleIds);
 
         $remainingRoles = $adminUser->roles()->count();
 

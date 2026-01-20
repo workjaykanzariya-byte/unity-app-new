@@ -26,11 +26,8 @@
     </div>
 @endif
 
-@php
-    $globalAdminRole = $roles->firstWhere('key', 'global_admin');
-@endphp
-@if ($globalAdminRole)
-    <form id="removeGlobalAdminRoleForm" method="POST" action="{{ route('admin.users.roles.remove', ['user' => $user->id, 'role' => $globalAdminRole->id]) }}">
+@if ($hasAssignedAdminRole)
+    <form id="removeAdminRoleForm" method="POST" action="{{ route('admin.users.roles.remove', $user->id) }}">
         @csrf
     </form>
 @endif
@@ -286,40 +283,45 @@
                 <div class="card-body">
                     @php
                         $currentRoleIds = old('role_ids', $userRoleIds);
-                        $hasGlobalAdmin = $globalAdminRole && in_array($globalAdminRole->id, $currentRoleIds);
                     @endphp
+                    @if ($hasAssignedAdminRole)
+                        <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div>
+                                <strong>Currently assigned:</strong>
+                                <span>{{ $assignedAdminRoleNames }}</span>
+                            </div>
+                            <button type="submit"
+                                    form="removeAdminRoleForm"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Remove the current admin role from this user?');">
+                                Remove Role
+                            </button>
+                        </div>
+                    @endif
                     <div class="row g-3 align-items-center">
                         @foreach ($roles as $role)
-                            @php $isGlobal = $role->key === 'global_admin'; @endphp
                             <div class="col-md-4 d-flex align-items-start">
-                                @if ($isGlobal && $hasGlobalAdmin)
-                                    <div class="w-100 d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <div class="fw-semibold">{{ $role->name }}</div>
-                                            <div class="small text-muted">{{ $role->description }}</div>
-                                            <span class="badge bg-danger-subtle text-danger">Currently assigned</span>
-                                        </div>
-                                        @if ($globalAdminRole)
-                                            <button type="submit"
-                                                    form="removeGlobalAdminRoleForm"
-                                                    class="btn btn-sm btn-outline-danger"
-                                                    onclick="return confirm('Remove Global Admin role from this user?');">
-                                                Remove Role
-                                            </button>
-                                        @endif
-                                    </div>
-                                @else
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}" id="role-{{ $role->id }}" @checked(in_array($role->id, $currentRoleIds))>
-                                        <label class="form-check-label" for="role-{{ $role->id }}">
-                                            <strong>{{ $role->name }}</strong>
-                                            <div class="small text-muted">{{ $role->description }}</div>
-                                        </label>
-                                    </div>
-                                @endif
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           name="role_ids[]"
+                                           value="{{ $role->id }}"
+                                           id="role-{{ $role->id }}"
+                                           @checked(in_array($role->id, $currentRoleIds))
+                                           @disabled($hasAssignedAdminRole)>
+                                    <label class="form-check-label" for="role-{{ $role->id }}">
+                                        <strong>{{ $role->name }}</strong>
+                                        <div class="small text-muted">{{ $role->description }}</div>
+                                    </label>
+                                </div>
                             </div>
                         @endforeach
                     </div>
+                    @if ($hasAssignedAdminRole)
+                        <div class="form-text text-muted mt-2">
+                            Remove the existing admin role to assign a new one.
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
