@@ -49,7 +49,7 @@
                     </th>
                     <th>
                         <a href="{{ route('admin.users.index', array_merge(request()->query(), ['sort' => 'display_name', 'dir' => $filters['sort'] === 'display_name' && $filters['dir'] === 'asc' ? 'desc' : 'asc'])) }}" class="text-decoration-none text-dark">
-                            Peers
+                            Peer Name
                             @if ($filters['sort'] === 'display_name')
                                 <i class="bi bi-arrow-{{ $filters['dir'] === 'asc' ? 'up' : 'down' }}-short"></i>
                             @endif
