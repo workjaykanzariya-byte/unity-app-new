@@ -16,7 +16,10 @@ class ActivitiesReferralsController extends Controller
     {
         $filters = $this->filters($request);
 
-        $items = $this->baseQuery($request, $filters)
+        $baseQuery = $this->baseQuery($request, $filters);
+        $total = (clone $baseQuery)->count();
+
+        $items = $baseQuery
             ->select([
                 'activity.id',
                 'activity.referral_type',
@@ -47,6 +50,7 @@ class ActivitiesReferralsController extends Controller
             'items' => $items,
             'filters' => $filters,
             'topMembers' => $topMembers,
+            'total' => $total,
         ]);
     }
 

@@ -16,7 +16,10 @@ class ActivitiesP2PMeetingsController extends Controller
     {
         $filters = $this->filters($request);
 
-        $items = $this->baseQuery($request, $filters)
+        $baseQuery = $this->baseQuery($request, $filters);
+        $total = (clone $baseQuery)->count();
+
+        $items = $baseQuery
             ->select([
                 'activity.id',
                 'activity.meeting_date',
@@ -43,6 +46,7 @@ class ActivitiesP2PMeetingsController extends Controller
             'items' => $items,
             'filters' => $filters,
             'topMembers' => $topMembers,
+            'total' => $total,
         ]);
     }
 

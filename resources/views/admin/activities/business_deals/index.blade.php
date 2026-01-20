@@ -38,7 +38,8 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h1 class="h4 mb-0">Business Deals</h1>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-light text-dark border">Total Deals: {{ number_format($total) }}</span>
             <a href="{{ route('admin.activities.business-deals.export', request()->query()) }}" class="btn btn-outline-primary">Export</a>
         </div>
     </div>
