@@ -95,7 +95,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>To</th>
+                        <th>Peer Name</th>
                         <th>Total Testimonials</th>
                     </tr>
                 </thead>

@@ -75,7 +75,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>To</th>
+                        <th>Peer Name</th>
                         <th>Total Deals</th>
                     </tr>
                 </thead>
@@ -105,7 +105,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>From</th>
-                        <th>Deal With</th>
+                        <th>To</th>
                         <th>Deal Date</th>
                         <th>Deal Amount</th>
                         <th>Business Type</th>

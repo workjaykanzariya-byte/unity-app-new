@@ -112,7 +112,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>To</th>
+                        <th>Peer Name</th>
                         <th>Total Requirements</th>
                     </tr>
                 </thead>
