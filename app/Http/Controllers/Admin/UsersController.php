@@ -208,6 +208,8 @@ class UsersController extends Controller
             'social_links' => ['nullable', 'string', 'max:10000'],
             'role_ids' => ['array', 'max:1'],
             'role_ids.*' => ['exists:roles,id', Rule::in($adminRoleIds)],
+        ], [
+            'role_ids.max' => 'You can not assign multiple roles.',
         ]);
 
         $csvFields = [
