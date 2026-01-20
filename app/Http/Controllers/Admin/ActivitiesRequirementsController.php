@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Support\AdminAccess;
+use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -169,7 +169,7 @@ class ActivitiesRequirementsController extends Controller
             $query->whereDate('activity.created_at', '<=', $filters['to']);
         }
 
-        $this->applyScopeToActivityQuery($query, $request, 'activity.user_id');
+        $this->applyScopeToActivityQuery($query, 'activity.user_id');
 
         return $query;
     }
@@ -180,7 +180,7 @@ class ActivitiesRequirementsController extends Controller
             ->join('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at');
 
-        $this->applyScopeToActivityQuery($query, $request, 'activity.user_id');
+        $this->applyScopeToActivityQuery($query, 'activity.user_id');
 
         return $query
             ->groupBy(
@@ -203,20 +203,9 @@ class ActivitiesRequirementsController extends Controller
             ->get();
     }
 
-    private function applyScopeToActivityQuery($query, Request $request, string $primaryColumn): void
+    private function applyScopeToActivityQuery($query, string $primaryColumn): void
     {
-        if (! $request->attributes->get('is_circle_scoped')) {
-            return;
-        }
-
-        $allowedUserIds = AdminAccess::allowedUserIds(auth('admin')->user());
-
-        if ($allowedUserIds === []) {
-            $query->whereRaw('1=0');
-            return;
-        }
-
-        $query->whereIn($primaryColumn, $allowedUserIds);
+        AdminCircleScope::applyToActivityQuery($query, auth('admin')->user(), $primaryColumn, null);
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string

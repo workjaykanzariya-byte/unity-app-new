@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CoinLedger;
 use App\Models\User;
+use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -45,7 +46,7 @@ class CoinsController extends Controller
             'membership_status',
         ]);
 
-        $this->applyCircleScopeToUsersQuery($query, $request);
+        $this->applyCircleScopeToUsersQuery($query, auth('admin')->user());
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -105,7 +106,7 @@ class CoinsController extends Controller
             ->select(['id', 'email', 'first_name', 'last_name', 'display_name'])
             ->orderBy('display_name');
 
-        $this->applyCircleScopeToUsersQuery($usersQuery, request());
+        $this->applyCircleScopeToUsersQuery($usersQuery, auth('admin')->user());
 
         $users = $usersQuery->get();
 
@@ -126,7 +127,7 @@ class CoinsController extends Controller
 
         $userId = $validated['user_id'];
         $amount = (int) $validated['amount'];
-        $this->ensureMemberInScope($userId, $request);
+        $this->ensureMemberInScope($userId, auth('admin')->user());
 
         $activity = $validated['activity'] ?? null;
         $remarks = trim((string) ($validated['remarks'] ?? ''));
@@ -160,7 +161,7 @@ class CoinsController extends Controller
 
     public function ledger(User $member, Request $request): View
     {
-        $this->ensureMemberInScope($member->id, $request);
+        $this->ensureMemberInScope($member->id, auth('admin')->user());
         $filters = $this->dateFilters($request);
 
         $query = CoinLedger::query()
@@ -180,7 +181,7 @@ class CoinsController extends Controller
             abort(404);
         }
 
-        $this->ensureMemberInScope($member->id, $request);
+        $this->ensureMemberInScope($member->id, auth('admin')->user());
         $filters = $this->dateFilters($request);
         $referencePattern = self::ACTIVITY_REFERENCE_PATTERNS[$type];
 
@@ -271,51 +272,14 @@ class CoinsController extends Controller
             : 'Admin adjustment';
     }
 
-    private function applyCircleScopeToUsersQuery($query, Request $request): void
+    private function applyCircleScopeToUsersQuery($query, $admin): void
     {
-        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
-        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
-
-        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
-            return;
-        }
-
-        if ($allowedCircleIds === []) {
-            $query->whereRaw('1=0');
-            return;
-        }
-
-        $query->whereExists(function ($subQuery) use ($allowedCircleIds) {
-            $subQuery->selectRaw(1)
-                ->from('circle_members as cm')
-                ->whereColumn('cm.user_id', 'users.id')
-                ->where('cm.status', 'approved')
-                ->whereNull('cm.deleted_at')
-                ->whereIn('cm.circle_id', $allowedCircleIds);
-        });
+        AdminCircleScope::applyToUsersQuery($query, $admin);
     }
 
-    private function ensureMemberInScope(string $userId, Request $request): void
+    private function ensureMemberInScope(string $userId, $admin): void
     {
-        $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
-        $isCircleScoped = (bool) $request->attributes->get('is_circle_scoped');
-
-        if (! $isCircleScoped || ! is_array($allowedCircleIds)) {
-            return;
-        }
-
-        if ($allowedCircleIds === []) {
-            abort(403);
-        }
-
-        $isMemberInScope = DB::table('circle_members')
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
-            ->whereNull('deleted_at')
-            ->whereIn('circle_id', $allowedCircleIds)
-            ->exists();
-
-        if (! $isMemberInScope) {
+        if (! AdminCircleScope::userInScope($admin, $userId)) {
             abort(403);
         }
     }

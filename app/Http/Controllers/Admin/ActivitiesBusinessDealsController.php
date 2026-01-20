@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Support\AdminAccess;
+use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -179,7 +179,7 @@ class ActivitiesBusinessDealsController extends Controller
             $query->whereDate('activity.created_at', '<=', $filters['to']);
         }
 
-        $this->applyScopeToActivityQuery($query, $request, 'activity.from_user_id', 'activity.to_user_id');
+        $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query;
     }
@@ -191,7 +191,7 @@ class ActivitiesBusinessDealsController extends Controller
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false);
 
-        $this->applyScopeToActivityQuery($query, $request, 'activity.from_user_id', 'activity.to_user_id');
+        $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query
             ->groupBy(
@@ -214,24 +214,9 @@ class ActivitiesBusinessDealsController extends Controller
             ->get();
     }
 
-    private function applyScopeToActivityQuery($query, Request $request, string $primaryColumn, ?string $peerColumn): void
+    private function applyScopeToActivityQuery($query, string $primaryColumn, ?string $peerColumn): void
     {
-        if (! $request->attributes->get('is_circle_scoped')) {
-            return;
-        }
-
-        $allowedUserIds = AdminAccess::allowedUserIds(auth('admin')->user());
-
-        if ($allowedUserIds === []) {
-            $query->whereRaw('1=0');
-            return;
-        }
-
-        $query->whereIn($primaryColumn, $allowedUserIds);
-
-        if ($peerColumn) {
-            $query->whereIn($peerColumn, $allowedUserIds);
-        }
+        AdminCircleScope::applyToActivityQuery($query, auth('admin')->user(), $primaryColumn, $peerColumn);
     }
 
     private function formatUserName(?string $displayName, ?string $firstName, ?string $lastName): string
