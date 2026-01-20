@@ -11,7 +11,7 @@
                     src="/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b"
                     alt="Peers Global Unity"
                     style="max-height:100px; width:auto;"
-                    class="mb-4"
+                    class="d-block mx-auto mb-4"
                     loading="lazy"
                 />
             </div>
