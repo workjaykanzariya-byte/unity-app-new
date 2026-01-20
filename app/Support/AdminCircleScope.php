@@ -79,13 +79,7 @@ class AdminCircleScope
 
         $circleUserIds = self::circleUserIdsSubquery($circleId);
 
-        $query->where(function ($scope) use ($primaryColumn, $peerColumn, $circleUserIds) {
-            $scope->whereIn($primaryColumn, $circleUserIds);
-
-            if ($peerColumn) {
-                $scope->orWhereIn($peerColumn, $circleUserIds);
-            }
-        });
+        $query->whereIn($primaryColumn, $circleUserIds);
     }
 
     public static function applyToUsersQuery($query, ?AdminUser $admin): void
