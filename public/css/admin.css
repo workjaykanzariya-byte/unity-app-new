@@ -36,12 +36,16 @@ body {
 
 .admin-sidebar {
     width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    flex: 0 0 var(--sidebar-width);
     background: #0f172a;
     color: #e5e7eb;
     min-height: 100vh;
     position: sticky;
     top: 0;
     padding: 20px 16px;
+    overflow-x: hidden;
 }
 
 .sidebar-brand {
@@ -63,6 +67,24 @@ body {
     border-radius: 10px;
     padding: 10px 12px;
     margin: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-sidebar .nav-link > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-sidebar .menu-arrow {
+    transition: transform 0.2s ease;
+}
+
+.admin-sidebar .menu-parent.open .menu-arrow {
+    transform: rotate(90deg);
 }
 
 .admin-sidebar .nav-link:hover,
@@ -82,6 +104,7 @@ body {
 .admin-main {
     background: var(--gray-100);
     min-height: 100vh;
+    min-width: 0;
 }
 
 .admin-topbar .input-group .form-control {

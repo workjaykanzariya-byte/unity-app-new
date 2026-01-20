@@ -45,10 +45,10 @@
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
             @if ($activityMenu)
-                <li class="nav-item">
+                <li class="nav-item menu-parent {{ $activityActive ? 'open' : '' }}">
                     <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
                         <span><i class="bi bi-activity me-2"></i>Activities</span>
-                        <i class="bi {{ $activityActive ? 'bi-chevron-down' : 'bi-chevron-right' }}"></i>
+                        <i class="bi bi-chevron-right menu-arrow"></i>
                     </a>
                     <div class="collapse {{ $activityActive ? 'show' : '' }}" id="activitiesSubmenu">
                         <ul class="nav flex-column ms-3">
@@ -85,3 +85,31 @@
         </form>
     </div>
 </aside>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const submenu = document.getElementById('activitiesSubmenu');
+            if (!submenu) {
+                return;
+            }
+
+            const parentItem = submenu.closest('.menu-parent');
+            if (!parentItem) {
+                return;
+            }
+
+            if (submenu.classList.contains('show')) {
+                parentItem.classList.add('open');
+            }
+
+            submenu.addEventListener('show.bs.collapse', () => {
+                parentItem.classList.add('open');
+            });
+
+            submenu.addEventListener('hide.bs.collapse', () => {
+                parentItem.classList.remove('open');
+            });
+        });
+    </script>
+@endpush
