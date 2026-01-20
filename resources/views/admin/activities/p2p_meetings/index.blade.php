@@ -38,7 +38,8 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h1 class="h4 mb-0">P2P Meetings</h1>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-light text-dark border">Total Meetings: {{ number_format($total) }}</span>
             <a href="{{ route('admin.activities.p2p-meetings.export', request()->query()) }}" class="btn btn-outline-primary">Export</a>
         </div>
     </div>
