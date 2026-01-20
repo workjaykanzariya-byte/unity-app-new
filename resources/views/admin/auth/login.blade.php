@@ -10,7 +10,8 @@
                 <img
                     src="/api/v1/files/019bd9ab-3cdd-733d-964b-b072134268e2"
                     alt="Peers Global Unity"
-                    style="max-height:60px; width:auto;"
+                    style="max-height:100px; width:auto;"
+                    class="mb-4"
                     loading="lazy"
                 />
             </div>
