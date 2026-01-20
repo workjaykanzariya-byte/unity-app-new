@@ -7,6 +7,7 @@
         ? [
             ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
         ]
         : [
             ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
@@ -16,6 +17,7 @@
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
             ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
+            ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
             ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
             ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
             ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],

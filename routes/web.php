@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\ActivitiesReferralsController;
 use App\Http\Controllers\Admin\ActivitiesRequirementsController;
 use App\Http\Controllers\Admin\ActivitiesTestimonialsController;
 use App\Http\Controllers\Admin\CoinsController;
+use App\Http\Controllers\Admin\EventGalleryController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -72,5 +73,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('circles.members.store');
         Route::put('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'update'])->name('circles.members.update');
         Route::delete('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'destroy'])->name('circles.members.destroy');
+        Route::get('/event-gallery', [EventGalleryController::class, 'index'])->name('event-gallery.index');
+        Route::post('/event-gallery/events', [EventGalleryController::class, 'storeEvent'])->name('event-gallery.events.store');
+        Route::post('/event-gallery/media', [EventGalleryController::class, 'storeMedia'])->name('event-gallery.media.store');
+        Route::delete('/event-gallery/media/{id}', [EventGalleryController::class, 'destroyMedia'])->name('event-gallery.media.destroy');
     });
 });

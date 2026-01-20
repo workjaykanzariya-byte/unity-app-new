@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
 use App\Http\Controllers\Api\V1\Profile\MyPostsController;
+use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -195,6 +196,8 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/files/{id}', [FileController::class, 'show']);
+    Route::get('/event-galleries', [EventGalleryApiController::class, 'index']);
+    Route::get('/event-galleries/{id}', [EventGalleryApiController::class, 'show']);
 
     // Wallet payment webhook (called by payment gateway)
     Route::post('/wallet/webhook', [WalletController::class, 'paymentWebhook']);
