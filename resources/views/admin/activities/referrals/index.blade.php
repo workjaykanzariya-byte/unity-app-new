@@ -79,7 +79,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Peer Name</th>
+                        <th>To</th>
                         <th>Total Referrals</th>
                     </tr>
                 </thead>
@@ -108,8 +108,8 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Created By</th>
-                        <th>Peer Name</th>
+                        <th>From</th>
+                        <th>To</th>
                         <th>Type</th>
                         <th>Referral Date</th>
                         <th>Referral Of</th>

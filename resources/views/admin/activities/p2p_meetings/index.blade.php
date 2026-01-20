@@ -75,7 +75,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Peer Name</th>
+                        <th>To</th>
                         <th>Total Meetings</th>
                     </tr>
                 </thead>
@@ -104,7 +104,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Created By</th>
+                        <th>From</th>
                         <th>Connected With</th>
                         <th>Meeting Date</th>
                         <th>Meeting Place</th>

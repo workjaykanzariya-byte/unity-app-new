@@ -95,7 +95,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Peer Name</th>
+                        <th>To</th>
                         <th>Total Testimonials</th>
                     </tr>
                 </thead>
@@ -124,8 +124,8 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Created By</th>
-                        <th>Peer Name</th>
+                        <th>From</th>
+                        <th>To</th>
                         <th>Content</th>
                         <th>Media</th>
                         <th>Created At</th>
