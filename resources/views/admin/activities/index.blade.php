@@ -28,7 +28,7 @@
                         <th style="width: 40px;">
                             <input type="checkbox" class="form-check-input" id="select-all-members">
                         </th>
-                        <th>Peers</th>
+                        <th>Peer Name</th>
                         <th>Testimonials</th>
                         <th>Referrals</th>
                         <th>Business Deals</th>

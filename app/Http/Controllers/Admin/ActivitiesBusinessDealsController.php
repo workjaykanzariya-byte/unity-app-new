@@ -202,7 +202,7 @@ class ActivitiesBusinessDealsController extends Controller
                 'actor.email'
             )
             ->orderByDesc(DB::raw('count(*)'))
-            ->limit(3)
+            ->limit(5)
             ->select([
                 'activity.from_user_id as actor_id',
                 'actor.display_name',

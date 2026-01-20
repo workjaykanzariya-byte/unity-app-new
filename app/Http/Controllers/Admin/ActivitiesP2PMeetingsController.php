@@ -198,7 +198,7 @@ class ActivitiesP2PMeetingsController extends Controller
                 'actor.email'
             )
             ->orderByDesc(DB::raw('count(*)'))
-            ->limit(3)
+            ->limit(5)
             ->select([
                 'activity.initiator_user_id as actor_id',
                 'actor.display_name',

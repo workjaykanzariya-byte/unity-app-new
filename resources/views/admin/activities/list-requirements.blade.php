@@ -76,7 +76,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Peers</th>
+                        <th>Peer Name</th>
                         <th>Subject</th>
                         <th>Description</th>
                         <th>Region</th>

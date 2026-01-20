@@ -11,7 +11,6 @@
                     <p class="text-muted mb-1">Overview</p>
                     <h5 class="mb-0">Platform Pulse</h5>
                 </div>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Global Admin</span>
             </div>
             <div class="row g-3">
                 <div class="col-sm-6 col-lg-3">

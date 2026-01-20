@@ -88,14 +88,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Peers</strong>
+            <strong>Top 5 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Peers</th>
+                        <th>Peer Name</th>
                         <th>Total Testimonials</th>
                     </tr>
                 </thead>
@@ -125,7 +125,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Created By</th>
-                        <th>Related Peer</th>
+                        <th>Peer Name</th>
                         <th>Content</th>
                         <th>Media</th>
                         <th>Created At</th>
