@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
-use App\Models\CircleMember;
 use App\Models\City;
 use App\Models\Role;
 use App\Models\User;
@@ -135,8 +134,9 @@ class UsersController extends Controller
 
         $user = User::query()->with(['city', 'roles'])->findOrFail($userId);
         $cities = City::query()->orderBy('name')->get();
+        $adminRoleKeys = ['global_admin', 'industry_director', 'ded', 'circle_leader'];
         $roles = Role::query()
-            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->whereIn('key', $adminRoleKeys)
             ->orderBy('name')
             ->get();
         $membershipStatuses = $this->membershipStatuses();
@@ -163,8 +163,9 @@ class UsersController extends Controller
         $user = User::query()->findOrFail($userId);
 
         $membershipStatuses = $this->membershipStatuses();
+        $adminRoleKeys = ['global_admin', 'industry_director', 'ded', 'circle_leader'];
         $adminRoleIds = Role::query()
-            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->whereIn('key', $adminRoleKeys)
             ->pluck('id')
             ->all();
 
@@ -281,8 +282,9 @@ class UsersController extends Controller
             return back()->withErrors(['roles' => 'Admin user record not found for this user.']);
         }
 
+        $adminRoleKeys = ['global_admin', 'industry_director', 'ded', 'circle_leader'];
         $adminRoleIds = Role::query()
-            ->whereNotIn('key', CircleMember::ROLE_OPTIONS)
+            ->whereIn('key', $adminRoleKeys)
             ->pluck('id')
             ->all();
 
