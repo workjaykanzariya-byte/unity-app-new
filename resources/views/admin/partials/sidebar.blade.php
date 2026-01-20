@@ -1,23 +1,28 @@
 @php
     $adminUser = Auth::guard('admin')->user();
+    $adminUser?->loadMissing('roles:key');
     $isSuper = \App\Support\AdminAccess::isSuper($adminUser);
     $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($adminUser);
+    $isGlobalAdmin = $adminUser && $adminUser->roles->contains('key', 'global_admin');
+
+    $dashboardItem = $isCircleScoped
+        ? null
+        : ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'];
 
     $navItems = $isCircleScoped
         ? [
             ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
-            ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
+            ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
         : [
-            ['icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'route' => 'admin.dashboard'],
             ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
             ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
-            ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
             ['icon' => 'bi-people-fill', 'label' => 'Referrals & Visitors', 'route' => '#'],
             ['icon' => 'bi-life-preserver', 'label' => 'Support & Feedback', 'route' => '#'],
             ['icon' => 'bi-bell', 'label' => 'Notifications & Email', 'route' => '#'],
@@ -48,6 +53,13 @@
     </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
+            @if ($dashboardItem)
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs($dashboardItem['route']) ? 'active' : '' }}" href="{{ route($dashboardItem['route']) }}">
+                        <i class="bi {{ $dashboardItem['icon'] }} me-2"></i>{{ $dashboardItem['label'] }}
+                    </a>
+                </li>
+            @endif
             @if ($activityMenu)
                 <li class="nav-item menu-parent {{ $activityActive ? 'open' : '' }}">
                     <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
