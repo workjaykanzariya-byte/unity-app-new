@@ -43,9 +43,6 @@
             loading="lazy"
         />
     </div>
-    <div class="sidebar-brand d-flex align-items-center">
-        <div class="brand-mark me-2"></div>
-    </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
             @if ($activityMenu)
