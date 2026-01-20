@@ -66,7 +66,7 @@
                     <th>Country</th>
                     <th>Type</th>
                     <th>Industry Tags</th>
-                    <th>Members</th>
+                    <th>Peers</th>
                     <th>Status</th>
                     <th>Created</th>
                     <th></th>

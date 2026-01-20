@@ -1,14 +1,14 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Import Users')
+@section('title', 'Import Peers')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h5 class="mb-0">Import Users</h5>
+        <h5 class="mb-0">Import Peers</h5>
         <small class="text-muted">Upload a CSV to create or update users</small>
     </div>
-    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">Back to Users</a>
+    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">Back to Peers</a>
 </div>
 
 @if (!empty($error))

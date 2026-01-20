@@ -63,8 +63,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>To Member</th>
+                        <th>To Peer</th>
                         <th>Content</th>
                         <th>Attachment</th>
                         <th>Created At</th>
@@ -76,7 +75,6 @@
                             $attachmentUrl = $extractMediaUrl($testimonial->media ?? null);
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ substr($testimonial->id, 0, 8) }}</td>
                             <td>
                                 <div>{{ $testimonial->toUser->display_name ?? trim(($testimonial->toUser->first_name ?? '') . ' ' . ($testimonial->toUser->last_name ?? '')) ?: '—' }}</div>
                                 <div class="text-muted small">{{ $testimonial->toUser->email ?? '—' }}</div>
@@ -93,7 +91,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted">No testimonials found.</td>
+                            <td colspan="4" class="text-center text-muted">No testimonials found.</td>
                         </tr>
                     @endforelse
                 </tbody>

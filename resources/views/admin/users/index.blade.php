@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Users')
+@section('title', 'Peers')
 
 @section('content')
 @if(session('success'))
@@ -27,7 +27,7 @@
         <div class="d-flex align-items-center gap-2">
             <a href="{{ route('admin.users.import') }}" class="btn btn-outline-primary btn-sm">Import</a>
             <button type="button" class="btn btn-outline-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
-            <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">Add Member</a>
+            <a href="{{ route('admin.users.create') }}" class="btn btn-primary btn-sm">Add Peer</a>
         </div>
     </div>
     <form id="exportCsvForm" method="POST" action="{{ route('admin.users.export.csv') }}" class="d-none">
@@ -47,10 +47,9 @@
                     <th style="width: 40px;">
                         <input type="checkbox" class="form-check-input" id="select-all">
                     </th>
-                    <th>ID</th>
                     <th>
                         <a href="{{ route('admin.users.index', array_merge(request()->query(), ['sort' => 'display_name', 'dir' => $filters['sort'] === 'display_name' && $filters['dir'] === 'asc' ? 'desc' : 'asc'])) }}" class="text-decoration-none text-dark">
-                            User
+                            Peer Name
                             @if ($filters['sort'] === 'display_name')
                                 <i class="bi bi-arrow-{{ $filters['dir'] === 'asc' ? 'up' : 'down' }}-short"></i>
                             @endif
@@ -82,10 +81,7 @@
                 <tr class="bg-light align-middle">
                     <th></th>
                     <th>
-                        <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
-                    </th>
-                    <th>
-                        <input type="text" name="q" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Name or email" value="{{ $filters['search'] }}">
+                        <input type="text" name="q" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Name, email, company, or city" value="{{ $filters['search'] }}">
                     </th>
                     <th>
                         <input type="text" name="phone" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
@@ -136,14 +132,10 @@
                         $cityName = $user->city->name ?? $user->city ?? '—';
                         $isActive = $user->deleted_at === null;
                         $detailsId = 'details-' . $user->id;
-                        $shortId = substr($user->id, 0, 8);
                     @endphp
                     <tr>
                         <td>
                             <input type="checkbox" class="form-check-input row-checkbox" value="{{ $user->id }}">
-                        </td>
-                        <td>
-                            <span class="font-monospace" data-bs-toggle="tooltip" title="{{ $user->id }}">{{ $shortId }}</span>
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-2">
@@ -155,7 +147,7 @@
                                     @endif
                                 </div>
                                 <div>
-                                    <div class="fw-semibold">{{ $name ?: 'Unnamed User' }}</div>
+                                    <div class="fw-semibold">{{ $name ?: 'Unnamed Peer' }}</div>
                                     <div class="text-muted small">{{ $user->email }}</div>
                                 </div>
                             </div>
@@ -183,7 +175,7 @@
                         </td>
                     </tr>
                     <tr class="collapse-row">
-                        <td colspan="11" class="p-0 border-0">
+                        <td colspan="10" class="p-0 border-0">
                             <div class="collapse" id="{{ $detailsId }}">
                                 <div class="p-3 bg-light border-top">
                                     @php

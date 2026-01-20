@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
         <h5 class="mb-0">{{ $circle->name }}</h5>
-        <small class="text-muted">Circle details and members</small>
+        <small class="text-muted">Circle details and peers</small>
     </div>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.circles.edit', $circle) }}" class="btn btn-outline-primary btn-sm">Edit Circle</a>
@@ -71,14 +71,14 @@
 </div>
 
 <div class="card mt-3">
-    <div class="card-header fw-semibold">Members</div>
+    <div class="card-header fw-semibold">Peers</div>
     <div class="card-body">
         <form action="{{ route('admin.circles.members.store', $circle) }}" method="POST" class="row g-2 align-items-end mb-4">
             @csrf
             <div class="col-md-6">
-                <label class="form-label">Select User</label>
+                <label class="form-label">Select Peer</label>
                 <select id="userSelect" name="user_id" class="form-select" required>
-                    <option value="">Select user</option>
+                    <option value="">Select peer</option>
                     @foreach ($allUsers as $userOption)
                         @php
                             $optionName = $userOption->display_name
@@ -101,7 +101,7 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <button class="btn btn-primary w-100">Add Member</button>
+                <button class="btn btn-primary w-100">Add Peer</button>
             </div>
         </form>
 
@@ -109,7 +109,7 @@
             <table class="table align-middle" style="white-space: nowrap;">
                 <thead class="table-light">
                     <tr>
-                        <th>Member</th>
+                        <th>Peers</th>
                         <th>Email</th>
                         <th>Role</th>
                         <th>Status</th>
@@ -151,7 +151,7 @@
                             </td>
                             <td>{{ optional($membership->joined_at ?? $membership->created_at)->format('Y-m-d') ?? '—' }}</td>
                             <td class="text-end">
-                                <form method="POST" action="{{ route('admin.circles.members.destroy', [$circle, $membership]) }}" onsubmit="return confirm('Remove this member from the circle?');">
+                                <form method="POST" action="{{ route('admin.circles.members.destroy', [$circle, $membership]) }}" onsubmit="return confirm('Remove this peer from the circle?');">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-sm btn-outline-danger">Remove</button>
@@ -160,7 +160,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No members assigned yet.</td>
+                            <td colspan="6" class="text-center text-muted py-4">No peers assigned yet.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -176,7 +176,7 @@
         if (window.$ && $('#userSelect').length) {
             $('#userSelect').select2({
                 width: '100%',
-                placeholder: 'Select user',
+                placeholder: 'Select peer',
             });
         }
     });

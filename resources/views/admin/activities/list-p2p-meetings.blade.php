@@ -28,8 +28,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Peer Member</th>
+                        <th>Peer</th>
                         <th>Meeting Date</th>
                         <th>Meeting Place</th>
                         <th>Remarks</th>
@@ -39,7 +38,6 @@
                 <tbody>
                     @forelse ($items as $meeting)
                         <tr>
-                            <td class="font-monospace">{{ substr($meeting->id, 0, 8) }}</td>
                             <td>
                                 <div>{{ $meeting->peer->display_name ?? trim(($meeting->peer->first_name ?? '') . ' ' . ($meeting->peer->last_name ?? '')) ?: '—' }}</div>
                                 <div class="text-muted small">{{ $meeting->peer->email ?? '—' }}</div>
@@ -51,7 +49,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No meetings found.</td>
+                            <td colspan="5" class="text-center text-muted">No meetings found.</td>
                         </tr>
                     @endforelse
                 </tbody>

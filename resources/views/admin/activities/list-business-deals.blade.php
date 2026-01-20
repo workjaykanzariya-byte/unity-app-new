@@ -28,7 +28,6 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Deal With</th>
                         <th>Deal Date</th>
                         <th>Amount</th>
@@ -40,7 +39,6 @@
                 <tbody>
                     @forelse ($items as $deal)
                         <tr>
-                            <td class="font-monospace">{{ substr($deal->id, 0, 8) }}</td>
                             <td>
                                 <div>{{ $deal->toUser->display_name ?? trim(($deal->toUser->first_name ?? '') . ' ' . ($deal->toUser->last_name ?? '')) ?: '—' }}</div>
                                 <div class="text-muted small">{{ $deal->toUser->email ?? '—' }}</div>
@@ -53,7 +51,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No business deals found.</td>
+                            <td colspan="6" class="text-center text-muted">No business deals found.</td>
                         </tr>
                     @endforelse
                 </tbody>

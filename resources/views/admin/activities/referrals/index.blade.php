@@ -48,7 +48,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Referral type</label>
@@ -72,14 +72,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Members</strong>
+            <strong>Top 5 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Member</th>
+                        <th>Peer Name</th>
                         <th>Total Referrals</th>
                     </tr>
                 </thead>
@@ -108,9 +108,8 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Created By</th>
-                        <th>Related Peer</th>
+                        <th>From</th>
+                        <th>To</th>
                         <th>Type</th>
                         <th>Referral Date</th>
                         <th>Referral Of</th>
@@ -131,7 +130,6 @@
                             $mediaInfo = $mediaSummary($referral->media ?? null);
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ $referral->id }}</td>
                             <td>
                                 <div>{{ $actorName }}</div>
                                 <div class="text-muted small">{{ $referral->actor_email ?? '—' }}</div>
@@ -161,7 +159,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="13" class="text-center text-muted">No referrals found.</td>
+                            <td colspan="12" class="text-center text-muted">No referrals found.</td>
                         </tr>
                     @endforelse
                 </tbody>

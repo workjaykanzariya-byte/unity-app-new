@@ -158,12 +158,16 @@ class ActivitiesBusinessDealsController extends Controller
             ->where('activity.is_deleted', false);
 
         if ($filters['search'] !== '') {
+            $query->leftJoin('cities as actor_city', 'actor_city.id', '=', 'actor.city_id');
             $like = '%' . $filters['search'] . '%';
             $query->where(function ($q) use ($like) {
                 $q->where('actor.display_name', 'ILIKE', $like)
                     ->orWhere('actor.first_name', 'ILIKE', $like)
                     ->orWhere('actor.last_name', 'ILIKE', $like)
-                    ->orWhere('actor.email', 'ILIKE', $like);
+                    ->orWhere('actor.email', 'ILIKE', $like)
+                    ->orWhere('actor.company_name', 'ILIKE', $like)
+                    ->orWhere('actor.city', 'ILIKE', $like)
+                    ->orWhere('actor_city.name', 'ILIKE', $like);
             });
         }
 
@@ -198,7 +202,7 @@ class ActivitiesBusinessDealsController extends Controller
                 'actor.email'
             )
             ->orderByDesc(DB::raw('count(*)'))
-            ->limit(3)
+            ->limit(5)
             ->select([
                 'activity.from_user_id as actor_id',
                 'actor.display_name',

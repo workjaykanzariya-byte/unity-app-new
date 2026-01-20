@@ -48,7 +48,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">From</label>
@@ -68,14 +68,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Members</strong>
+            <strong>Top 5 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Member</th>
+                        <th>Peer Name</th>
                         <th>Total Meetings</th>
                     </tr>
                 </thead>
@@ -104,9 +104,8 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Created By</th>
-                        <th>Connected With</th>
+                        <th>From</th>
+                        <th>To</th>
                         <th>Meeting Date</th>
                         <th>Meeting Place</th>
                         <th>Remarks</th>
@@ -122,7 +121,6 @@
                             $mediaInfo = $mediaSummary($meeting->media ?? null);
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ $meeting->id }}</td>
                             <td>
                                 <div>{{ $actorName }}</div>
                                 <div class="text-muted small">{{ $meeting->actor_email ?? '—' }}</div>
@@ -147,7 +145,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No meetings found.</td>
+                            <td colspan="7" class="text-center text-muted">No meetings found.</td>
                         </tr>
                     @endforelse
                 </tbody>

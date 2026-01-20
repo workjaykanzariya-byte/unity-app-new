@@ -23,10 +23,10 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     @if ($isSuper && ! $isCircleScoped)
-                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Users</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Peers</a></li>
                     @endif
                     @if ($isCircleScoped)
-                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Users</a></li>
+                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">View Peers</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.activities.index') }}">View Activities</a></li>
                         <li><a class="dropdown-item" href="{{ route('admin.coins.index') }}">View Coins</a></li>
                     @else

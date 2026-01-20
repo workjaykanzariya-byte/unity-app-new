@@ -30,6 +30,43 @@
 
             return ['has' => true, 'count' => 1];
         };
+
+        $firstMediaId = function ($media): ?string {
+            if (! $media) {
+                return null;
+            }
+
+            $decoded = is_string($media) ? json_decode($media, true) : $media;
+            $items = is_array($decoded) ? array_values($decoded) : [$decoded];
+            $first = $items[0] ?? null;
+
+            if (is_string($first)) {
+                return $first;
+            }
+
+            if (is_array($first)) {
+                return $first['file_id'] ?? $first['fileId'] ?? $first['id'] ?? null;
+            }
+
+            if (is_object($first)) {
+                return $first->file_id ?? $first->fileId ?? $first->id ?? null;
+            }
+
+            return null;
+        };
+
+        $decodeFilter = function ($value): array {
+            if (is_array($value)) {
+                return $value;
+            }
+
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+
+            return [];
+        };
     @endphp
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -44,7 +81,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Status</label>
@@ -68,14 +105,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Members</strong>
+            <strong>Top 5 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Member</th>
+                        <th>Peer Name</th>
                         <th>Total Requirements</th>
                     </tr>
                 </thead>
@@ -104,8 +141,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Created By</th>
+                        <th>From</th>
                         <th>Subject</th>
                         <th>Description</th>
                         <th>Region</th>
@@ -120,23 +156,26 @@
                         @php
                             $actorName = $displayName($requirement->actor_display_name ?? null, $requirement->actor_first_name ?? null, $requirement->actor_last_name ?? null);
                             $mediaInfo = $mediaSummary($requirement->media ?? null);
+                            $mediaId = $firstMediaId($requirement->media ?? null);
+                            $regionFilter = $decodeFilter($requirement->region_filter ?? null);
+                            $categoryFilter = $decodeFilter($requirement->category_filter ?? null);
+                            $regionLabel = $regionFilter['region_label'] ?? $regionFilter['region_name'] ?? $regionFilter['city_name'] ?? null;
+                            $categoryLabel = $categoryFilter['category'] ?? null;
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ $requirement->id }}</td>
                             <td>
                                 <div>{{ $actorName }}</div>
                                 <div class="text-muted small">{{ $requirement->actor_email ?? '—' }}</div>
                             </td>
                             <td>{{ $requirement->subject ?? '—' }}</td>
                             <td class="text-muted">{{ $requirement->description ?? '—' }}</td>
-                            <td>{{ $requirement->region_filter ?? '—' }}</td>
-                            <td>{{ $requirement->category_filter ?? '—' }}</td>
+                            <td>{{ $regionLabel ?: '—' }}</td>
+                            <td>{{ $categoryLabel ?: '—' }}</td>
                             <td>{{ $requirement->status ?? '—' }}</td>
                             <td>
-                                @if ($mediaInfo['has'])
+                                @if ($mediaInfo['has'] && $mediaId)
                                     <span class="badge bg-success">Yes ({{ $mediaInfo['count'] }})</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#mediaViewerModal" data-media-source="media-json-{{ $requirement->id }}">View</button>
-                                    <script type="application/json" id="media-json-{{ $requirement->id }}">{{ e(json_encode(is_string($requirement->media ?? null) ? json_decode($requirement->media ?? '[]', true) : ($requirement->media ?? []))) }}</script>
+                                    <a href="{{ url('/api/v1/files/' . $mediaId) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-2">View</a>
                                 @else
                                     <span class="text-muted">No</span>
                                 @endif
@@ -145,7 +184,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No requirements found.</td>
+                            <td colspan="8" class="text-center text-muted">No requirements found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -157,86 +196,4 @@
         {{ $items->links() }}
     </div>
 
-    <div class="modal fade" id="mediaViewerModal" tabindex="-1" aria-labelledby="mediaViewerModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mediaViewerModalLabel">Media</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" data-media-container>
-                    <p class="text-muted mb-0">No media available.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.querySelectorAll('[data-media-source]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const modal = document.getElementById('mediaViewerModal');
-                const container = modal.querySelector('[data-media-container]');
-                const sourceId = button.getAttribute('data-media-source');
-                const scriptTag = document.getElementById(sourceId);
-                let items = [];
-
-                if (scriptTag) {
-                    try {
-                        items = JSON.parse(scriptTag.textContent || '[]');
-                    } catch (error) {
-                        items = [];
-                    }
-                }
-
-                container.innerHTML = '';
-
-                if (!Array.isArray(items) || items.length === 0) {
-                    container.innerHTML = '<p class="text-muted mb-0">No media available.</p>';
-                    return;
-                }
-
-                items.forEach((item, index) => {
-                    let url = null;
-
-                    if (typeof item === 'string') {
-                        url = item;
-                    } else if (item && typeof item === 'object') {
-                        url = item.url || item.id || null;
-                    }
-
-                    if (!url) {
-                        return;
-                    }
-
-                    if (!url.startsWith('http') && /^[0-9a-fA-F-]{36}$/.test(url)) {
-                        url = `/api/v1/files/${url}`;
-                    }
-
-                    const wrapper = document.createElement('div');
-                    wrapper.classList.add('border', 'rounded', 'p-2', 'mb-3');
-
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener';
-                    link.textContent = `Media ${index + 1}`;
-                    link.classList.add('d-block', 'mb-2');
-
-                    wrapper.appendChild(link);
-
-                    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(url)) {
-                        const img = document.createElement('img');
-                        img.src = url;
-                        img.alt = `Media ${index + 1}`;
-                        img.classList.add('img-thumbnail');
-                        img.style.maxWidth = '200px';
-                        img.style.maxHeight = '200px';
-                        wrapper.appendChild(img);
-                    }
-
-                    container.appendChild(wrapper);
-                });
-            });
-        });
-    </script>
 @endsection

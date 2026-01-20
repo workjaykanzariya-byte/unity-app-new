@@ -605,7 +605,11 @@ class UsersController extends Controller
                     ->orWhere('first_name', 'ILIKE', $like)
                     ->orWhere('last_name', 'ILIKE', $like)
                     ->orWhere('email', 'ILIKE', $like)
-                    ->orWhere('company_name', 'ILIKE', $like);
+                    ->orWhere('company_name', 'ILIKE', $like)
+                    ->orWhere('city', 'ILIKE', $like)
+                    ->orWhereHas('city', function ($cityQuery) use ($like) {
+                        $cityQuery->where('name', 'ILIKE', $like);
+                    });
             });
         }
 
