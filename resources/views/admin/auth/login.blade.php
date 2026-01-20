@@ -14,7 +14,6 @@
                     loading="lazy"
                 />
             </div>
-            <p class="eyebrow">Peers Global Unity</p>
         </div>
 
         @if (session('status'))
