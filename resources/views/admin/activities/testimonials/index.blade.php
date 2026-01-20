@@ -31,14 +31,28 @@
             return ['has' => true, 'count' => 1];
         };
 
-        $normalizeMedia = function ($media): array {
+        $firstMediaId = function ($media): ?string {
             if (! $media) {
-                return [];
+                return null;
             }
 
             $decoded = is_string($media) ? json_decode($media, true) : $media;
+            $items = is_array($decoded) ? array_values($decoded) : [$decoded];
+            $first = $items[0] ?? null;
 
-            return is_array($decoded) ? array_values($decoded) : [$decoded];
+            if (is_string($first)) {
+                return $first;
+            }
+
+            if (is_array($first)) {
+                return $first['file_id'] ?? $first['fileId'] ?? $first['id'] ?? null;
+            }
+
+            if (is_object($first)) {
+                return $first->file_id ?? $first->fileId ?? $first->id ?? null;
+            }
+
+            return null;
         };
     @endphp
 
@@ -123,7 +137,7 @@
                             $actorName = $displayName($testimonial->actor_display_name ?? null, $testimonial->actor_first_name ?? null, $testimonial->actor_last_name ?? null);
                             $peerName = $displayName($testimonial->peer_display_name ?? null, $testimonial->peer_first_name ?? null, $testimonial->peer_last_name ?? null);
                             $mediaInfo = $mediaSummary($testimonial->media ?? null);
-                            $mediaItems = $normalizeMedia($testimonial->media ?? null);
+                            $mediaId = $firstMediaId($testimonial->media ?? null);
                         @endphp
                         <tr>
                             <td>
@@ -136,9 +150,9 @@
                             </td>
                             <td class="text-muted">{{ $testimonial->content ?? '—' }}</td>
                             <td>
-                                @if ($mediaInfo['has'])
+                                @if ($mediaInfo['has'] && $mediaId)
                                     <span class="badge bg-success">Yes ({{ $mediaInfo['count'] }})</span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2 js-view-media" data-media='@json($mediaItems)'>View</button>
+                                    <a href="{{ url('/api/v1/files/' . $mediaId) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary ms-2">View</a>
                                 @else
                                     <span class="text-muted">No</span>
                                 @endif
@@ -159,103 +173,4 @@
         {{ $items->links() }}
     </div>
 
-    <div class="modal fade" id="mediaModal" tabindex="-1" aria-labelledby="mediaModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mediaModalLabel">Media</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="mediaModalBody">
-                    <p class="text-muted mb-0">No media available.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('click', (event) => {
-            const button = event.target.closest('.js-view-media');
-            if (!button) {
-                return;
-            }
-
-            let items = [];
-            const payload = button.getAttribute('data-media') || '[]';
-
-            try {
-                items = JSON.parse(payload);
-            } catch (error) {
-                items = [];
-            }
-
-            const modalElement = document.getElementById('mediaModal');
-            const container = document.getElementById('mediaModalBody');
-            container.innerHTML = '';
-
-            if (!Array.isArray(items) || items.length === 0) {
-                container.innerHTML = '<p class="text-muted mb-0">No media available.</p>';
-                new bootstrap.Modal(modalElement).show();
-                return;
-            }
-
-            items.forEach((item, index) => {
-                let fileId = null;
-                let type = null;
-                let thumbnailId = null;
-
-                if (typeof item === 'string') {
-                    fileId = item;
-                } else if (item && typeof item === 'object') {
-                    fileId = item.file_id || item.fileId || item.id || null;
-                    type = item.type || item.media_type || item.mime_type || null;
-                    thumbnailId = item.thumbnail_file_id || item.thumbnail_id || null;
-
-                    if (!fileId && item.url && typeof item.url === 'string') {
-                        const match = item.url.match(/[0-9a-fA-F-]{36}/);
-                        fileId = match ? match[0] : null;
-                    }
-                }
-
-                if (!fileId) {
-                    return;
-                }
-
-                const url = `/api/v1/files/${fileId}`;
-                const wrapper = document.createElement('div');
-                wrapper.classList.add('border', 'rounded', 'p-2', 'mb-3');
-
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = '_blank';
-                link.rel = 'noopener';
-                link.textContent = `Media ${index + 1}`;
-                link.classList.add('d-block', 'mb-2');
-                wrapper.appendChild(link);
-
-                const isVideo = type && type.toString().toLowerCase().includes('video');
-
-                if (isVideo) {
-                    const video = document.createElement('video');
-                    video.src = url;
-                    video.controls = true;
-                    video.classList.add('w-100', 'mb-3');
-                    if (thumbnailId) {
-                        video.poster = `/api/v1/files/${thumbnailId}`;
-                    }
-                    wrapper.appendChild(video);
-                } else {
-                    const img = document.createElement('img');
-                    img.src = url;
-                    img.alt = `Media ${index + 1}`;
-                    img.classList.add('img-fluid', 'rounded', 'mb-3');
-                    wrapper.appendChild(img);
-                }
-
-                container.appendChild(wrapper);
-            });
-
-            new bootstrap.Modal(modalElement).show();
-        });
-    </script>
 @endsection
