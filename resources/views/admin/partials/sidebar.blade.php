@@ -35,20 +35,22 @@
     $activityActive = request()->routeIs('admin.activities.*');
 @endphp
 <aside class="admin-sidebar d-flex flex-column">
-    <div class="sidebar-brand d-flex align-items-center">
-        <div class="brand-mark me-2"></div>
-        <div>
-            <div class="fw-bold">Peers Global Unity</div>
-            <small class="text-muted">Admin Panel</small>
-        </div>
+    <div class="text-center mb-2">
+        <img
+            src="/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b"
+            alt="Peers Global Unity"
+            style="max-height:68px; width:auto;"
+            class="d-block mx-auto my-3"
+            loading="lazy"
+        />
     </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
             @if ($activityMenu)
-                <li class="nav-item">
+                <li class="nav-item menu-parent {{ $activityActive ? 'open' : '' }}">
                     <a class="nav-link d-flex justify-content-between align-items-center {{ $activityActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#activitiesSubmenu" role="button" aria-expanded="{{ $activityActive ? 'true' : 'false' }}" aria-controls="activitiesSubmenu">
                         <span><i class="bi bi-activity me-2"></i>Activities</span>
-                        <i class="bi {{ $activityActive ? 'bi-chevron-down' : 'bi-chevron-right' }}"></i>
+                        <i class="bi bi-chevron-right menu-arrow"></i>
                     </a>
                     <div class="collapse {{ $activityActive ? 'show' : '' }}" id="activitiesSubmenu">
                         <ul class="nav flex-column ms-3">
@@ -85,3 +87,31 @@
         </form>
     </div>
 </aside>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const submenu = document.getElementById('activitiesSubmenu');
+            if (!submenu) {
+                return;
+            }
+
+            const parentItem = submenu.closest('.menu-parent');
+            if (!parentItem) {
+                return;
+            }
+
+            if (submenu.classList.contains('show')) {
+                parentItem.classList.add('open');
+            }
+
+            submenu.addEventListener('show.bs.collapse', () => {
+                parentItem.classList.add('open');
+            });
+
+            submenu.addEventListener('hide.bs.collapse', () => {
+                parentItem.classList.remove('open');
+            });
+        });
+    </script>
+@endpush

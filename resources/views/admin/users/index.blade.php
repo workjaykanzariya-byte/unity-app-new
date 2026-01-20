@@ -3,13 +3,6 @@
 @section('title', 'Users')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h5 class="mb-0">Users</h5>
-        <small class="text-muted">Manage platform users</small>
-    </div>
-</div>
-
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif

@@ -6,9 +6,15 @@
 <div class="page-container auth-wrapper">
     <div class="card">
         <div class="card-header">
-            <p class="eyebrow">Peers Global Unity</p>
-            <h1>Admin Access</h1>
-            <p>Use your admin email to request a 4-digit OTP for secure access.</p>
+            <div class="text-center mb-3">
+                <img
+                    src="/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b"
+                    alt="Peers Global Unity"
+                    style="max-height:100px; width:auto;"
+                    class="d-block mx-auto mb-4"
+                    loading="lazy"
+                />
+            </div>
         </div>
 
         @if (session('status'))
