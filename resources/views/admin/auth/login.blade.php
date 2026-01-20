@@ -15,8 +15,6 @@
                 />
             </div>
             <p class="eyebrow">Peers Global Unity</p>
-            <h1>Admin Access</h1>
-            <p>Use your admin email to request a 4-digit OTP for secure access.</p>
         </div>
 
         @if (session('status'))

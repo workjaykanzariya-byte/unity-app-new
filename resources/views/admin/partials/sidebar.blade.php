@@ -45,10 +45,6 @@
     </div>
     <div class="sidebar-brand d-flex align-items-center">
         <div class="brand-mark me-2"></div>
-        <div>
-            <div class="fw-bold">Peers Global Unity</div>
-            <small class="text-muted">Admin Panel</small>
-        </div>
     </div>
     <nav class="flex-grow-1">
         <ul class="nav flex-column">
