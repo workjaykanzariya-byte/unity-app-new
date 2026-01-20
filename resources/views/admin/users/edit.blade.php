@@ -1,14 +1,14 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Edit User')
+@section('title', 'Edit Peer')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h5 class="mb-0">Edit User</h5>
+        <h5 class="mb-0">Edit Peer</h5>
         <small class="text-muted">ID: {{ $user->id }}</small>
     </div>
-    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">Back to Users</a>
+    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary btn-sm">Back to Peers</a>
 </div>
 
 @if (session('status'))

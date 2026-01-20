@@ -44,7 +44,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">From</label>
@@ -64,14 +64,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Members</strong>
+            <strong>Top 3 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Member</th>
+                        <th>Peers</th>
                         <th>Total Testimonials</th>
                     </tr>
                 </thead>
@@ -100,7 +100,6 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Created By</th>
                         <th>Related Peer</th>
                         <th>Content</th>
@@ -116,7 +115,6 @@
                             $mediaInfo = $mediaSummary($testimonial->media ?? null);
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ $testimonial->id }}</td>
                             <td>
                                 <div>{{ $actorName }}</div>
                                 <div class="text-muted small">{{ $testimonial->actor_email ?? '—' }}</div>
@@ -139,7 +137,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted">No testimonials found.</td>
+                            <td colspan="5" class="text-center text-muted">No testimonials found.</td>
                         </tr>
                     @endforelse
                 </tbody>

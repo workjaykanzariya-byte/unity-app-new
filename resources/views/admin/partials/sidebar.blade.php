@@ -11,12 +11,12 @@
 
     $navItems = $isCircleScoped
         ? [
-            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
         : [
-            ['icon' => 'bi-people', 'label' => 'Users', 'route' => 'admin.users.index'],
+            ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),

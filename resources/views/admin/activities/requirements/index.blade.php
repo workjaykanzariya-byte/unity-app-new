@@ -30,6 +30,19 @@
 
             return ['has' => true, 'count' => 1];
         };
+
+        $decodeFilter = function ($value): array {
+            if (is_array($value)) {
+                return $value;
+            }
+
+            if (is_string($value)) {
+                $decoded = json_decode($value, true);
+                return is_array($decoded) ? $decoded : [];
+            }
+
+            return [];
+        };
     @endphp
 
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -44,7 +57,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name or email">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Status</label>
@@ -68,14 +81,14 @@
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
-            <strong>Top 3 Members</strong>
+            <strong>Top 3 Peers</strong>
         </div>
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Rank</th>
-                        <th>Member</th>
+                        <th>Peers</th>
                         <th>Total Requirements</th>
                     </tr>
                 </thead>
@@ -104,7 +117,6 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Created By</th>
                         <th>Subject</th>
                         <th>Description</th>
@@ -120,17 +132,20 @@
                         @php
                             $actorName = $displayName($requirement->actor_display_name ?? null, $requirement->actor_first_name ?? null, $requirement->actor_last_name ?? null);
                             $mediaInfo = $mediaSummary($requirement->media ?? null);
+                            $regionFilter = $decodeFilter($requirement->region_filter ?? null);
+                            $categoryFilter = $decodeFilter($requirement->category_filter ?? null);
+                            $regionLabel = $regionFilter['region_label'] ?? $regionFilter['region_name'] ?? $regionFilter['city_name'] ?? null;
+                            $categoryLabel = $categoryFilter['category'] ?? null;
                         @endphp
                         <tr>
-                            <td class="font-monospace">{{ $requirement->id }}</td>
                             <td>
                                 <div>{{ $actorName }}</div>
                                 <div class="text-muted small">{{ $requirement->actor_email ?? '—' }}</div>
                             </td>
                             <td>{{ $requirement->subject ?? '—' }}</td>
                             <td class="text-muted">{{ $requirement->description ?? '—' }}</td>
-                            <td>{{ $requirement->region_filter ?? '—' }}</td>
-                            <td>{{ $requirement->category_filter ?? '—' }}</td>
+                            <td>{{ $regionLabel ?: '—' }}</td>
+                            <td>{{ $categoryLabel ?: '—' }}</td>
                             <td>{{ $requirement->status ?? '—' }}</td>
                             <td>
                                 @if ($mediaInfo['has'])
@@ -145,7 +160,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No requirements found.</td>
+                            <td colspan="8" class="text-center text-muted">No requirements found.</td>
                         </tr>
                     @endforelse
                 </tbody>

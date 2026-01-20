@@ -28,8 +28,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Referred Member</th>
+                        <th>Referred Peer</th>
                         <th>Referral Date</th>
                         <th>Referral Of</th>
                         <th>Type</th>
@@ -42,7 +41,6 @@
                 <tbody>
                     @forelse ($items as $referral)
                         <tr>
-                            <td class="font-monospace">{{ substr($referral->id, 0, 8) }}</td>
                             <td>
                                 <div>{{ $referral->toUser->display_name ?? trim(($referral->toUser->first_name ?? '') . ' ' . ($referral->toUser->last_name ?? '')) ?: '—' }}</div>
                                 <div class="text-muted small">{{ $referral->toUser->email ?? '—' }}</div>
@@ -61,7 +59,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No referrals found.</td>
+                            <td colspan="8" class="text-center text-muted">No referrals found.</td>
                         </tr>
                     @endforelse
                 </tbody>

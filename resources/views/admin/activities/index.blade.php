@@ -28,7 +28,7 @@
                         <th style="width: 40px;">
                             <input type="checkbox" class="form-check-input" id="select-all-members">
                         </th>
-                        <th>User</th>
+                        <th>Peers</th>
                         <th>Testimonials</th>
                         <th>Referrals</th>
                         <th>Business Deals</th>
@@ -44,7 +44,7 @@
                                     name="q"
                                     form="activitiesFiltersForm"
                                     class="form-control form-control-sm"
-                                    placeholder="Name or email"
+                                    placeholder="Name, email, company, or city"
                                     value="{{ request('q', $filters['search']) }}"
                                     oninput="this.form.search.value = this.value"
                                 >
@@ -92,7 +92,7 @@
                                 <input type="checkbox" class="form-check-input member-checkbox" value="{{ $member->id }}">
                             </td>
                             <td>
-                                <div class="fw-semibold">{{ $memberName ?: 'Unnamed Member' }}</div>
+                                <div class="fw-semibold">{{ $memberName ?: 'Unnamed Peer' }}</div>
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
                             <td>
@@ -113,7 +113,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No members found.</td>
+                            <td colspan="7" class="text-center text-muted">No peers found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -145,11 +145,11 @@
                             <label class="form-label">Scope</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="scope" id="scopeSelected" value="selected" checked>
-                                <label class="form-check-label" for="scopeSelected">Selected members only</label>
+                                <label class="form-check-label" for="scopeSelected">Selected peers only</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="scope" id="scopeAll" value="all">
-                                <label class="form-check-label" for="scopeAll">All members (current filters)</label>
+                                <label class="form-check-label" for="scopeAll">All peers (current filters)</label>
                             </div>
                         </div>
                         <input type="hidden" name="q" value="{{ request('q', $filters['search']) }}">

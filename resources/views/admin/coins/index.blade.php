@@ -23,7 +23,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>User</th>
+                        <th>Peers</th>
                         <th>Total Coins</th>
                         <th>Testimonials Coins</th>
                         <th>Referrals Coins</th>
@@ -79,7 +79,7 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold">{{ $memberName ?: 'Unnamed Member' }}</div>
+                                <div class="fw-semibold">{{ $memberName ?: 'Unnamed Peer' }}</div>
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
                             <td>
@@ -103,7 +103,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No members found.</td>
+                            <td colspan="7" class="text-center text-muted">No peers found.</td>
                         </tr>
                     @endforelse
                 </tbody>
