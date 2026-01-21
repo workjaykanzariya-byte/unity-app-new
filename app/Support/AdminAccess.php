@@ -95,6 +95,15 @@ class AdminAccess
         return (bool) array_intersect(self::SUPER_ROLE_KEYS, $roleKeys);
     }
 
+    public static function isGlobalAdmin(?AdminUser $admin): bool
+    {
+        if (! $admin) {
+            return false;
+        }
+
+        return in_array('global_admin', self::adminRoleKeys($admin), true);
+    }
+
     public static function isCircleScoped(?AdminUser $admin): bool
     {
         if (! $admin || self::isSuper($admin)) {
