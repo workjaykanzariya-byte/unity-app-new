@@ -16,7 +16,6 @@ class StoreMembershipPlanRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:200'],
-            'slug' => ['required', 'string', 'max:200', 'unique:membership_plans,slug'],
             'price' => ['required', 'numeric', 'min:0'],
             'gst_percent' => ['required', 'numeric', 'min:0'],
             'duration_days' => ['required', 'integer', 'min:0'],

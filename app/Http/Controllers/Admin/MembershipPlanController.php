@@ -9,6 +9,7 @@ use App\Models\MembershipPlan;
 use App\Support\AdminAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class MembershipPlanController extends Controller
@@ -37,10 +38,12 @@ class MembershipPlanController extends Controller
 
     public function store(StoreMembershipPlanRequest $request): RedirectResponse
     {
-        $plan = MembershipPlan::query()->create($request->validated());
+        $payload = $request->validated();
+        $payload['slug'] = $this->generateUniqueSlug($payload['name']);
+        $plan = MembershipPlan::query()->create($payload);
 
         return redirect()
-            ->route('admin.unity-peers-plans.edit', $plan)
+            ->route('admin.unity-peers-plans.edit', $plan->id)
             ->with('success', 'Membership plan created successfully.');
     }
 
@@ -55,7 +58,9 @@ class MembershipPlanController extends Controller
 
     public function update(UpdateMembershipPlanRequest $request, MembershipPlan $plan): RedirectResponse
     {
-        $plan->update($request->validated());
+        $payload = $request->validated();
+        $payload['slug'] = $this->generateUniqueSlug($payload['name'], $plan->id);
+        $plan->update($payload);
 
         return redirect()
             ->route('admin.unity-peers-plans.index')
@@ -67,5 +72,22 @@ class MembershipPlanController extends Controller
         if (! AdminAccess::isGlobalAdmin($request->user('admin'))) {
             abort(403);
         }
+    }
+
+    private function generateUniqueSlug(string $name, ?string $ignoreId = null): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (MembershipPlan::query()
+            ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+            ->where('slug', $slug)
+            ->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
     }
 }

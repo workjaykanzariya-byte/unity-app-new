@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Unity Peers Plans')
+@section('title', 'Membership Plans')
 
 @section('content')
     @if(session('success'))
@@ -9,7 +9,7 @@
 
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Unity Peers Plans</h5>
+            <h5 class="mb-0">Membership Plans</h5>
             <div class="d-flex gap-2 align-items-center">
                 @if (! $canEdit)
                     <span class="badge bg-secondary">View only</span>

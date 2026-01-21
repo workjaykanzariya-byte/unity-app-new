@@ -2,10 +2,8 @@
 
 namespace App\Http\Requests\Admin\MembershipPlans;
 
-use App\Models\MembershipPlan;
 use App\Support\AdminAccess;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateMembershipPlanRequest extends FormRequest
 {
@@ -16,14 +14,8 @@ class UpdateMembershipPlanRequest extends FormRequest
 
     public function rules(): array
     {
-        $planId = $this->route('plan');
-        if ($planId instanceof MembershipPlan) {
-            $planId = $planId->id;
-        }
-
         return [
             'name' => ['required', 'string', 'max:200'],
-            'slug' => ['required', 'string', 'max:200', Rule::unique('membership_plans', 'slug')->ignore($planId)],
             'price' => ['required', 'numeric', 'min:0'],
             'gst_percent' => ['required', 'numeric', 'min:0'],
             'duration_days' => ['required', 'integer', 'min:0'],

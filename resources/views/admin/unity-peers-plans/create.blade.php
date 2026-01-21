@@ -1,10 +1,10 @@
 @extends('admin.layouts.app')
 
-@section('title', 'Create Unity Peers Plan')
+@section('title', 'Create Membership Plan')
 
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Create Unity Peers Plan</h4>
+        <h4 class="mb-0">Create Membership Plan</h4>
         <a href="{{ route('admin.unity-peers-plans.index') }}" class="btn btn-sm btn-outline-secondary">Back</a>
     </div>
 
@@ -28,11 +28,6 @@
                         <label class="form-label">Name</label>
                         <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Slug</label>
-                        <input type="text" name="slug" class="form-control" value="{{ old('slug') }}" required>
-                    </div>
-
                     <div class="col-md-4">
                         <label class="form-label">Price (Base)</label>
                         <input type="number" step="0.01" min="0" name="price" class="form-control" value="{{ old('price', 0) }}" required>
