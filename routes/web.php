@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\ActivitiesRequirementsController;
 use App\Http\Controllers\Admin\ActivitiesTestimonialsController;
 use App\Http\Controllers\Admin\CoinsController;
 use App\Http\Controllers\Admin\EventGalleryController;
-use App\Http\Controllers\Admin\MembershipPlansController;
+use App\Http\Controllers\Admin\MembershipPlanController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -60,9 +60,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/coins/add', [CoinsController::class, 'store'])->name('coins.store');
         Route::get('/coins/{member}/ledger', [CoinsController::class, 'ledger'])->name('coins.ledger');
         Route::get('/coins/{member}/ledger/{type}', [CoinsController::class, 'ledgerByType'])->name('coins.ledger.type');
-        Route::get('/memberships/plans', [MembershipPlansController::class, 'index'])->name('memberships.plans.index');
-        Route::get('/memberships/plans/{plan}/edit', [MembershipPlansController::class, 'edit'])->name('memberships.plans.edit');
-        Route::put('/memberships/plans/{plan}', [MembershipPlansController::class, 'update'])->name('memberships.plans.update');
+        Route::get('/unity-peers-plans', [MembershipPlanController::class, 'index'])->name('unity-peers-plans.index');
+        Route::get('/unity-peers-plans/create', [MembershipPlanController::class, 'create'])->name('unity-peers-plans.create');
+        Route::post('/unity-peers-plans', [MembershipPlanController::class, 'store'])->name('unity-peers-plans.store');
+        Route::get('/unity-peers-plans/{plan}/edit', [MembershipPlanController::class, 'edit'])->name('unity-peers-plans.edit');
+        Route::put('/unity-peers-plans/{plan}', [MembershipPlanController::class, 'update'])->name('unity-peers-plans.update');
         Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
         Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');

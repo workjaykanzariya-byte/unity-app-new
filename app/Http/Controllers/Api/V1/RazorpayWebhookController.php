@@ -11,8 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Razorpay\Api\Errors\SignatureVerificationError;
-use Razorpay\Api\Utility;
 
 class RazorpayWebhookController extends Controller
 {
@@ -22,30 +20,29 @@ class RazorpayWebhookController extends Controller
 
     public function handle(Request $request): JsonResponse
     {
-        $signature = $request->header('X-Razorpay-Signature');
-        $payload = $request->getContent();
+        $signature = (string) $request->header('X-Razorpay-Signature');
+        $payload = (string) $request->getContent();
+        $secret = (string) config('razorpay.webhook_secret');
 
-        if (! $signature) {
-            Log::warning('Razorpay webhook signature missing');
+        if ($signature === '' || $secret === '') {
+            Log::warning('Razorpay webhook signature or secret missing');
 
-            return response()->json(['message' => 'Signature missing.'], 400);
+            return response()->json(['ok' => true], 403);
         }
 
-        try {
-            Utility::verifyWebhookSignature($payload, $signature, config('razorpay.webhook_secret'));
-        } catch (SignatureVerificationError $exception) {
-            Log::warning('Razorpay webhook signature invalid', [
-                'error' => $exception->getMessage(),
-            ]);
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
 
-            return response()->json(['message' => 'Invalid signature.'], 400);
+        if (! hash_equals($expectedSignature, $signature)) {
+            Log::warning('Razorpay webhook signature mismatch');
+
+            return response()->json(['ok' => true], 403);
         }
 
         $data = json_decode($payload, true);
         if (! is_array($data)) {
             Log::warning('Razorpay webhook payload invalid');
 
-            return response()->json(['message' => 'Invalid payload.'], 400);
+            return response()->json(['ok' => true]);
         }
 
         $event = $data['event'] ?? '';
@@ -64,16 +61,19 @@ class RazorpayWebhookController extends Controller
     private function handlePaymentCaptured(array $payload): void
     {
         $paymentEntity = $payload['payload']['payment']['entity'] ?? [];
-        $orderEntity = $payload['payload']['order']['entity'] ?? [];
         $orderId = $paymentEntity['order_id'] ?? null;
-        $receipt = $orderEntity['receipt'] ?? ($paymentEntity['notes']['receipt'] ?? null);
 
-        $payment = $this->findPaymentFromWebhook($orderId, $receipt);
+        if (! $orderId) {
+            Log::warning('Razorpay webhook missing order id');
+
+            return;
+        }
+
+        $payment = Payment::query()->where('razorpay_order_id', $orderId)->first();
 
         if (! $payment) {
             Log::warning('Payment not found for Razorpay capture webhook', [
                 'order_id' => $orderId,
-                'receipt' => $receipt,
             ]);
 
             return;
@@ -111,40 +111,19 @@ class RazorpayWebhookController extends Controller
     private function handlePaymentFailed(array $payload): void
     {
         $paymentEntity = $payload['payload']['payment']['entity'] ?? [];
-        $orderEntity = $payload['payload']['order']['entity'] ?? [];
         $orderId = $paymentEntity['order_id'] ?? null;
-        $receipt = $orderEntity['receipt'] ?? ($paymentEntity['notes']['receipt'] ?? null);
 
-        $payment = $this->findPaymentFromWebhook($orderId, $receipt);
-
-        if (! $payment) {
-            Log::warning('Payment not found for Razorpay failed webhook', [
-                'order_id' => $orderId,
-                'receipt' => $receipt,
-            ]);
+        if (! $orderId) {
+            Log::warning('Razorpay webhook missing order id for failed payment');
 
             return;
         }
 
-        Payment::query()->where('id', $payment->id)->update([
-            'razorpay_payment_id' => $paymentEntity['id'] ?? null,
-            'status' => Payment::STATUS_FAILED,
-        ]);
-    }
-
-    private function findPaymentFromWebhook(?string $orderId, ?string $receipt): ?Payment
-    {
-        if ($orderId) {
-            $payment = Payment::query()->where('razorpay_order_id', $orderId)->first();
-            if ($payment) {
-                return $payment;
-            }
-        }
-
-        if ($receipt) {
-            return Payment::query()->where('id', $receipt)->first();
-        }
-
-        return null;
+        Payment::query()
+            ->where('razorpay_order_id', $orderId)
+            ->update([
+                'razorpay_payment_id' => $paymentEntity['id'] ?? null,
+                'status' => Payment::STATUS_FAILED,
+            ]);
     }
 }
