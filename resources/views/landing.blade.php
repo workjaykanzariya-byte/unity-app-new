@@ -14,17 +14,10 @@
             --text-primary: #f5f7ff;
             --text-secondary: #c6c9e5;
             --accent: #6be4ff;
-            --accent-strong: #4cc4ff;
-            --button-primary: #4cc4ff;
-            --button-secondary: rgba(255, 255, 255, 0.12);
             --shadow: 0 24px 60px rgba(4, 8, 26, 0.45);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -33,14 +26,9 @@
             min-height: 100vh;
         }
 
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
+        a { color: inherit; text-decoration: none; }
 
-        .page {
-            padding: 48px 20px 40px;
-        }
+        .page { padding: 48px 20px 40px; }
 
         .hero-card {
             max-width: 1100px;
@@ -112,6 +100,7 @@
             border: 1px solid rgba(255, 255, 255, 0.35);
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            min-width: 0;
         }
 
         .store-button .store-icon {
@@ -119,6 +108,7 @@
             height: 34px;
             display: grid;
             place-items: center;
+            flex: 0 0 auto;
         }
 
         .store-button .store-text {
@@ -126,6 +116,7 @@
             flex-direction: column;
             gap: 4px;
             color: #ffffff;
+            min-width: 0;
         }
 
         .store-button .store-label {
@@ -133,11 +124,15 @@
             letter-spacing: 0.12em;
             text-transform: uppercase;
             color: rgba(255, 255, 255, 0.8);
+            white-space: nowrap;
         }
 
         .store-button .store-name {
             font-size: 1.2rem;
             font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .store-button:hover,
@@ -146,10 +141,7 @@
             box-shadow: 0 16px 28px rgba(0, 0, 0, 0.45);
         }
 
-        .phone-wrap {
-            display: flex;
-            justify-content: center;
-        }
+        .phone-wrap { display: flex; justify-content: center; }
 
         .phone {
             width: min(360px, 100%);
@@ -219,21 +211,15 @@
             overflow: hidden;
         }
 
-        .app-icon svg {
-            width: 62px;
-            height: 62px;
+        .app-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
-        .app-title {
-            font-size: 1.05rem;
-            font-weight: 600;
-        }
-
-        .app-subtitle {
-            font-size: 0.85rem;
-            color: rgba(198, 201, 229, 0.8);
-        }
-
+        .app-title { font-size: 1.05rem; font-weight: 600; }
+        .app-subtitle { font-size: 0.85rem; color: rgba(198, 201, 229, 0.8); }
 
         .feed-card {
             background: rgba(255, 255, 255, 0.06);
@@ -250,9 +236,7 @@
             background: rgba(255, 255, 255, 0.16);
         }
 
-        .feed-line.short {
-            width: 60%;
-        }
+        .feed-line.short { width: 60%; }
 
         .install-pill {
             margin-top: auto;
@@ -277,55 +261,44 @@
         }
 
         @media (min-width: 900px) {
-            .phone {
-                animation: float 6s ease-in-out infinite;
-            }
+            .phone { animation: float 6s ease-in-out infinite; }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .phone {
-                animation: none;
-            }
-
-            .store-button {
-                transition: none;
-            }
+            .phone { animation: none; }
+            .store-button { transition: none; }
         }
 
         @media (max-width: 900px) {
-            .hero-card {
-                padding: 28px 22px;
-            }
+            .hero-card { padding: 28px 22px; }
+            .hero-grid { grid-template-columns: 1fr; }
+            .phone-wrap { order: 2; }
+            .page { padding: 24px 18px 32px; }
 
-            .hero-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .phone-wrap {
-                order: 2;
-            }
-
-            .page {
-                padding: 24px 18px 32px;
-            }
-
+            /* mobile: keep both buttons in one line */
             .cta-buttons {
-                flex-direction: column;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                gap: 12px;
             }
-
             .store-button {
-                width: 100%;
+                flex: 1 1 0;
+                padding: 12px 14px;
+                border-radius: 14px;
             }
+            .store-button .store-icon { width: 28px; height: 28px; }
+            .store-button .store-label { font-size: 0.62rem; }
+            .store-button .store-name { font-size: 1.02rem; }
+        }
+
+        @media (max-width: 420px) {
+            .cta-buttons { flex-wrap: wrap; }
+            .store-button { flex: 1 1 100%; }
         }
 
         @keyframes float {
-            0%,
-            100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
     </style>
 </head>
@@ -340,8 +313,11 @@
                     <p class="description">
                         Hi! I’m Peers Global Unity. I’m now available on the App Store and Google Play. Download me to access your circles, referrals, events, and connections — all in one trusted platform.
                     </p>
+
                     <div class="cta-buttons">
-                        <a class="store-button primary" href="https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
+                        <a class="store-button primary"
+                           href="https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share"
+                           target="_blank" rel="noopener noreferrer">
                             <span class="store-icon" aria-hidden="true">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M3.7 2.6C2.9 2 1.8 2.6 1.8 3.6v16.8c0 1 1.1 1.6 1.9 1L13.6 12 3.7 2.6z" fill="#00d2ff"/>
@@ -354,7 +330,10 @@
                                 <span class="store-name">Google Play</span>
                             </span>
                         </a>
-                        <a class="store-button secondary" href="https://apps.apple.com/in/app/peers-global-unity/id6739198477" target="_blank" rel="noopener noreferrer">
+
+                        <a class="store-button secondary"
+                           href="https://apps.apple.com/in/app/peers-global-unity/id6739198477"
+                           target="_blank" rel="noopener noreferrer">
                             <span class="store-icon" aria-hidden="true">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M15.9 5.7c-1 .8-1.7 1.9-1.6 3.1 1.1.1 2.2-.6 3-1.5.7-.9 1.2-2.1 1.1-3.4-1.2.1-2.4.8-3.5 1.8z" fill="#ffffff"/>
@@ -368,32 +347,27 @@
                         </a>
                     </div>
                 </div>
+
                 <div class="phone-wrap">
                     <div class="phone" aria-hidden="true">
                         <div class="phone-notch"></div>
                         <div class="phone-screen">
                             <div class="app-header">
                                 <div class="app-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 96 96" fill="none" aria-hidden="true">
-                                        <rect x="6" y="6" width="84" height="84" rx="20" fill="#ffffff"/>
-                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3" fill="none"/>
-                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.5" fill="none"/>
-                                        <circle cx="48" cy="30" r="4" fill="#e53935"/>
-                                        <circle cx="24" cy="44.5" r="4" fill="#e53935"/>
-                                        <circle cx="72" cy="44.5" r="4" fill="#e53935"/>
-                                        <circle cx="48" cy="58" r="7" stroke="#1f6ddc" stroke-width="2.5"/>
-                                        <circle cx="32" cy="69" r="4" fill="#e53935"/>
-                                        <circle cx="64" cy="69" r="4" fill="#e53935"/>
-                                        <text x="45" y="80" text-anchor="end" font-size="12.5" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
-                                        <text x="48" y="80" text-anchor="start" font-size="12.5" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
-                                        <text x="48" y="90" text-anchor="middle" font-size="6.5" font-weight="600" fill="#1f6ddc" font-family="Arial, sans-serif">Community of Collaboration</text>
-                                    </svg>
+                                    <!-- ✅ Option B: Serve logo by file route -->
+                                    <img
+                                        src="{{ url('/api/v1/files/019be538-1251-705b-b26e-5460ee4ef526') }}"
+                                        alt="Peers Global Unity"
+                                        loading="lazy"
+                                        decoding="async"
+                                    >
                                 </div>
                                 <div>
                                     <div class="app-title">Peers Global Unity</div>
                                     <div class="app-subtitle">Vyapaar Jagat</div>
                                 </div>
                             </div>
+
                             <div class="feed-card">
                                 <div class="feed-line"></div>
                                 <div class="feed-line short"></div>
@@ -406,12 +380,15 @@
                                 <div class="feed-line"></div>
                                 <div class="feed-line short"></div>
                             </div>
+
                             <div class="install-pill">Install</div>
                         </div>
                     </div>
                 </div>
+
             </div>
         </section>
+
         <footer>
             <div>© 2026 Peers Global Unity</div>
             <div>You are viewing the official download page.</div>
