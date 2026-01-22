@@ -17,7 +17,7 @@ use App\Http\Controllers\Admin\CoinsController;
 use App\Http\Controllers\Admin\EventGalleryController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('landing');
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
