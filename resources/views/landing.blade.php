@@ -48,11 +48,10 @@
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 28px;
-            padding: 32px 28px;
+            padding: 36px 28px;
             box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 28px;
+            display: grid;
+            gap: 32px;
             position: relative;
             overflow: hidden;
         }
@@ -75,14 +74,24 @@
 
         .eyebrow {
             text-transform: uppercase;
-            letter-spacing: 0.3em;
+            letter-spacing: 0.25em;
             font-size: 0.7rem;
-            color: var(--text-muted);
+            color: #93c5fd;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(147, 197, 253, 0.35);
+            padding: 8px 14px;
+            border-radius: 999px;
+            width: fit-content;
         }
 
         h1 {
             margin: 0;
-            font-size: clamp(2rem, 4vw, 3.2rem);
+            font-size: clamp(2.2rem, 5vw, 3.6rem);
+            line-height: 1.08;
+        }
+
+        .hero-highlight {
+            color: #7dd3fc;
         }
 
         .subtitle {
@@ -102,7 +111,7 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .cta-row {
@@ -111,50 +120,160 @@
             gap: 14px;
         }
 
-        .cta-button {
+        .store-button {
             appearance: none;
-            border: 1px solid transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 14px;
-            padding: 16px 20px;
-            font-size: 1rem;
-            font-weight: 600;
+            padding: 14px 18px;
             text-decoration: none;
             color: #fff;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.85);
             box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
-        .cta-button:focus-visible {
+        .store-button:focus-visible {
             outline: 3px solid rgba(34, 211, 238, 0.6);
             outline-offset: 2px;
         }
 
-        .cta-button.primary {
-            background: linear-gradient(120deg, var(--accent), #6366f1);
+        .store-button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.35);
         }
 
-        .cta-button.secondary {
-            background: linear-gradient(120deg, var(--success), #22c55e);
+        .store-badge {
+            display: grid;
+            gap: 2px;
         }
 
-        .cta-button.ghost {
-            background: transparent;
-            border-color: rgba(148, 163, 184, 0.4);
+        .store-eyebrow {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .store-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .store-icon {
+            width: 30px;
+            height: 30px;
+        }
+
+        .cta-button {
+            appearance: none;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
             color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: transparent;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
         .cta-button:hover {
             transform: translateY(-2px);
+            border-color: rgba(148, 163, 184, 0.8);
         }
 
         .cta-note {
             margin: 8px 0 0;
             font-size: 0.95rem;
             color: var(--text-muted);
+        }
+
+        .hero-visual {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .phone-mock {
+            width: min(300px, 75vw);
+            aspect-ratio: 9 / 18.5;
+            border-radius: 36px;
+            border: 8px solid #1e293b;
+            background: #f8fafc;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.5);
+            position: relative;
+            display: grid;
+            padding: 20px;
+            gap: 12px;
+        }
+
+        .phone-notch {
+            width: 55%;
+            height: 16px;
+            background: #0f172a;
+            border-radius: 0 0 18px 18px;
+            margin: 0 auto 10px;
+        }
+
+        .screen-card {
+            background: #eff6ff;
+            border-radius: 18px;
+            padding: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .screen-pill {
+            height: 8px;
+            background: #93c5fd;
+            border-radius: 999px;
+            width: 70%;
+        }
+
+        .screen-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .screen-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #dbeafe;
+        }
+
+        .screen-lines {
+            flex: 1;
+            display: grid;
+            gap: 6px;
+        }
+
+        .screen-line {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 999px;
+        }
+
+        .floating-pill {
+            position: absolute;
+            bottom: -14px;
+            right: 16px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #e2e8f0;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(148, 163, 184, 0.2);
         }
 
         .features {
@@ -208,6 +327,8 @@
             }
 
             .hero-card {
+                grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+                align-items: center;
                 padding: 48px 52px;
             }
 
@@ -215,7 +336,7 @@
                 flex-direction: row;
             }
 
-            .cta-button {
+            .store-button {
                 flex: 1;
             }
 
@@ -235,8 +356,8 @@
     <main class="page">
         <section class="hero-card">
             <div class="hero-content">
-                <span class="eyebrow">Download the app</span>
-                <h1>Peers Global Unity</h1>
+                <span class="eyebrow">Direct access from PeersGlobal</span>
+                <h1>I’m officially <span class="hero-highlight">Live &amp; Ready.</span></h1>
                 <p class="subtitle">Your trusted entrepreneur network — connect, collaborate, and grow.</p>
                 <p class="message">
                     Hi! I’m Peers Global Unity. I’m now available on the App Store and Google Play.
@@ -244,13 +365,63 @@
                 </p>
                 <div class="cta-group">
                     <div class="cta-row">
-                        <a class="cta-button primary" href="{{ $iosUrl }}" rel="noopener">Download on the App Store</a>
-                        <a class="cta-button secondary" href="{{ $androidUrl }}" rel="noopener">Get it on Google Play</a>
+                        <a class="store-button" href="{{ $androidUrl }}" rel="noopener">
+                            <svg class="store-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="#34A853" d="M3.8 2.6l10.2 9.4-10.2 9.4c-.5-.3-.8-.9-.8-1.5V4.1c0-.6.3-1.1.8-1.5z"/>
+                                <path fill="#4285F4" d="M14 12l3.2 2.9-4 2.2-4.5-4.1 4.5-4.1 4 2.2L14 12z"/>
+                                <path fill="#FBBC04" d="M3.8 2.6l12.2 7.1-3.3 3-8.9-8.2z"/>
+                                <path fill="#EA4335" d="M3.8 21.4l8.9-8.2 3.3 3-12.2 7.1z"/>
+                            </svg>
+                            <span class="store-badge">
+                                <span class="store-eyebrow">Get it on</span>
+                                <span class="store-title">Google Play</span>
+                            </span>
+                        </a>
+                        <a class="store-button" href="{{ $iosUrl }}" rel="noopener">
+                            <svg class="store-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="currentColor" d="M16.6 13.2c0 2.3 2.1 3.1 2.2 3.1-.1.2-.3.6-.6 1.1-.4.6-.9 1.3-1.6 1.3-.7 0-1-.4-1.8-.4-.8 0-1.1.4-1.9.4-.7 0-1.2-.7-1.6-1.3-.9-1.3-1.6-3.7-.7-5.3.5-.8 1.4-1.4 2.4-1.4.7 0 1.4.4 1.8.4.4 0 1.2-.5 2.1-.4.4 0 1.6.1 2.4 1.2-.1.1-1.5.9-1.5 2.6z"/>
+                                <path fill="currentColor" d="M14.8 7.2c.3-.4.5-1.1.4-1.7-.5 0-1.1.3-1.5.7-.3.3-.6 1-.5 1.6.5 0 1.1-.3 1.6-.7z"/>
+                            </svg>
+                            <span class="store-badge">
+                                <span class="store-eyebrow">Download on the</span>
+                                <span class="store-title">App Store</span>
+                            </span>
+                        </a>
                     </div>
                     @if ($deepLinkUrl)
                         <p class="cta-note">Already installed? Open the app.</p>
-                        <a class="cta-button ghost" href="{{ $deepLinkUrl }}" rel="noopener">Open App</a>
+                        <a class="cta-button" href="{{ $deepLinkUrl }}" rel="noopener">Open App</a>
                     @endif
+                </div>
+            </div>
+            <div class="hero-visual" aria-hidden="true">
+                <div class="phone-mock">
+                    <div class="phone-notch"></div>
+                    <div class="screen-card">
+                        <div class="screen-row">
+                            <div class="screen-avatar"></div>
+                            <div class="screen-lines">
+                                <div class="screen-line" style="width: 60%;"></div>
+                                <div class="screen-line" style="width: 80%;"></div>
+                            </div>
+                        </div>
+                        <div class="screen-pill"></div>
+                    </div>
+                    <div class="screen-row">
+                        <div class="screen-avatar"></div>
+                        <div class="screen-lines">
+                            <div class="screen-line" style="width: 70%;"></div>
+                            <div class="screen-line" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="screen-row">
+                        <div class="screen-avatar"></div>
+                        <div class="screen-lines">
+                            <div class="screen-line" style="width: 65%;"></div>
+                            <div class="screen-line" style="width: 45%;"></div>
+                        </div>
+                    </div>
+                    <div class="floating-pill">App Store Ready</div>
                 </div>
             </div>
         </section>
