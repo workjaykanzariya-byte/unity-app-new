@@ -203,65 +203,24 @@
             z-index: 1;
         }
 
-        .phone-mock {
-            width: min(300px, 75vw);
-            aspect-ratio: 9 / 18.5;
-            border-radius: 36px;
-            border: 8px solid #1e293b;
-            background: #f8fafc;
-            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.5);
-            position: relative;
-            display: grid;
-            padding: 20px;
-            gap: 12px;
+        .hero-image {
+            width: min(360px, 85vw);
+            border-radius: 28px;
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.45);
         }
 
-        .phone-notch {
-            width: 55%;
-            height: 16px;
-            background: #0f172a;
-            border-radius: 0 0 18px 18px;
-            margin: 0 auto 10px;
-        }
-
-        .screen-card {
-            background: #eff6ff;
-            border-radius: 18px;
-            padding: 14px;
-            display: grid;
-            gap: 8px;
-        }
-
-        .screen-pill {
-            height: 8px;
-            background: #93c5fd;
-            border-radius: 999px;
-            width: 70%;
-        }
-
-        .screen-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .screen-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: #dbeafe;
-        }
-
-        .screen-lines {
-            flex: 1;
-            display: grid;
-            gap: 6px;
-        }
-
-        .screen-line {
-            height: 6px;
-            background: #e2e8f0;
-            border-radius: 999px;
+        @keyframes floatY {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-14px);
+            }
+            100% {
+                transform: translateY(0);
+            }
         }
 
         footer {
@@ -297,6 +256,12 @@
                 flex: 1;
             }
 
+        }
+
+        @media (max-width: 767px) {
+            .hero-image {
+                animation: floatY 4.5s ease-in-out infinite;
+            }
         }
     </style>
 </head>
@@ -349,33 +314,7 @@
                 </div>
             </div>
             <div class="hero-visual" aria-hidden="true">
-                <div class="phone-mock">
-                    <div class="phone-notch"></div>
-                    <div class="screen-card">
-                        <div class="screen-row">
-                            <div class="screen-avatar"></div>
-                            <div class="screen-lines">
-                                <div class="screen-line" style="width: 60%;"></div>
-                                <div class="screen-line" style="width: 80%;"></div>
-                            </div>
-                        </div>
-                        <div class="screen-pill"></div>
-                    </div>
-                    <div class="screen-row">
-                        <div class="screen-avatar"></div>
-                        <div class="screen-lines">
-                            <div class="screen-line" style="width: 70%;"></div>
-                            <div class="screen-line" style="width: 50%;"></div>
-                        </div>
-                    </div>
-                    <div class="screen-row">
-                        <div class="screen-avatar"></div>
-                        <div class="screen-lines">
-                            <div class="screen-line" style="width: 65%;"></div>
-                            <div class="screen-line" style="width: 45%;"></div>
-                        </div>
-                    </div>
-                </div>
+                <img class="hero-image" src="{{ asset('storage/019be49e-72b7-729a-8e9a-7e267656f7ee') }}" alt="Peers Global Unity app preview">
             </div>
         </section>
 
