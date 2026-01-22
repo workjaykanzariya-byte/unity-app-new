@@ -203,24 +203,25 @@
             z-index: 1;
         }
 
-        .mobile-app-card {
-            display: none;
-            border-radius: 22px;
+        .app-store-card {
+            width: min(420px, 92vw);
+            border-radius: 20px;
             border: 1px solid rgba(148, 163, 184, 0.2);
             background: rgba(15, 23, 42, 0.7);
             box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
-            padding: 18px;
+            padding: 20px;
+            display: grid;
             gap: 14px;
         }
 
-        .mobile-app-card__header {
+        .app-store-card__top {
             display: grid;
             grid-template-columns: 72px 1fr;
             gap: 14px;
             align-items: center;
         }
 
-        .mobile-app-card__logo {
+        .app-store-card__logo {
             width: 72px;
             height: 72px;
             border-radius: 18px;
@@ -229,25 +230,32 @@
             background: #fff;
         }
 
-        .mobile-app-card__title {
+        .app-store-card__title {
             font-size: 1.2rem;
             font-weight: 700;
             margin: 0;
         }
 
-        .mobile-app-card__subtitle {
+        .app-store-card__subtitle {
             margin: 4px 0 0;
             color: var(--text-muted);
             font-size: 0.95rem;
         }
 
-        .mobile-app-card__chips {
+        .app-store-card__desc {
+            margin: 0;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .app-store-card__chips {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         }
 
-        .mobile-app-card__chip {
+        .app-store-card__chip {
             font-size: 0.75rem;
             padding: 6px 10px;
             border-radius: 999px;
@@ -256,72 +264,32 @@
             background: rgba(15, 23, 42, 0.5);
         }
 
-        .mobile-app-card__desc {
-            margin: 0;
-            color: #e2e8f0;
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-
-        .mobile-app-card__actions {
+        .app-store-card__actions {
             display: grid;
             gap: 10px;
         }
 
-        .mobile-app-card__btn {
+        .app-store-card__btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            height: 50px;
+            min-height: 48px;
             border-radius: 14px;
             font-weight: 600;
             text-decoration: none;
             font-size: 1rem;
         }
 
-        .mobile-app-card__btn--primary {
+        .app-store-card__btn--primary {
             background: linear-gradient(120deg, #22c55e, #16a34a);
             color: #fff;
             border: 1px solid transparent;
         }
 
-        .mobile-app-card__btn--secondary {
+        .app-store-card__btn--secondary {
             background: transparent;
             color: #f8fafc;
             border: 1px solid rgba(148, 163, 184, 0.4);
-        }
-
-        .phone-preview {
-            width: min(420px, 92vw);
-            aspect-ratio: 9 / 19.5;
-            border-radius: 28px;
-            overflow: hidden;
-            margin: 0 auto;
-            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.45);
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.6));
-            transform: translate3d(0, 0, 0);
-            transition: transform 0.2s ease-out;
-        }
-
-        .phone-preview__img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            user-select: none;
-            pointer-events: none;
-        }
-
-        @keyframes floatY {
-            0% {
-                transform: translateY(0) scale(1);
-            }
-            50% {
-                transform: translateY(-12px) scale(1.01);
-            }
-            100% {
-                transform: translateY(0) scale(1);
-            }
         }
 
         footer {
@@ -359,33 +327,20 @@
 
         }
 
-        .phone-preview {
-            animation: floatY 6s ease-in-out infinite;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .phone-preview {
-                animation: none;
-                transition: none;
-            }
-        }
-
         @media (max-width: 768px) {
-            .mobile-app-card {
-                display: grid;
-            }
-
-            .cta-group {
-                display: none;
-            }
-
-            .hero-visual {
-                display: none;
-            }
-
-            .phone-preview {
+            .app-store-card {
                 width: 86vw;
-                border-radius: 22px;
+                border-radius: 18px;
+            }
+
+            .app-store-card__top {
+                grid-template-columns: 64px 1fr;
+            }
+
+            .app-store-card__logo {
+                width: 64px;
+                height: 64px;
+                border-radius: 16px;
             }
         }
     </style>
@@ -400,33 +355,6 @@
     <main class="page">
         <section class="hero-card">
             <div class="hero-content">
-                <div class="mobile-app-card" aria-label="Peers Global Unity app card">
-                    <div class="mobile-app-card__header">
-                        <img
-                            class="mobile-app-card__logo"
-                            src="{{ url('/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b') }}"
-                            alt="Peers Global Unity"
-                            loading="lazy"
-                            decoding="async"
-                        >
-                        <div>
-                            <p class="mobile-app-card__title">Peers Global Unity</p>
-                            <p class="mobile-app-card__subtitle">Vyapaar Jagat</p>
-                        </div>
-                    </div>
-                    <div class="mobile-app-card__chips">
-                        <span class="mobile-app-card__chip">Official App</span>
-                        <span class="mobile-app-card__chip">Secure Login</span>
-                        <span class="mobile-app-card__chip">Circles &amp; Networking</span>
-                    </div>
-                    <p class="mobile-app-card__desc">
-                        Connect, collaborate, and grow with your trusted entrepreneur network.
-                    </p>
-                    <div class="mobile-app-card__actions">
-                        <a class="mobile-app-card__btn mobile-app-card__btn--primary" href="{{ $androidUrl }}" rel="noopener">Install on Google Play</a>
-                        <a class="mobile-app-card__btn mobile-app-card__btn--secondary" href="{{ $iosUrl }}" rel="noopener">Download on App Store</a>
-                    </div>
-                </div>
                 <span class="eyebrow">Direct access from PeersGlobal</span>
                 <h1>I’m officially <span class="hero-highlight">Live &amp; Ready.</span></h1>
                 <p class="subtitle">Your trusted entrepreneur network — connect, collaborate, and grow.</p>
@@ -466,18 +394,32 @@
                 </div>
             </div>
             <div class="hero-visual" aria-hidden="true">
-                <div class="phone-preview">
-                    <!-- Primary image URL uses /api/v1/files/{id}; fallback uses /storage/... URL. Motion is disabled for prefers-reduced-motion. -->
-                    <img
-                        class="phone-preview__img"
-                        src="{{ url('/api/v1/files/019be49e-72b7-729a-8e9a-7e267656f7ee') }}"
-                        alt="Peers Global Unity app preview"
-                        loading="lazy"
-                        decoding="async"
-                        width="360"
-                        height="640"
-                        onerror="this.onerror=null;this.src='https://peersunity.com/storage/uploads/2026/01/22/f8384db7-7c38-4621-a890-3e4e87ed4fb0.webp';"
-                    >
+                <div class="app-store-card" aria-label="Peers Global Unity app card">
+                    <div class="app-store-card__top">
+                        <img
+                            class="app-store-card__logo"
+                            src="{{ url('/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b') }}"
+                            alt="Peers Global Unity"
+                            loading="lazy"
+                            decoding="async"
+                        >
+                        <div>
+                            <p class="app-store-card__title">Peers Global Unity</p>
+                            <p class="app-store-card__subtitle">Vyapaar Jagat</p>
+                        </div>
+                    </div>
+                    <div class="app-store-card__chips">
+                        <span class="app-store-card__chip">Official App</span>
+                        <span class="app-store-card__chip">Secure OTP Login</span>
+                        <span class="app-store-card__chip">Circles</span>
+                    </div>
+                    <p class="app-store-card__desc">
+                        Connect, collaborate, and grow with your trusted entrepreneur network.
+                    </p>
+                    <div class="app-store-card__actions">
+                        <a class="app-store-card__btn app-store-card__btn--primary" href="{{ $androidUrl }}" rel="noopener">Install on Google Play</a>
+                        <a class="app-store-card__btn app-store-card__btn--secondary" href="{{ $iosUrl }}" rel="noopener">Download on App Store</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -487,71 +429,5 @@
             <div>You are viewing the official download page.</div>
         </footer>
     </main>
-    <script>
-        (() => {
-            const preview = document.querySelector('.phone-preview');
-            if (!preview) return;
-
-            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (prefersReducedMotion) return;
-
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            if (!isMobile) return;
-            const maxTilt = 6;
-            let targetX = 0;
-            let targetY = 0;
-            let currentX = 0;
-            let currentY = 0;
-
-            const applyTransform = () => {
-                currentX += (targetX - currentX) * 0.08;
-                currentY += (targetY - currentY) * 0.08;
-                preview.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotateX(${-(currentY / 6)}deg) rotateY(${currentX / 6}deg)`;
-                requestAnimationFrame(applyTransform);
-            };
-
-            const setFromScroll = () => {
-                const rect = preview.getBoundingClientRect();
-                const viewportCenter = window.innerHeight / 2;
-                const offset = (rect.top + rect.height / 2 - viewportCenter) / viewportCenter;
-                targetY = Math.max(-12, Math.min(12, offset * 12));
-                targetX = 0;
-            };
-
-            const setFromOrientation = (event) => {
-                const gamma = event.gamma ?? 0;
-                const beta = event.beta ?? 0;
-                targetX = Math.max(-maxTilt, Math.min(maxTilt, gamma)) * 0.6;
-                targetY = Math.max(-maxTilt, Math.min(maxTilt, beta)) * 0.6;
-            };
-
-            const startOrientation = () => {
-                window.addEventListener('deviceorientation', setFromOrientation, true);
-            };
-
-            if (isMobile && 'DeviceOrientationEvent' in window && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then((state) => {
-                        if (state === 'granted') {
-                            startOrientation();
-                        } else {
-                            window.addEventListener('scroll', setFromScroll, { passive: true });
-                            setFromScroll();
-                        }
-                    })
-                    .catch(() => {
-                        window.addEventListener('scroll', setFromScroll, { passive: true });
-                        setFromScroll();
-                    });
-            } else if (isMobile && 'DeviceOrientationEvent' in window) {
-                startOrientation();
-            } else {
-                window.addEventListener('scroll', setFromScroll, { passive: true });
-                setFromScroll();
-            }
-
-            requestAnimationFrame(applyTransform);
-        })();
-    </script>
 </body>
 </html>
