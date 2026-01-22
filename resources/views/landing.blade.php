@@ -203,12 +203,24 @@
             z-index: 1;
         }
 
-        .hero-image {
+        .app-preview-wrap {
             width: min(360px, 85vw);
+            aspect-ratio: 9 / 16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
             border-radius: 28px;
             box-shadow: 0 30px 60px rgba(15, 23, 42, 0.45);
             border: 1px solid rgba(148, 163, 184, 0.2);
             background: rgba(15, 23, 42, 0.45);
+            transform: translate3d(0, 0, 0);
+            transition: transform 0.2s ease-out;
         }
 
         @keyframes floatY {
@@ -216,7 +228,7 @@
                 transform: translateY(0) scale(1);
             }
             50% {
-                transform: translateY(-16px) scale(1.01);
+                transform: translateY(-12px) scale(1.01);
             }
             100% {
                 transform: translateY(0) scale(1);
@@ -258,9 +270,14 @@
 
         }
 
-        @media (max-width: 767px) {
-            .hero-image {
-                animation: floatY 4.5s ease-in-out infinite;
+        .app-preview {
+            animation: floatY 6s ease-in-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .app-preview {
+                animation: none;
+                transition: none;
             }
         }
     </style>
@@ -270,7 +287,6 @@
         $iosUrl = config('app.store_ios_url', '#');
         $androidUrl = config('app.store_android_url', '#');
         $deepLinkUrl = config('app.deep_link_url');
-        $previewImageId = '019be49e-72b7-729a-8e9a-7e267656f7ee';
     @endphp
 
     <main class="page">
@@ -315,7 +331,19 @@
                 </div>
             </div>
             <div class="hero-visual" aria-hidden="true">
-                <img class="hero-image" src="{{ url('/api/files/' . $previewImageId) }}" alt="Peers Global Unity app preview">
+                <div class="app-preview-wrap">
+                    <!-- Primary image URL uses /api/v1/files/{id}; fallback uses /storage/... URL. Motion is disabled for prefers-reduced-motion. -->
+                    <img
+                        class="app-preview"
+                        src="{{ url('/api/v1/files/019be49e-72b7-729a-8e9a-7e267656f7ee') }}"
+                        alt="Peers Global Unity app preview"
+                        loading="lazy"
+                        decoding="async"
+                        width="360"
+                        height="640"
+                        onerror="this.onerror=null;this.src='https://peersunity.com/storage/uploads/2026/01/22/f8384db7-7c38-4621-a890-3e4e87ed4fb0.webp';"
+                    >
+                </div>
             </div>
         </section>
 
@@ -324,5 +352,71 @@
             <div>You are viewing the official download page.</div>
         </footer>
     </main>
+    <script>
+        (() => {
+            const preview = document.querySelector('.app-preview');
+            if (!preview) return;
+
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReducedMotion) return;
+
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            if (!isMobile) return;
+            const maxTilt = 6;
+            let targetX = 0;
+            let targetY = 0;
+            let currentX = 0;
+            let currentY = 0;
+
+            const applyTransform = () => {
+                currentX += (targetX - currentX) * 0.08;
+                currentY += (targetY - currentY) * 0.08;
+                preview.style.transform = `translate3d(${currentX}px, ${currentY}px, 0) rotateX(${-(currentY / 6)}deg) rotateY(${currentX / 6}deg)`;
+                requestAnimationFrame(applyTransform);
+            };
+
+            const setFromScroll = () => {
+                const rect = preview.getBoundingClientRect();
+                const viewportCenter = window.innerHeight / 2;
+                const offset = (rect.top + rect.height / 2 - viewportCenter) / viewportCenter;
+                targetY = Math.max(-12, Math.min(12, offset * 12));
+                targetX = 0;
+            };
+
+            const setFromOrientation = (event) => {
+                const gamma = event.gamma ?? 0;
+                const beta = event.beta ?? 0;
+                targetX = Math.max(-maxTilt, Math.min(maxTilt, gamma)) * 0.6;
+                targetY = Math.max(-maxTilt, Math.min(maxTilt, beta)) * 0.6;
+            };
+
+            const startOrientation = () => {
+                window.addEventListener('deviceorientation', setFromOrientation, true);
+            };
+
+            if (isMobile && 'DeviceOrientationEvent' in window && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then((state) => {
+                        if (state === 'granted') {
+                            startOrientation();
+                        } else {
+                            window.addEventListener('scroll', setFromScroll, { passive: true });
+                            setFromScroll();
+                        }
+                    })
+                    .catch(() => {
+                        window.addEventListener('scroll', setFromScroll, { passive: true });
+                        setFromScroll();
+                    });
+            } else if (isMobile && 'DeviceOrientationEvent' in window) {
+                startOrientation();
+            } else {
+                window.addEventListener('scroll', setFromScroll, { passive: true });
+                setFromScroll();
+            }
+
+            requestAnimationFrame(applyTransform);
+        })();
+    </script>
 </body>
 </html>
