@@ -28,6 +28,9 @@
                                     </td>
                                 </tr>
                             </table>
+                            <p style="margin:0 0 8px; color:#334155; font-size:15px; line-height:22px;">
+                                For your security, do not share this OTP with anyone. Peers Global Unity will never ask for your OTP.
+                            </p>
                             <p style="margin:0 0 8px; color:#0f172a; font-size:15px; font-weight:600;">OTP valid for 5 minutes.</p>
                             <p style="margin:0 0 16px; color:#475569; font-size:14px; line-height:21px;">
                                 If you did not attempt to sign in, please secure your account or contact support immediately.
