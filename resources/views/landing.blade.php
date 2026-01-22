@@ -376,16 +376,17 @@
                                 <div class="app-icon" aria-hidden="true">
                                     <svg viewBox="0 0 96 96" fill="none" aria-hidden="true">
                                         <rect x="6" y="6" width="84" height="84" rx="20" fill="#ffffff"/>
-                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3.2" fill="none"/>
-                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.7" fill="none"/>
+                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3" fill="none"/>
+                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.5" fill="none"/>
                                         <circle cx="48" cy="30" r="4" fill="#e53935"/>
                                         <circle cx="24" cy="44.5" r="4" fill="#e53935"/>
                                         <circle cx="72" cy="44.5" r="4" fill="#e53935"/>
-                                        <circle cx="48" cy="58" r="7" stroke="#1f6ddc" stroke-width="2.6"/>
+                                        <circle cx="48" cy="58" r="7" stroke="#1f6ddc" stroke-width="2.5"/>
                                         <circle cx="32" cy="69" r="4" fill="#e53935"/>
                                         <circle cx="64" cy="69" r="4" fill="#e53935"/>
-                                        <text x="48" y="79" text-anchor="middle" font-size="12.5" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
-                                        <text x="48" y="91" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
+                                        <text x="45" y="80" text-anchor="end" font-size="12.5" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
+                                        <text x="48" y="80" text-anchor="start" font-size="12.5" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
+                                        <text x="48" y="90" text-anchor="middle" font-size="6.5" font-weight="600" fill="#1f6ddc" font-family="Arial, sans-serif">Community of Collaboration</text>
                                     </svg>
                                 </div>
                                 <div>
