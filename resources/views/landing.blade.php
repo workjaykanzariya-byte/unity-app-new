@@ -99,31 +99,60 @@
             gap: 16px;
         }
 
-        .cta-button {
-            flex: 1 1 180px;
-            padding: 14px 20px;
-            border-radius: 12px;
+        .store-button {
+            flex: 1 1 220px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 18px;
+            border-radius: 14px;
             font-weight: 600;
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .store-button .store-icon {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .store-button .store-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .store-button .store-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .store-button .store-name {
             font-size: 1rem;
-            text-align: center;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            font-weight: 700;
         }
 
-        .cta-button.primary {
-            background: var(--button-primary);
-            color: #041226;
-            box-shadow: 0 12px 24px rgba(76, 196, 255, 0.35);
+        .store-button.primary {
+            background: linear-gradient(135deg, rgba(76, 196, 255, 0.2), rgba(76, 196, 255, 0.05));
+            border: 1px solid rgba(76, 196, 255, 0.4);
+            box-shadow: 0 12px 24px rgba(76, 196, 255, 0.25);
         }
 
-        .cta-button.secondary {
+        .store-button.secondary {
             background: var(--button-secondary);
             border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
-        .cta-button:hover,
-        .cta-button:focus {
+        .store-button:hover,
+        .store-button:focus {
             transform: translateY(-2px);
-            box-shadow: 0 16px 28px rgba(76, 196, 255, 0.35);
+            box-shadow: 0 16px 28px rgba(76, 196, 255, 0.25);
         }
 
         .phone-wrap {
@@ -132,7 +161,7 @@
         }
 
         .phone {
-            width: min(320px, 100%);
+            width: min(360px, 100%);
             border-radius: 36px;
             padding: 16px;
             background: linear-gradient(180deg, rgba(21, 31, 58, 0.9) 0%, rgba(8, 12, 26, 0.95) 100%);
@@ -175,7 +204,7 @@
             background: linear-gradient(160deg, rgba(19, 27, 54, 0.9) 0%, rgba(10, 14, 29, 0.98) 100%);
             border-radius: 26px;
             padding: 18px;
-            min-height: 420px;
+            min-height: 460px;
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -188,16 +217,17 @@
         }
 
         .app-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: rgba(107, 228, 255, 0.2);
-            border: 1px solid rgba(107, 228, 255, 0.3);
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            background: radial-gradient(circle at 30% 20%, rgba(107, 228, 255, 0.55), rgba(76, 196, 255, 0.15));
+            border: 1px solid rgba(107, 228, 255, 0.4);
             display: grid;
             place-items: center;
             font-weight: 700;
             font-size: 13px;
-            color: var(--accent);
+            color: #041226;
+            box-shadow: 0 8px 20px rgba(76, 196, 255, 0.35);
         }
 
         .app-title {
@@ -208,6 +238,12 @@
         .app-subtitle {
             font-size: 0.85rem;
             color: rgba(198, 201, 229, 0.8);
+        }
+
+        .app-description {
+            font-size: 0.8rem;
+            line-height: 1.4;
+            color: rgba(198, 201, 229, 0.7);
         }
 
         .feed-card {
@@ -231,14 +267,14 @@
 
         .install-pill {
             margin-top: auto;
-            align-self: flex-start;
-            padding: 10px 18px;
+            align-self: center;
+            padding: 12px 28px;
             border-radius: 999px;
             background: rgba(76, 196, 255, 0.2);
             border: 1px solid rgba(76, 196, 255, 0.35);
             color: var(--accent);
-            font-weight: 600;
-            font-size: 0.85rem;
+            font-weight: 700;
+            font-size: 0.9rem;
         }
 
         footer {
@@ -262,7 +298,7 @@
                 animation: none;
             }
 
-            .cta-button {
+            .store-button {
                 transition: none;
             }
         }
@@ -288,7 +324,7 @@
                 flex-direction: column;
             }
 
-            .cta-button {
+            .store-button {
                 width: 100%;
             }
         }
@@ -316,8 +352,30 @@
                         Hi! I’m Peers Global Unity. I’m now available on the App Store and Google Play. Download me to access your circles, referrals, events, and connections — all in one trusted platform.
                     </p>
                     <div class="cta-buttons">
-                        <a class="cta-button primary" href="https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">Google Play</a>
-                        <a class="cta-button secondary" href="https://apps.apple.com/in/app/peers-global-unity/id6739198477" target="_blank" rel="noopener noreferrer">App Store</a>
+                        <a class="store-button primary" href="https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
+                            <span class="store-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M4.5 3.6C3.7 2.9 2.5 3.5 2.5 4.6v14.9c0 1.1 1.2 1.7 2 1l8.6-8.1L4.5 3.6z" fill="#4cc4ff"/>
+                                    <path d="M13.1 12.4l3.5-3.3 4 2.3c1 .6 1 .9 0 1.5l-4 2.3-3.5-3.3z" fill="#9fe9ff"/>
+                                </svg>
+                            </span>
+                            <span class="store-text">
+                                <span class="store-label">Get it on</span>
+                                <span class="store-name">Google Play</span>
+                            </span>
+                        </a>
+                        <a class="store-button secondary" href="https://apps.apple.com/in/app/peers-global-unity/id6739198477" target="_blank" rel="noopener noreferrer">
+                            <span class="store-icon" aria-hidden="true">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M16.5 6.5c-1 .8-1.7 1.9-1.6 3.2 1.1.1 2.2-.6 3-1.5.7-.9 1.3-2.1 1.1-3.4-1.2.1-2.5.8-3.5 1.7z" fill="#f5f7ff"/>
+                                    <path d="M19.8 17.2c-.6 1.4-1.3 2.7-2.4 2.7-1 0-1.3-.7-2.6-.7-1.3 0-1.7.7-2.7.7-1.1 0-1.9-1.2-2.6-2.6-1.4-2.6-1.5-5.6-.7-7 .6-1 1.7-1.7 2.9-1.7 1.1 0 1.8.7 2.7.7.8 0 1.8-.8 3.2-.7 1 .1 2 .5 2.7 1.4-2.4 1.4-2 5.1-.5 6.2z" fill="#f5f7ff"/>
+                                </svg>
+                            </span>
+                            <span class="store-text">
+                                <span class="store-label">Download on</span>
+                                <span class="store-name">App Store</span>
+                            </span>
+                        </a>
                     </div>
                 </div>
                 <div class="phone-wrap">
@@ -329,6 +387,7 @@
                                 <div>
                                     <div class="app-title">Peers Global Unity</div>
                                     <div class="app-subtitle">Vyapaar Jagat</div>
+                                    <div class="app-description">Your circle, referrals, and events in one trusted network.</div>
                                 </div>
                             </div>
                             <div class="feed-card">
