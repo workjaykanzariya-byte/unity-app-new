@@ -100,59 +100,50 @@
         }
 
         .store-button {
-            flex: 1 1 220px;
+            flex: 1 1 240px;
             display: inline-flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px 18px;
-            border-radius: 14px;
+            gap: 14px;
+            padding: 12px 20px;
+            border-radius: 16px;
             font-weight: 600;
             text-align: left;
+            background: linear-gradient(180deg, #0c0c0c 0%, #000000 100%);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
         .store-button .store-icon {
-            width: 28px;
-            height: 28px;
+            width: 34px;
+            height: 34px;
             display: grid;
             place-items: center;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.12);
         }
 
         .store-button .store-text {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
+            color: #ffffff;
         }
 
         .store-button .store-label {
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             letter-spacing: 0.12em;
             text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .store-button .store-name {
-            font-size: 1rem;
+            font-size: 1.2rem;
             font-weight: 700;
-        }
-
-        .store-button.primary {
-            background: linear-gradient(135deg, rgba(76, 196, 255, 0.2), rgba(76, 196, 255, 0.05));
-            border: 1px solid rgba(76, 196, 255, 0.4);
-            box-shadow: 0 12px 24px rgba(76, 196, 255, 0.25);
-        }
-
-        .store-button.secondary {
-            background: var(--button-secondary);
-            border: 1px solid rgba(255, 255, 255, 0.18);
         }
 
         .store-button:hover,
         .store-button:focus {
             transform: translateY(-2px);
-            box-shadow: 0 16px 28px rgba(76, 196, 255, 0.25);
+            box-shadow: 0 16px 28px rgba(0, 0, 0, 0.45);
         }
 
         .phone-wrap {
@@ -217,17 +208,20 @@
         }
 
         .app-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 16px;
-            background: radial-gradient(circle at 30% 20%, rgba(107, 228, 255, 0.55), rgba(76, 196, 255, 0.15));
-            border: 1px solid rgba(107, 228, 255, 0.4);
+            width: 62px;
+            height: 62px;
+            border-radius: 18px;
+            background: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.6);
             display: grid;
             place-items: center;
-            font-weight: 700;
-            font-size: 13px;
-            color: #041226;
-            box-shadow: 0 8px 20px rgba(76, 196, 255, 0.35);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .app-icon svg {
+            width: 54px;
+            height: 54px;
         }
 
         .app-title {
@@ -354,9 +348,10 @@
                     <div class="cta-buttons">
                         <a class="store-button primary" href="https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share" target="_blank" rel="noopener noreferrer">
                             <span class="store-icon" aria-hidden="true">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M4.5 3.6C3.7 2.9 2.5 3.5 2.5 4.6v14.9c0 1.1 1.2 1.7 2 1l8.6-8.1L4.5 3.6z" fill="#4cc4ff"/>
-                                    <path d="M13.1 12.4l3.5-3.3 4 2.3c1 .6 1 .9 0 1.5l-4 2.3-3.5-3.3z" fill="#9fe9ff"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M3.7 2.6C2.9 2 1.8 2.6 1.8 3.6v16.8c0 1 1.1 1.6 1.9 1L13.6 12 3.7 2.6z" fill="#00d2ff"/>
+                                    <path d="M13.6 12l3.6-3.4 4.1 2.4c1 .6 1 .9 0 1.5l-4.1 2.4L13.6 12z" fill="#ffe000"/>
+                                    <path d="M3.7 21.4L13.6 12l3.6 3.4-5.5 3.2c-.7.4-1.6.4-2.3-.1l-5.7-4.1z" fill="#00f076"/>
                                 </svg>
                             </span>
                             <span class="store-text">
@@ -366,13 +361,13 @@
                         </a>
                         <a class="store-button secondary" href="https://apps.apple.com/in/app/peers-global-unity/id6739198477" target="_blank" rel="noopener noreferrer">
                             <span class="store-icon" aria-hidden="true">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M16.5 6.5c-1 .8-1.7 1.9-1.6 3.2 1.1.1 2.2-.6 3-1.5.7-.9 1.3-2.1 1.1-3.4-1.2.1-2.5.8-3.5 1.7z" fill="#f5f7ff"/>
-                                    <path d="M19.8 17.2c-.6 1.4-1.3 2.7-2.4 2.7-1 0-1.3-.7-2.6-.7-1.3 0-1.7.7-2.7.7-1.1 0-1.9-1.2-2.6-2.6-1.4-2.6-1.5-5.6-.7-7 .6-1 1.7-1.7 2.9-1.7 1.1 0 1.8.7 2.7.7.8 0 1.8-.8 3.2-.7 1 .1 2 .5 2.7 1.4-2.4 1.4-2 5.1-.5 6.2z" fill="#f5f7ff"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M15.9 5.7c-1 .8-1.7 1.9-1.6 3.1 1.1.1 2.2-.6 3-1.5.7-.9 1.2-2.1 1.1-3.4-1.2.1-2.4.8-3.5 1.8z" fill="#ffffff"/>
+                                    <path d="M19.3 16.9c-.6 1.4-1.2 2.7-2.3 2.7-1 0-1.3-.7-2.5-.7-1.3 0-1.7.7-2.7.7-1.1 0-1.9-1.2-2.5-2.6-1.4-2.6-1.5-5.6-.7-7 .6-1 1.7-1.7 2.9-1.7 1.1 0 1.8.7 2.7.7.8 0 1.8-.8 3.1-.7 1 .1 2 .5 2.7 1.4-2.4 1.4-2 5.1-.7 6.2z" fill="#ffffff"/>
                                 </svg>
                             </span>
                             <span class="store-text">
-                                <span class="store-label">Download on</span>
+                                <span class="store-label">Download on the</span>
                                 <span class="store-name">App Store</span>
                             </span>
                         </a>
@@ -383,7 +378,21 @@
                         <div class="phone-notch"></div>
                         <div class="phone-screen">
                             <div class="app-header">
-                                <div class="app-icon">PGU</div>
+                                <div class="app-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 96 96" fill="none" aria-hidden="true">
+                                        <rect x="6" y="6" width="84" height="84" rx="20" fill="#ffffff"/>
+                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3" fill="none"/>
+                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.5" fill="none"/>
+                                        <circle cx="48" cy="30" r="3.5" fill="#e53935"/>
+                                        <circle cx="24" cy="44.5" r="3.5" fill="#e53935"/>
+                                        <circle cx="72" cy="44.5" r="3.5" fill="#e53935"/>
+                                        <circle cx="48" cy="58" r="6.5" stroke="#1f6ddc" stroke-width="2.5"/>
+                                        <circle cx="32" cy="69" r="3.5" fill="#e53935"/>
+                                        <circle cx="64" cy="69" r="3.5" fill="#e53935"/>
+                                        <text x="48" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
+                                        <text x="48" y="90" text-anchor="middle" font-size="11" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
+                                    </svg>
+                                </div>
                                 <div>
                                     <div class="app-title">Peers Global Unity</div>
                                     <div class="app-subtitle">Vyapaar Jagat</div>
