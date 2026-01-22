@@ -208,20 +208,20 @@
         }
 
         .app-icon {
-            width: 62px;
-            height: 62px;
-            border-radius: 18px;
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
             background: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.6);
             display: grid;
             place-items: center;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
             overflow: hidden;
         }
 
         .app-icon svg {
-            width: 54px;
-            height: 54px;
+            width: 62px;
+            height: 62px;
         }
 
         .app-title {
@@ -234,11 +234,6 @@
             color: rgba(198, 201, 229, 0.8);
         }
 
-        .app-description {
-            font-size: 0.8rem;
-            line-height: 1.4;
-            color: rgba(198, 201, 229, 0.7);
-        }
 
         .feed-card {
             background: rgba(255, 255, 255, 0.06);
@@ -381,22 +376,21 @@
                                 <div class="app-icon" aria-hidden="true">
                                     <svg viewBox="0 0 96 96" fill="none" aria-hidden="true">
                                         <rect x="6" y="6" width="84" height="84" rx="20" fill="#ffffff"/>
-                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3" fill="none"/>
-                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.5" fill="none"/>
-                                        <circle cx="48" cy="30" r="3.5" fill="#e53935"/>
-                                        <circle cx="24" cy="44.5" r="3.5" fill="#e53935"/>
-                                        <circle cx="72" cy="44.5" r="3.5" fill="#e53935"/>
-                                        <circle cx="48" cy="58" r="6.5" stroke="#1f6ddc" stroke-width="2.5"/>
-                                        <circle cx="32" cy="69" r="3.5" fill="#e53935"/>
-                                        <circle cx="64" cy="69" r="3.5" fill="#e53935"/>
-                                        <text x="48" y="78" text-anchor="middle" font-size="12" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
-                                        <text x="48" y="90" text-anchor="middle" font-size="11" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
+                                        <path d="M24 44.5L48 28l24 16.5v27L48 88 24 71.5v-27z" stroke="#1f6ddc" stroke-width="3.2" fill="none"/>
+                                        <path d="M32 41l16-10 16 10" stroke="#1f6ddc" stroke-width="2.7" fill="none"/>
+                                        <circle cx="48" cy="30" r="4" fill="#e53935"/>
+                                        <circle cx="24" cy="44.5" r="4" fill="#e53935"/>
+                                        <circle cx="72" cy="44.5" r="4" fill="#e53935"/>
+                                        <circle cx="48" cy="58" r="7" stroke="#1f6ddc" stroke-width="2.6"/>
+                                        <circle cx="32" cy="69" r="4" fill="#e53935"/>
+                                        <circle cx="64" cy="69" r="4" fill="#e53935"/>
+                                        <text x="48" y="79" text-anchor="middle" font-size="12.5" font-weight="700" fill="#e53935" font-family="Arial, sans-serif">Peers</text>
+                                        <text x="48" y="91" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f6ddc" font-family="Arial, sans-serif">Global</text>
                                     </svg>
                                 </div>
                                 <div>
                                     <div class="app-title">Peers Global Unity</div>
                                     <div class="app-subtitle">Vyapaar Jagat</div>
-                                    <div class="app-description">Your circle, referrals, and events in one trusted network.</div>
                                 </div>
                             </div>
                             <div class="feed-card">
