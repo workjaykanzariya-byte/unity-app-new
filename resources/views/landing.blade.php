@@ -203,6 +203,94 @@
             z-index: 1;
         }
 
+        .mobile-app-card {
+            display: none;
+            border-radius: 22px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.7);
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);
+            padding: 18px;
+            gap: 14px;
+        }
+
+        .mobile-app-card__header {
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .mobile-app-card__logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 18px;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+            object-fit: cover;
+            background: #fff;
+        }
+
+        .mobile-app-card__title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .mobile-app-card__subtitle {
+            margin: 4px 0 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .mobile-app-card__chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .mobile-app-card__chip {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .mobile-app-card__desc {
+            margin: 0;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .mobile-app-card__actions {
+            display: grid;
+            gap: 10px;
+        }
+
+        .mobile-app-card__btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 50px;
+            border-radius: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 1rem;
+        }
+
+        .mobile-app-card__btn--primary {
+            background: linear-gradient(120deg, #22c55e, #16a34a);
+            color: #fff;
+            border: 1px solid transparent;
+        }
+
+        .mobile-app-card__btn--secondary {
+            background: transparent;
+            color: #f8fafc;
+            border: 1px solid rgba(148, 163, 184, 0.4);
+        }
+
         .phone-preview {
             width: min(420px, 92vw);
             aspect-ratio: 9 / 19.5;
@@ -283,6 +371,18 @@
         }
 
         @media (max-width: 768px) {
+            .mobile-app-card {
+                display: grid;
+            }
+
+            .cta-group {
+                display: none;
+            }
+
+            .hero-visual {
+                display: none;
+            }
+
             .phone-preview {
                 width: 86vw;
                 border-radius: 22px;
@@ -300,6 +400,33 @@
     <main class="page">
         <section class="hero-card">
             <div class="hero-content">
+                <div class="mobile-app-card" aria-label="Peers Global Unity app card">
+                    <div class="mobile-app-card__header">
+                        <img
+                            class="mobile-app-card__logo"
+                            src="{{ url('/api/v1/files/019bd9d7-7e13-71fc-8395-0e1dd20a268b') }}"
+                            alt="Peers Global Unity"
+                            loading="lazy"
+                            decoding="async"
+                        >
+                        <div>
+                            <p class="mobile-app-card__title">Peers Global Unity</p>
+                            <p class="mobile-app-card__subtitle">Vyapaar Jagat</p>
+                        </div>
+                    </div>
+                    <div class="mobile-app-card__chips">
+                        <span class="mobile-app-card__chip">Official App</span>
+                        <span class="mobile-app-card__chip">Secure Login</span>
+                        <span class="mobile-app-card__chip">Circles &amp; Networking</span>
+                    </div>
+                    <p class="mobile-app-card__desc">
+                        Connect, collaborate, and grow with your trusted entrepreneur network.
+                    </p>
+                    <div class="mobile-app-card__actions">
+                        <a class="mobile-app-card__btn mobile-app-card__btn--primary" href="{{ $androidUrl }}" rel="noopener">Install on Google Play</a>
+                        <a class="mobile-app-card__btn mobile-app-card__btn--secondary" href="{{ $iosUrl }}" rel="noopener">Download on App Store</a>
+                    </div>
+                </div>
                 <span class="eyebrow">Direct access from PeersGlobal</span>
                 <h1>I’m officially <span class="hero-highlight">Live &amp; Ready.</span></h1>
                 <p class="subtitle">Your trusted entrepreneur network — connect, collaborate, and grow.</p>
