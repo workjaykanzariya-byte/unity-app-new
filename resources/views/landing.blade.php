@@ -203,24 +203,25 @@
             z-index: 1;
         }
 
-        .app-preview-wrap {
-            width: min(360px, 85vw);
-            aspect-ratio: 9 / 16;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .phone-preview {
+            width: min(420px, 92vw);
+            aspect-ratio: 9 / 19.5;
+            border-radius: 28px;
+            overflow: hidden;
+            margin: 0 auto;
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.45);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.6));
+            transform: translate3d(0, 0, 0);
+            transition: transform 0.2s ease-out;
         }
 
-        .app-preview {
+        .phone-preview__img {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            border-radius: 28px;
-            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.45);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: rgba(15, 23, 42, 0.45);
-            transform: translate3d(0, 0, 0);
-            transition: transform 0.2s ease-out;
+            display: block;
+            user-select: none;
+            pointer-events: none;
         }
 
         @keyframes floatY {
@@ -270,14 +271,21 @@
 
         }
 
-        .app-preview {
+        .phone-preview {
             animation: floatY 6s ease-in-out infinite;
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .app-preview {
+            .phone-preview {
                 animation: none;
                 transition: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .phone-preview {
+                width: 86vw;
+                border-radius: 22px;
             }
         }
     </style>
@@ -331,10 +339,10 @@
                 </div>
             </div>
             <div class="hero-visual" aria-hidden="true">
-                <div class="app-preview-wrap">
+                <div class="phone-preview">
                     <!-- Primary image URL uses /api/v1/files/{id}; fallback uses /storage/... URL. Motion is disabled for prefers-reduced-motion. -->
                     <img
-                        class="app-preview"
+                        class="phone-preview__img"
                         src="{{ url('/api/v1/files/019be49e-72b7-729a-8e9a-7e267656f7ee') }}"
                         alt="Peers Global Unity app preview"
                         loading="lazy"
@@ -354,7 +362,7 @@
     </main>
     <script>
         (() => {
-            const preview = document.querySelector('.app-preview');
+            const preview = document.querySelector('.phone-preview');
             if (!preview) return;
 
             const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
