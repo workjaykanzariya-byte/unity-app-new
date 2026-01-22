@@ -264,49 +264,6 @@
             border-radius: 999px;
         }
 
-        .floating-pill {
-            position: absolute;
-            bottom: -14px;
-            right: 16px;
-            background: rgba(15, 23, 42, 0.85);
-            color: #e2e8f0;
-            padding: 8px 14px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-
-        .feature-card {
-            background: rgba(15, 23, 42, 0.75);
-            border: 1px solid rgba(148, 163, 184, 0.16);
-            border-radius: 18px;
-            padding: 18px;
-            display: grid;
-            gap: 10px;
-            min-height: 140px;
-        }
-
-        .feature-icon {
-            font-size: 1.5rem;
-        }
-
-        .feature-title {
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .feature-text {
-            margin: 0;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
-
         footer {
             display: flex;
             flex-direction: column;
@@ -340,9 +297,6 @@
                 flex: 1;
             }
 
-            .features {
-                grid-template-columns: repeat(5, minmax(0, 1fr));
-            }
         }
     </style>
 </head>
@@ -421,37 +375,8 @@
                             <div class="screen-line" style="width: 45%;"></div>
                         </div>
                     </div>
-                    <div class="floating-pill">App Store Ready</div>
                 </div>
             </div>
-        </section>
-
-        <section class="features" aria-label="App features">
-            <article class="feature-card">
-                <div class="feature-icon">🤝</div>
-                <h3 class="feature-title">Circles &amp; Community</h3>
-                <p class="feature-text">Build trusted circles, collaborate with peers, and grow together.</p>
-            </article>
-            <article class="feature-card">
-                <div class="feature-icon">💼</div>
-                <h3 class="feature-title">Referrals &amp; Deals</h3>
-                <p class="feature-text">Unlock warm introductions and curated opportunities.</p>
-            </article>
-            <article class="feature-card">
-                <div class="feature-icon">📅</div>
-                <h3 class="feature-title">Events &amp; Meetups</h3>
-                <p class="feature-text">Stay close with exclusive gatherings and meetups.</p>
-            </article>
-            <article class="feature-card">
-                <div class="feature-icon">💬</div>
-                <h3 class="feature-title">1:1 Messaging</h3>
-                <p class="feature-text">Connect instantly with members who matter to you.</p>
-            </article>
-            <article class="feature-card">
-                <div class="feature-icon">✨</div>
-                <h3 class="feature-title">Coins &amp; Recognition</h3>
-                <p class="feature-text">Celebrate wins, recognize contributions, and earn trust.</p>
-            </article>
         </section>
 
         <footer>
