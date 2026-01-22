@@ -123,9 +123,9 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    'store_ios_url' => env('APP_STORE_IOS_URL', '#'),
+    'store_ios_url' => env('APP_STORE_IOS_URL', 'https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share'),
 
-    'store_android_url' => env('APP_STORE_ANDROID_URL', '#'),
+    'store_android_url' => env('APP_STORE_ANDROID_URL', 'https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share'),
 
     'deep_link_url' => env('APP_DEEP_LINK_URL'),
 

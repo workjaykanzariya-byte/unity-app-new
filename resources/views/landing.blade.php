@@ -320,7 +320,6 @@
 
         <footer>
             <div>© {{ date('Y') }} Peers Global Unity</div>
-            <div><a href="mailto:support@peersunity.com">support@peersunity.com</a></div>
             <div>You are viewing the official download page.</div>
         </footer>
     </main>
