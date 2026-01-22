@@ -32,6 +32,9 @@ use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
 use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
+use App\Http\Controllers\Api\V1\MembershipPlanController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -193,8 +196,14 @@ Route::prefix('v1')->group(function () {
 
         // Files
         Route::post('/files/upload', [FileController::class, 'upload']);
+
+        // Membership payments
+        Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);
+        Route::post('/payments/verify', [PaymentController::class, 'verify']);
     });
 
+    Route::get('/membership-plans', [MembershipPlanController::class, 'index']);
+    Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle']);
     Route::get('/files/{id}', [FileController::class, 'show']);
     Route::get('/event-galleries', [EventGalleryApiController::class, 'index']);
     Route::get('/event-galleries/{id}', [EventGalleryApiController::class, 'show']);

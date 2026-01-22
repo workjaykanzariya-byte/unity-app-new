@@ -75,6 +75,13 @@ A single item returned by `GET /api/v1/coins/history` now includes the counterpa
 }
 ```
 
+## How to test
+
+- `php artisan memberships:expire`
+- `php artisan route:list --path=api/v1/membership-plans`
+- `php artisan route:list --path=api/v1/payments`
+- `php artisan route:list --path=api/v1/webhooks/razorpay`
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

@@ -35,7 +35,8 @@ class AuthController extends BaseApiController
         $user->company_name   = $data['company_name'] ?? null;
         $user->designation    = $data['designation'] ?? null;
         $user->city_id        = $user->city_id ?? null;
-        $user->membership_status = $user->membership_status ?? 'visitor';
+        $user->membership_status = 'free_peer';
+        $user->membership_expiry = null;
         $user->coins_balance  = $user->coins_balance ?? 0;
 
         // Store the hashed password in password_hash (not password)

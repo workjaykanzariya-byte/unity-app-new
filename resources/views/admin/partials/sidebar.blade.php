@@ -3,7 +3,7 @@
     $adminUser?->loadMissing('roles:key');
     $isSuper = \App\Support\AdminAccess::isSuper($adminUser);
     $isCircleScoped = \App\Support\AdminAccess::isCircleScoped($adminUser);
-    $isGlobalAdmin = $adminUser && $adminUser->roles->contains('key', 'global_admin');
+    $isGlobalAdmin = \App\Support\AdminAccess::isGlobalAdmin($adminUser);
 
     $dashboardItem = $isCircleScoped
         ? null
@@ -13,12 +13,14 @@
         ? [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
         : [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
