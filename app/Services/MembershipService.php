@@ -43,6 +43,15 @@ class MembershipService
         };
     }
 
+    /**
+     * TODO: Recompute membership status from paid circle membership counts.
+     * This is intentionally left as a placeholder for future circle billing logic.
+     */
+    public function recomputeStatusFromCircles(User $user): void
+    {
+        // TODO: Implement membership_status resolution based on circle participation rules.
+    }
+
     public function activateMembership(User $user, MembershipPlan $plan, Payment $payment): User
     {
         $now = now();
