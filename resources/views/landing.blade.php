@@ -213,13 +213,13 @@
 
         @keyframes floatY {
             0% {
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
             50% {
-                transform: translateY(-14px);
+                transform: translateY(-16px) scale(1.01);
             }
             100% {
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
         }
 

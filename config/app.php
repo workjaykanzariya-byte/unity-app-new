@@ -123,7 +123,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
-    'store_ios_url' => env('APP_STORE_IOS_URL', 'https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share'),
+    'store_ios_url' => env('APP_STORE_IOS_URL', 'https://apps.apple.com/'),
 
     'store_android_url' => env('APP_STORE_ANDROID_URL', 'https://play.google.com/store/apps/details?id=com.peers.peersunity&pcampaignid=web_share'),
 
