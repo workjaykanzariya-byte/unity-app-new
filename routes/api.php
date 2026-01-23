@@ -182,6 +182,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/chats/{id}/messages', [ChatController::class, 'listMessages']);
         Route::post('/chats/{id}/messages', [ChatController::class, 'storeMessage']);
         Route::post('/chats/{id}/mark-read', [ChatController::class, 'markRead']);
+        Route::post('/chats/{id}/typing', [ChatController::class, 'typing']);
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);

@@ -1,0 +1,266 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Reverb Chat Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    input, button { padding: 8px; margin: 4px 0; width: 100%; }
+    .row { display:flex; gap: 10px; }
+    .col { flex: 1; border: 1px solid #ddd; padding: 10px; border-radius: 8px; }
+    pre { background:#f7f7f7; padding: 8px; height: 260px; overflow:auto; }
+    .status { font-size: 12px; color: #444; margin-top: 6px; }
+    .btn-row { display:flex; gap: 6px; }
+    .btn-row button { width: 100%; }
+  </style>
+</head>
+<body>
+
+<h2>Reverb Chat Test (Private + Presence)</h2>
+
+<label>Chat ID</label>
+<input id="chatId" value="CHAT_ID" />
+
+<div class="row">
+  <div class="col">
+    <h3>User A</h3>
+    <label>Bearer Token</label>
+    <input id="tokenA" value="PASTE_USER_A_TOKEN" />
+    <div class="btn-row">
+      <button onclick="connect('A')">Connect A</button>
+      <button onclick="disconnect('A')">Disconnect A</button>
+    </div>
+    <button onclick="pingApi('A')">Ping API (A)</button>
+
+    <label>Send Message (A)</label>
+    <input id="msgA" placeholder="Type message as A and press Send" />
+    <button onclick="sendMsg('A')">Send from A</button>
+
+    <label>Typing (A)</label>
+    <div class="btn-row">
+      <button onclick="typing('A', true)">A Typing ON</button>
+      <button onclick="typing('A', false)">A Typing OFF</button>
+    </div>
+
+    <div class="status" id="statusA">Not connected</div>
+    <pre id="logA"></pre>
+  </div>
+
+  <div class="col">
+    <h3>User B</h3>
+    <label>Bearer Token</label>
+    <input id="tokenB" value="PASTE_USER_B_TOKEN" />
+    <div class="btn-row">
+      <button onclick="connect('B')">Connect B</button>
+      <button onclick="disconnect('B')">Disconnect B</button>
+    </div>
+    <button onclick="pingApi('B')">Ping API (B)</button>
+
+    <label>Send Message (B)</label>
+    <input id="msgB" placeholder="Type message as B and press Send" />
+    <button onclick="sendMsg('B')">Send from B</button>
+
+    <label>Typing (B)</label>
+    <div class="btn-row">
+      <button onclick="typing('B', true)">B Typing ON</button>
+      <button onclick="typing('B', false)">B Typing OFF</button>
+    </div>
+
+    <div class="status" id="statusB">Not connected</div>
+    <pre id="logB"></pre>
+  </div>
+</div>
+
+<script src="https://unpkg.com/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
+<script src="https://unpkg.com/laravel-echo@1.16.1/dist/echo.iife.js"></script>
+
+<script>
+  const APP_BASE = "http://127.0.0.1:8000";
+  const WS_HOST = "127.0.0.1";
+  const WS_PORT = 8080;
+  const REVERB_KEY = "usng6vzqesxebdilitip";
+
+  const echoes = {};
+
+  function log(who, obj) {
+    const el = document.getElementById("log" + who);
+    const message = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+    el.textContent += message + "\n";
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setStatus(who, s) {
+    document.getElementById("status" + who).textContent = s;
+  }
+
+  function makeEcho(token, who) {
+    Pusher.logToConsole = true;
+
+    const echo = new Echo.Echo({
+      broadcaster: "pusher",
+      key: REVERB_KEY,
+      wsHost: WS_HOST,
+      wsPort: WS_PORT,
+      wssPort: WS_PORT,
+      forceTLS: false,
+      enabledTransports: ["ws"],
+      disableStats: true,
+      cluster: "mt1",
+      authorizer: (channel) => {
+        return {
+          authorize: (socketId, callback) => {
+            fetch(`${APP_BASE}/api/broadcasting/auth`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": "Bearer " + token
+              },
+              body: JSON.stringify({
+                socket_id: socketId,
+                channel_name: channel.name
+              })
+            })
+              .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                log(who, { event: "auth.response", status: res.status, data });
+                callback(false, data);
+              })
+              .catch((err) => {
+                log(who, { event: "auth.error", err: err.toString() });
+                callback(true, err);
+              });
+          }
+        };
+      }
+    });
+
+    echo.connector.pusher.connection.bind("connected", () => {
+      setStatus(who, "CONNECTED ✅");
+    });
+
+    echo.connector.pusher.connection.bind("disconnected", () => {
+      setStatus(who, "Disconnected");
+    });
+
+    echo.connector.pusher.connection.bind("error", (err) => {
+      log(who, { event: "ws.error", err });
+    });
+
+    return echo;
+  }
+
+  function connect(who) {
+    const chatId = document.getElementById("chatId").value.trim();
+    const token = document.getElementById("token" + who).value.trim();
+    if (!chatId || !token) return alert("Chat ID + Token required");
+
+    setStatus(who, "Connecting...");
+
+    if (echoes[who]) {
+      disconnect(who);
+    }
+
+    const echo = makeEcho(token, who);
+    echoes[who] = echo;
+
+    echo.private(`private-chat.${chatId}`)
+      .listen(".chat.message.sent", (e) => log(who, { event: "chat.message.sent", data: e }))
+      .listen(".chat.read.updated", (e) => log(who, { event: "chat.read.updated", data: e }))
+      .error((err) => log(who, { event: "private.error", err }));
+
+    echo.join(`presence-chat.${chatId}`)
+      .here((users) => log(who, { event: "presence.here", users }))
+      .joining((user) => log(who, { event: "presence.joining", user }))
+      .leaving((user) => log(who, { event: "presence.leaving", user }))
+      .listen(".chat.typing", (e) => log(who, { event: "chat.typing", data: e }))
+      .error((err) => log(who, { event: "presence.error", err }));
+
+    setStatus(who, "Subscribed (private + presence). Waiting events...");
+    log(who, "Subscribed to: private-chat." + chatId + " and presence-chat." + chatId);
+  }
+
+  function disconnect(who) {
+    const chatId = document.getElementById("chatId").value.trim();
+    const echo = echoes[who];
+    if (!echo) return;
+
+    try {
+      echo.leave(`presence-chat.${chatId}`);
+      echo.leave(`private-chat.${chatId}`);
+      echo.disconnect();
+    } catch (e) {
+      log(who, { event: "disconnect.error", e });
+    }
+
+    echoes[who] = null;
+    setStatus(who, "Not connected");
+    log(who, "Disconnected");
+  }
+
+  async function pingApi(who) {
+    const token = document.getElementById("token" + who).value.trim();
+    if (!token) return alert("Token required");
+
+    const res = await fetch(`${APP_BASE}/api/v1/notifications`, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await res.json().catch(() => ({}));
+    log(who, { event: "api.ping", status: res.status, data });
+  }
+
+  async function sendMsg(who) {
+    const chatId = document.getElementById("chatId").value.trim();
+    const token = document.getElementById("token" + who).value.trim();
+    const msg = document.getElementById("msg" + who).value.trim();
+    if (!msg) return;
+
+    const res = await fetch(`${APP_BASE}/api/v1/chats/${chatId}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ content: msg })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    log(who, { event: "api.send", status: res.status, data });
+  }
+
+  async function typing(who, isTyping) {
+    const chatId = document.getElementById("chatId").value.trim();
+    const token = document.getElementById("token" + who).value.trim();
+
+    const res = await fetch(`${APP_BASE}/api/v1/chats/${chatId}/typing`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ is_typing: !!isTyping })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    log(who, { event: "api.typing", status: res.status, data });
+  }
+</script>
+
+<!--
+Developer steps:
+- php artisan config:clear
+- php artisan cache:clear
+- php artisan serve
+- php artisan reverb:start
+- Open http://127.0.0.1:8000/reverb-chat-test.html
+-->
+
+</body>
+</html>
