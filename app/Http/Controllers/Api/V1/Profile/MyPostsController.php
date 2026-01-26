@@ -17,8 +17,8 @@ class MyPostsController extends BaseApiController
 
         $posts = Post::query()
             ->where('user_id', $user->id)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at')
+            ->where('posts.is_deleted', false)
+            ->whereNull('posts.deleted_at')
             ->with([
                 'author:id,display_name,profile_photo_file_id',
                 'comments' => function ($query) {
@@ -48,8 +48,8 @@ class MyPostsController extends BaseApiController
 
         $post = Post::query()
             ->where('id', $postId)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at')
+            ->where('posts.is_deleted', false)
+            ->whereNull('posts.deleted_at')
             ->first();
 
         if (! $post) {

@@ -10,17 +10,11 @@ use Illuminate\Http\JsonResponse;
 
 class PostReportController extends BaseApiController
 {
-    public function store(ReportPostRequest $request, string $postId): JsonResponse
+    public function store(ReportPostRequest $request, Post $post): JsonResponse
     {
         $user = $request->user();
 
-        $post = Post::query()
-            ->where('id', $postId)
-            ->where('is_deleted', false)
-            ->whereNull('deleted_at')
-            ->first();
-
-        if (! $post) {
+        if ($post->is_deleted || $post->deleted_at) {
             return $this->error('Post not available', 404);
         }
 
