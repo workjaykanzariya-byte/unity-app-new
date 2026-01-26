@@ -64,7 +64,7 @@
                 <tbody>
                     @forelse ($reports as $report)
                         @php
-                            $postOwner = $report->post?->author;
+                            $postOwner = $report->post?->user;
                             $postOwnerName = $postOwner?->display_name ?: trim(($postOwner?->first_name ?? '') . ' ' . ($postOwner?->last_name ?? ''));
                             $reporterName = $report->reporter?->display_name ?: trim(($report->reporter?->first_name ?? '') . ' ' . ($report->reporter?->last_name ?? ''));
                             $isPostActive = $report->post ? ! $report->post->is_deleted && ! $report->post->deleted_at : false;

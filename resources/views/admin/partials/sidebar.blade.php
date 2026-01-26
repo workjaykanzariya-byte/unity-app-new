@@ -14,20 +14,14 @@
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
-            ...($isGlobalAdmin ? [
-                ['icon' => 'bi-chat-dots', 'label' => 'Post Reports', 'route' => 'admin.post-reports.index'],
-                ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
-            ] : []),
+            ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
         : [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
-            ...($isGlobalAdmin ? [
-                ['icon' => 'bi-chat-dots', 'label' => 'Post Reports', 'route' => 'admin.post-reports.index'],
-                ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
-            ] : []),
+            ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
             ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],
@@ -49,6 +43,12 @@
 
     $activityActive = request()->routeIs('admin.activities.*');
     $activityExpanded = $activityActive || ! $isGlobalAdmin;
+
+    $postsMenu = $isGlobalAdmin ? [
+        ['label' => 'All Posts', 'route' => 'admin.posts.index'],
+        ['label' => 'Post Reports', 'route' => 'admin.post-reports.index'],
+    ] : [];
+    $postsActive = request()->routeIs('admin.posts.*') || request()->routeIs('admin.post-reports.*');
 @endphp
 <aside class="admin-sidebar d-flex flex-column">
     <div class="text-center mb-2">
@@ -80,6 +80,25 @@
                     <div class="collapse {{ $activityExpanded ? 'show' : '' }}" id="activitiesSubmenu">
                         <ul class="nav flex-column ms-3">
                             @foreach ($activityMenu as $item)
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
+                                        {{ $item['label'] }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </li>
+            @endif
+            @if ($postsMenu)
+                <li class="nav-item menu-parent {{ $postsActive ? 'open' : '' }}">
+                    <a class="nav-link d-flex justify-content-between align-items-center {{ $postsActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#postsSubmenu" role="button" aria-expanded="{{ $postsActive ? 'true' : 'false' }}" aria-controls="postsSubmenu">
+                        <span><i class="bi bi-chat-dots me-2"></i>Posts &amp; Timeline</span>
+                        <i class="bi bi-chevron-right menu-arrow"></i>
+                    </a>
+                    <div class="collapse {{ $postsActive ? 'show' : '' }}" id="postsSubmenu">
+                        <ul class="nav flex-column ms-3">
+                            @foreach ($postsMenu as $item)
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
                                         {{ $item['label'] }}

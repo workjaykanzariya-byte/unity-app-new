@@ -12,7 +12,7 @@
     @endif
 
     @php
-        $postOwner = $report->post?->author;
+        $postOwner = $report->post?->user;
         $postOwnerName = $postOwner?->display_name ?: trim(($postOwner?->first_name ?? '') . ' ' . ($postOwner?->last_name ?? ''));
         $reporterName = $report->reporter?->display_name ?: trim(($report->reporter?->first_name ?? '') . ' ' . ($report->reporter?->last_name ?? ''));
         $isPostActive = $report->post ? ! $report->post->is_deleted && ! $report->post->deleted_at : false;
@@ -108,7 +108,7 @@
                 @else
                     <form method="POST" action="{{ route('admin.posts.restore', $report->post) }}">
                         @csrf
-                        <button type="submit" class="btn btn-outline-success">Restore Post</button>
+                        <button type="submit" class="btn btn-outline-success">Restore / Activate Again</button>
                     </form>
                 @endif
             @endif

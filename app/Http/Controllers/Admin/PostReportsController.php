@@ -43,7 +43,7 @@ class PostReportsController extends Controller
                 'total_reports'
             )
             ->with([
-                'post.author:id,display_name,first_name,last_name',
+                'post.user:id,display_name,first_name,last_name',
                 'reporter:id,display_name,first_name,last_name',
             ]);
 
@@ -95,7 +95,7 @@ class PostReportsController extends Controller
 
         $report = PostReport::query()
             ->with([
-                'post.author:id,display_name,first_name,last_name',
+                'post.user:id,display_name,first_name,last_name',
                 'reporter:id,display_name,first_name,last_name',
                 'reviewer:id,name',
             ])
