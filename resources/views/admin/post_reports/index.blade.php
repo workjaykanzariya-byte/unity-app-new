@@ -52,12 +52,13 @@
                     <tr>
                         <th>Reported At</th>
                         <th>Post ID</th>
-                        <th>Post Owner Name</th>
+                        <th>Peer Name</th>
                         <th>Reporter Name</th>
                         <th>Reason</th>
                         <th>Status</th>
                         <th>Total Reports on Post</th>
                         <th>Post Active?</th>
+                        <th>Media</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -68,6 +69,42 @@
                             $postOwnerName = $postOwner?->display_name ?: trim(($postOwner?->first_name ?? '') . ' ' . ($postOwner?->last_name ?? ''));
                             $reporterName = $report->reporter?->display_name ?: trim(($report->reporter?->first_name ?? '') . ' ' . ($report->reporter?->last_name ?? ''));
                             $isPostActive = $report->post ? ! $report->post->is_deleted && ! $report->post->deleted_at : false;
+                            $mediaUrl = (function ($media) {
+                                if (empty($media)) {
+                                    return null;
+                                }
+
+                                $items = [];
+
+                                if (is_array($media)) {
+                                    $items = $media;
+                                } elseif (is_object($media)) {
+                                    $items = data_get($media, 'items', []);
+                                }
+
+                                if (! is_array($items)) {
+                                    return null;
+                                }
+
+                                $imageItem = collect($items)->first(function ($item) {
+                                    return data_get($item, 'type') === 'image';
+                                });
+
+                                $candidate = $imageItem ?? (collect($items)->first() ?? []);
+                                $url = data_get($candidate, 'url');
+
+                                if ($url) {
+                                    return $url;
+                                }
+
+                                $id = data_get($candidate, 'id') ?? data_get($candidate, 'file_id');
+
+                                if ($id) {
+                                    return url('/api/v1/files/' . $id);
+                                }
+
+                                return data_get($candidate, 'path');
+                            })($report->post?->media ?? null);
                         @endphp
                         <tr>
                             <td>{{ $report->created_at?->format('Y-m-d H:i') }}</td>
@@ -78,6 +115,13 @@
                             <td>{{ ucfirst($report->status) }}</td>
                             <td>{{ $report->total_reports ?? 0 }}</td>
                             <td>{{ $isPostActive ? 'Yes' : 'No' }}</td>
+                            <td>
+                                @if ($mediaUrl)
+                                    <a class="btn btn-sm btn-outline-primary" target="_blank" href="{{ $mediaUrl }}">View</a>
+                                @else
+                                    None
+                                @endif
+                            </td>
                             <td class="d-flex gap-2">
                                 <a href="{{ route('admin.post-reports.show', $report) }}" class="btn btn-sm btn-outline-primary">View</a>
                                 @if ($report->post)
@@ -97,7 +141,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No reports found.</td>
+                            <td colspan="10" class="text-center text-muted">No reports found.</td>
                         </tr>
                     @endforelse
                 </tbody>

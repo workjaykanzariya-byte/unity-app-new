@@ -56,13 +56,13 @@
                     <tr>
                         <th>Created At</th>
                         <th>Post ID</th>
-                        <th>Owner</th>
+                        <th>Peer Name</th>
                         <th>Circle</th>
                         <th>Visibility</th>
                         <th>Moderation Status</th>
                         <th>Active?</th>
                         <th>Content</th>
-                        <th>Media Count</th>
+                        <th>Media</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -72,7 +72,42 @@
                             $owner = $post->user;
                             $ownerName = $owner?->display_name ?: trim(($owner?->first_name ?? '') . ' ' . ($owner?->last_name ?? ''));
                             $isActive = ! $post->is_deleted && ! $post->deleted_at;
-                            $mediaCount = is_array($post->media) ? count($post->media) : 0;
+                            $mediaUrl = (function ($media) {
+                                if (empty($media)) {
+                                    return null;
+                                }
+
+                                $items = [];
+
+                                if (is_array($media)) {
+                                    $items = $media;
+                                } elseif (is_object($media)) {
+                                    $items = data_get($media, 'items', []);
+                                }
+
+                                if (! is_array($items)) {
+                                    return null;
+                                }
+
+                                $imageItem = collect($items)->first(function ($item) {
+                                    return data_get($item, 'type') === 'image';
+                                });
+
+                                $candidate = $imageItem ?? (collect($items)->first() ?? []);
+                                $url = data_get($candidate, 'url');
+
+                                if ($url) {
+                                    return $url;
+                                }
+
+                                $id = data_get($candidate, 'id') ?? data_get($candidate, 'file_id');
+
+                                if ($id) {
+                                    return url('/api/v1/files/' . $id);
+                                }
+
+                                return data_get($candidate, 'path');
+                            })($post->media ?? null);
                         @endphp
                         <tr>
                             <td>{{ $post->created_at?->format('Y-m-d H:i') }}</td>
@@ -83,7 +118,13 @@
                             <td>{{ $post->moderation_status ? ucfirst($post->moderation_status) : '—' }}</td>
                             <td>{{ $isActive ? 'Yes' : 'No' }}</td>
                             <td>{{ \Illuminate\Support\Str::limit($post->content_text, 60) }}</td>
-                            <td>{{ $mediaCount }}</td>
+                            <td>
+                                @if ($mediaUrl)
+                                    <a class="btn btn-sm btn-outline-primary" target="_blank" href="{{ $mediaUrl }}">View</a>
+                                @else
+                                    None
+                                @endif
+                            </td>
                             <td class="d-flex gap-2">
                                 <a href="{{ route('admin.posts.show', $post) }}" class="btn btn-sm btn-outline-primary">View</a>
                                 @if ($isActive)
