@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\V1\Connections\MyConnectionsController;
+use App\Http\Controllers\Api\V1\PostReportController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
@@ -104,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}/comments', [PostController::class, 'listComments']);
         Route::get('/profile/posts', [MyPostsController::class, 'index']);
         Route::get('/posts/{post}/likes', [MyPostsController::class, 'likes']);
+        Route::post('/posts/{post}/report', [PostReportController::class, 'store']);
 
         // Events
         Route::get('/events', [EventController::class, 'index']);

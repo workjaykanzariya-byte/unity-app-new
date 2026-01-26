@@ -78,6 +78,11 @@ class Post extends Model
         return $this->hasMany(PostSave::class, 'post_id');
     }
 
+    public function reports(): HasMany
+    {
+        return $this->hasMany(PostReport::class);
+    }
+
     public function savers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_saves', 'post_id', 'user_id');
