@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ReportPostRequest extends FormRequest
 {
@@ -14,8 +15,14 @@ class ReportPostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'reason' => ['required', 'string', 'max:50'],
-            'note' => ['nullable', 'string', 'max:500'],
+            'reason_id' => [
+                'required',
+                'integer',
+                Rule::exists('post_report_reasons', 'id')->where('is_active', true),
+            ],
+            'reason' => ['prohibited'],
+            'note' => ['prohibited'],
+            'message' => ['prohibited'],
         ];
     }
 }

@@ -45,6 +45,7 @@ class PostReportsController extends Controller
             ->with([
                 'post.user:id,display_name,first_name,last_name',
                 'reporter:id,display_name,first_name,last_name',
+                'reasonOption:id,title',
             ]);
 
         if ($filters['status']) {
@@ -97,6 +98,7 @@ class PostReportsController extends Controller
             ->with([
                 'post.user:id,display_name,first_name,last_name',
                 'reporter:id,display_name,first_name,last_name',
+                'reasonOption:id,title',
                 'reviewer:id,name',
             ])
             ->findOrFail($reportId);

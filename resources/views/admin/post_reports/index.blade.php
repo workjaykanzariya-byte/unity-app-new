@@ -111,7 +111,7 @@
                             <td>{{ $report->post_id }}</td>
                             <td>{{ $postOwnerName !== '' ? $postOwnerName : 'Unknown' }}</td>
                             <td>{{ $reporterName !== '' ? $reporterName : 'Unknown' }}</td>
-                            <td>{{ ucfirst($report->reason) }}</td>
+                            <td>{{ $report->reasonOption?->title ?? $report->reason ?? '—' }}</td>
                             <td>{{ ucfirst($report->status) }}</td>
                             <td>{{ $report->total_reports ?? 0 }}</td>
                             <td>{{ $isPostActive ? 'Yes' : 'No' }}</td>

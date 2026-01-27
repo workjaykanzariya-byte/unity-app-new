@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\ReportPostRequest;
 use App\Models\Post;
 use App\Models\PostReport;
+use App\Models\PostReportReason;
 use Illuminate\Http\JsonResponse;
 
 class PostReportController extends BaseApiController
@@ -36,12 +37,13 @@ class PostReportController extends BaseApiController
         }
 
         $data = $request->validated();
+        $reason = PostReportReason::query()->find($data['reason_id']);
 
         $report = PostReport::create([
             'post_id' => $post->id,
             'reporter_user_id' => $user->id,
-            'reason' => $data['reason'],
-            'note' => $data['note'] ?? null,
+            'reason_id' => $data['reason_id'],
+            'reason' => $reason?->title,
             'status' => 'open',
         ]);
 

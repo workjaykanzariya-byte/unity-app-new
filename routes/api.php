@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,6 +53,8 @@ Route::prefix('v1')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
         });
     });
+
+    Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -91,6 +94,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
 
         // Posts & feed
+        Route::post('/posts/{post}/report', [PostReportController::class, 'store']);
         Route::get('/posts/feed', [PostController::class, 'feed']);
         Route::get('/posts/saved', [PostSaveController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
@@ -105,7 +109,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{id}/comments', [PostController::class, 'listComments']);
         Route::get('/profile/posts', [MyPostsController::class, 'index']);
         Route::get('/posts/{post}/likes', [MyPostsController::class, 'likes']);
-        Route::post('/posts/{post}/report', [PostReportController::class, 'store']);
 
         // Events
         Route::get('/events', [EventController::class, 'index']);

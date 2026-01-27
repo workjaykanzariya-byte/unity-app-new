@@ -38,7 +38,7 @@
                         <dt class="col-sm-4">Reported At</dt>
                         <dd class="col-sm-8">{{ $report->created_at?->format('Y-m-d H:i') }}</dd>
                         <dt class="col-sm-4">Reason</dt>
-                        <dd class="col-sm-8">{{ ucfirst($report->reason) }}</dd>
+                        <dd class="col-sm-8">{{ $report->reasonOption?->title ?? $report->reason ?? '—' }}</dd>
                         <dt class="col-sm-4">Status</dt>
                         <dd class="col-sm-8">{{ ucfirst($report->status) }}</dd>
                         <dt class="col-sm-4">Reporter</dt>

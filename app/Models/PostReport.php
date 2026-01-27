@@ -22,6 +22,7 @@ class PostReport extends Model
     protected $fillable = [
         'post_id',
         'reporter_user_id',
+        'reason_id',
         'reason',
         'note',
         'status',
@@ -54,6 +55,11 @@ class PostReport extends Model
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reporter_user_id');
+    }
+
+    public function reasonOption(): BelongsTo
+    {
+        return $this->belongsTo(PostReportReason::class, 'reason_id');
     }
 
     public function reviewer(): BelongsTo
