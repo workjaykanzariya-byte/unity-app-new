@@ -45,11 +45,14 @@ class CoinsService
         });
     }
 
-    public function reward(User $user, int $amount, string $reference, ?string $createdBy = null): ?CoinsLedger
+    public function reward(User $user, int $amount, string $reasonLabel, array $meta = []): ?CoinsLedger
     {
         if ($amount <= 0) {
             return null;
         }
+
+        $reference = $meta['reference'] ?? $reasonLabel;
+        $createdBy = $meta['created_by'] ?? null;
 
         return DB::transaction(function () use ($user, $amount, $reference, $createdBy) {
             $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();

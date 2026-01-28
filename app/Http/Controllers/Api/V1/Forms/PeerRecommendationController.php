@@ -34,7 +34,10 @@ class PeerRecommendationController extends BaseApiController
 
             if (! $recommendation->coins_awarded) {
                 $amount = (int) config('coins.recommend_peer', 0);
-                $ledger = $coinsService->reward($authUser, $amount, 'Recommend a Peer');
+                $ledger = $coinsService->reward($authUser, $amount, 'Recommend a Peer', [
+                    'type' => 'recommend_peer',
+                    'reference_id' => (string) $recommendation->id,
+                ]);
 
                 if ($ledger) {
                     $recommendation->coins_awarded = true;
