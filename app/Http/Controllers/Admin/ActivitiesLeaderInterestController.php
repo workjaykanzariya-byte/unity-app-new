@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaderInterestSubmission;
+use App\Models\User;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,6 +53,26 @@ class ActivitiesLeaderInterestController extends Controller
                 'applying_for' => $applyingFor,
             ],
             'applyingForOptions' => ['all', 'myself', 'referring_friend'],
+        ]);
+    }
+
+    public function show(User $peer, Request $request): View
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (! AdminCircleScope::userInScope($admin, $peer->id)) {
+            abort(403);
+        }
+
+        $items = LeaderInterestSubmission::query()
+            ->where('user_id', $peer->id)
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.activities.become_a_leader.show', [
+            'peer' => $peer,
+            'items' => $items,
         ]);
     }
 }

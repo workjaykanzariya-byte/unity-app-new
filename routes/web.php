@@ -59,6 +59,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/activities/become-a-leader', [ActivitiesLeaderInterestController::class, 'index'])->name('activities.become-a-leader.index');
         Route::get('/activities/recommend-peer', [ActivitiesPeerRecommendationController::class, 'index'])->name('activities.recommend-peer.index');
         Route::get('/activities/register-visitor', [ActivitiesVisitorRegistrationController::class, 'index'])->name('activities.register-visitor.index');
+        Route::get('/activities/{peer}/become-a-leader', [ActivitiesLeaderInterestController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.become-a-leader.show');
+        Route::get('/activities/{peer}/recommend-peer', [ActivitiesPeerRecommendationController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.recommend-peer.show');
+        Route::get('/activities/{peer}/register-visitor', [ActivitiesVisitorRegistrationController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.register-visitor.show');
         Route::get('/activities/{member}/testimonials', [ActivitiesController::class, 'testimonials'])->name('activities.testimonials');
         Route::get('/activities/{member}/referrals', [ActivitiesController::class, 'referrals'])->name('activities.referrals');
         Route::get('/activities/{member}/business-deals', [ActivitiesController::class, 'businessDeals'])->name('activities.business-deals');

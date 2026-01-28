@@ -111,28 +111,60 @@
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCount }}</a>
+                                @if ($testimonialCount > 0)
+                                    <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $testimonialCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCount }}</a>
+                                @if ($referralCount > 0)
+                                    <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $referralCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCount }}</a>
+                                @if ($businessDealCount > 0)
+                                    <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $businessDealCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCount }}</a>
+                                @if ($p2pMeetingCount > 0)
+                                    <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $p2pMeetingCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
+                                @if ($requirementCount > 0)
+                                    <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $requirementCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <span class="btn btn-sm btn-outline-primary disabled">{{ $becomeLeaderCount }}</span>
+                                @if ($becomeLeaderCount > 0)
+                                    <a href="{{ route('admin.activities.become-a-leader.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $becomeLeaderCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <span class="btn btn-sm btn-outline-primary disabled">{{ $recommendPeerCount }}</span>
+                                @if ($recommendPeerCount > 0)
+                                    <a href="{{ route('admin.activities.recommend-peer.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $recommendPeerCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <span class="btn btn-sm btn-outline-primary disabled">{{ $registerVisitorCount }}</span>
+                                @if ($registerVisitorCount > 0)
+                                    <a href="{{ route('admin.activities.register-visitor.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $registerVisitorCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

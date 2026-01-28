@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PeerRecommendation;
+use App\Models\User;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -57,6 +58,26 @@ class ActivitiesPeerRecommendationController extends Controller
                 'client',
                 'community_contact',
             ],
+        ]);
+    }
+
+    public function show(User $peer, Request $request): View
+    {
+        $admin = Auth::guard('admin')->user();
+
+        if (! AdminCircleScope::userInScope($admin, $peer->id)) {
+            abort(403);
+        }
+
+        $items = PeerRecommendation::query()
+            ->where('user_id', $peer->id)
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.activities.recommend_peer.show', [
+            'peer' => $peer,
+            'items' => $items,
         ]);
     }
 }
