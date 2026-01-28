@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
+// NOTE: After deploy run `php artisan optimize:clear` (optional) `composer dump-autoload`.
 class ActivitiesController extends Controller
 {
     public function index(Request $request): View
