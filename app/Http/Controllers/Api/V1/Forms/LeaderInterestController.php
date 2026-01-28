@@ -10,8 +10,8 @@ class LeaderInterestController extends BaseApiController
 {
     public function store(StoreLeaderInterestRequest $request)
     {
-        $authUser = $request->user();
         $data = $request->validated();
+        $data['user_id'] = $request->user()?->id;
 
         if ($data['applying_for'] === 'referring_friend') {
             $data['leadership_roles'] = null;
@@ -28,25 +28,17 @@ class LeaderInterestController extends BaseApiController
             $data['referred_mobile'] = null;
         }
 
-        $submission = LeaderInterestSubmission::create([
-            'user_id' => $authUser->id,
-            'applying_for' => $data['applying_for'],
-            'referred_name' => $data['referred_name'] ?? null,
-            'referred_mobile' => $data['referred_mobile'] ?? null,
-            'leadership_roles' => $data['leadership_roles'] ?? null,
-            'contribute_city' => $data['contribute_city'] ?? null,
-            'primary_domain' => $data['primary_domain'] ?? null,
-            'why_interested' => $data['why_interested'] ?? null,
-            'excitement' => $data['excitement'] ?? null,
-            'ownership' => $data['ownership'] ?? null,
-            'time_commitment' => $data['time_commitment'] ?? null,
-            'has_led_before' => $data['has_led_before'] ?? null,
-            'message' => $data['message'] ?? null,
-        ]);
+        $submission = LeaderInterestSubmission::create($data);
 
-        return $this->success([
+        $payload = [
             'id' => $submission->id,
             'created_at' => $submission->created_at,
-        ], 'Leader interest submitted successfully.', 201);
+        ];
+
+        if (app()->environment('local')) {
+            $payload['debug_saved_payload'] = $data;
+        }
+
+        return $this->success($payload, 'Leader interest submitted successfully.', 201);
     }
 }
