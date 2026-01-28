@@ -9,6 +9,10 @@ class VisitorRegistration extends Model
 {
     protected $table = 'visitor_registrations';
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $fillable = [
         'user_id',
         'event_type',
