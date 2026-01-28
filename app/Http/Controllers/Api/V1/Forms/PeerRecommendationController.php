@@ -69,14 +69,16 @@ class PeerRecommendationController extends BaseApiController
         $items = PeerRecommendation::query()
             ->where('user_id', $authUser->id)
             ->orderByDesc('created_at')
-            ->get([
+            ->select([
+                'id',
                 'peer_name',
                 'peer_mobile',
                 'how_well_known',
                 'is_aware',
                 'note',
                 'created_at',
-            ]);
+            ])
+            ->get();
 
         return $this->success([
             'items' => $items,

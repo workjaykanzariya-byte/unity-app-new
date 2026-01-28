@@ -50,7 +50,8 @@ class LeaderInterestController extends BaseApiController
         $items = LeaderInterestSubmission::query()
             ->where('user_id', $authUser->id)
             ->orderByDesc('created_at')
-            ->get([
+            ->select([
+                'id',
                 'applying_for',
                 'referred_name',
                 'referred_mobile',
@@ -64,7 +65,8 @@ class LeaderInterestController extends BaseApiController
                 'has_led_before',
                 'message',
                 'created_at',
-            ]);
+            ])
+            ->get();
 
         return $this->success([
             'items' => $items,

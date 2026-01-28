@@ -44,7 +44,7 @@ class VisitorRegistrationController extends BaseApiController
         $items = VisitorRegistration::query()
             ->where('user_id', $authUser->id)
             ->orderByDesc('created_at')
-            ->get([
+            ->select([
                 'id',
                 'event_type',
                 'event_name',
@@ -55,7 +55,8 @@ class VisitorRegistrationController extends BaseApiController
                 'visitor_business',
                 'status',
                 'created_at',
-            ]);
+            ])
+            ->get();
 
         return $this->success([
             'items' => $items,

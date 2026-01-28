@@ -9,6 +9,10 @@ class LeaderInterestSubmission extends Model
 {
     protected $table = 'leader_interest_submissions';
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $fillable = [
         'user_id',
         'applying_for',

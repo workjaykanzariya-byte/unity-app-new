@@ -9,6 +9,10 @@ class PeerRecommendation extends Model
 {
     protected $table = 'peer_recommendations';
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $fillable = [
         'user_id',
         'peer_name',
