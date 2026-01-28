@@ -35,7 +35,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Visitor name/mobile or member name/phone">
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Visitor name/mobile or peer name/phone">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Status</label>
@@ -60,8 +60,8 @@
                 <thead class="table-light">
                     <tr>
                         <th>Submitted At</th>
-                        <th>Member Name</th>
-                        <th>Member Phone</th>
+                        <th>Peer Name</th>
+                        <th>Peer Phone</th>
                         <th>Event Type</th>
                         <th>Event Name</th>
                         <th>Event Date</th>
