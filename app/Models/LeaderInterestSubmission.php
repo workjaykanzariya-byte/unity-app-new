@@ -14,6 +14,20 @@ class LeaderInterestSubmission extends Model
         'applying_for',
         'referred_name',
         'referred_mobile',
+        'leadership_roles',
+        'contribute_city',
+        'primary_domain',
+        'why_interested',
+        'excitement',
+        'ownership',
+        'time_commitment',
+        'has_led_before',
+        'message',
+    ];
+
+    protected $casts = [
+        'leadership_roles' => 'array',
+        'has_led_before' => 'boolean',
     ];
 
     public function user(): BelongsTo
