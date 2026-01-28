@@ -34,6 +34,9 @@
                         <th>Business Deals</th>
                         <th>P2P Meetings</th>
                         <th>Requirements</th>
+                        <th>Become A Leader</th>
+                        <th>Recommend A Peer</th>
+                        <th>Register A Visitor</th>
                     </tr>
                     <tr class="bg-light align-middle">
                         <th></th>
@@ -68,6 +71,15 @@
                         <th>
                             <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
                         </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
                         <th class="text-end">
                             <form id="activitiesFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
                                 <input type="hidden" name="search" value="{{ request('q', $filters['search']) }}">
@@ -86,6 +98,9 @@
                             $businessDealCount = $counts['business_deals'][$member->id] ?? 0;
                             $p2pMeetingCount = $counts['p2p_meetings'][$member->id] ?? 0;
                             $requirementCount = $counts['requirements'][$member->id] ?? 0;
+                            $becomeLeaderCount = $counts['become_a_leader'][$member->id] ?? 0;
+                            $recommendPeerCount = $counts['recommend_peer'][$member->id] ?? 0;
+                            $registerVisitorCount = $counts['register_visitor'][$member->id] ?? 0;
                         @endphp
                         <tr>
                             <td>
@@ -110,10 +125,19 @@
                             <td>
                                 <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
                             </td>
+                            <td>
+                                <span class="btn btn-sm btn-outline-primary disabled">{{ $becomeLeaderCount }}</span>
+                            </td>
+                            <td>
+                                <span class="btn btn-sm btn-outline-primary disabled">{{ $recommendPeerCount }}</span>
+                            </td>
+                            <td>
+                                <span class="btn btn-sm btn-outline-primary disabled">{{ $registerVisitorCount }}</span>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No peers found.</td>
+                            <td colspan="10" class="text-center text-muted">No peers found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -139,6 +163,9 @@
                                 <option value="business_deals">Business Deals</option>
                                 <option value="p2p_meetings">P2P Meetings</option>
                                 <option value="requirements">Requirements</option>
+                                <option value="become_a_leader">Become A Leader</option>
+                                <option value="recommend_peer">Recommend A Peer</option>
+                                <option value="register_visitor">Register A Visitor</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -155,7 +182,7 @@
                         <input type="hidden" name="q" value="{{ request('q', $filters['search']) }}">
                         <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] }}">
                         <div id="selectedMemberIdsContainer"></div>
-                        <div class="text-danger small d-none" id="exportSelectionError">Please select at least one member.</div>
+                        <div class="text-danger small d-none" id="exportSelectionError">Please select at least one peer.</div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>

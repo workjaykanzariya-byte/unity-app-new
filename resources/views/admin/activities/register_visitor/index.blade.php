@@ -26,6 +26,29 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Search</label>
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Peer name/phone or visitor details">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        @foreach ($statusOptions as $option)
+                            <option value="{{ $option }}" @selected($filters['status'] === $option)>{{ ucfirst($option) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex flex-column gap-2">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                    <a href="{{ route('admin.activities.register-visitor.index') }}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
@@ -33,6 +56,8 @@
                     <tr>
                         <th>Submitted At</th>
                         <th>Peer Name</th>
+                        <th>Peer Phone</th>
+                        <th>Event Type</th>
                         <th>Event Name</th>
                         <th>Event Date</th>
                         <th>Visitor Name</th>
@@ -42,6 +67,7 @@
                         <th>Status</th>
                         <th>Coins Awarded</th>
                         <th class="text-end">Actions</th>
+                        <th>Created At</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -54,6 +80,8 @@
                         <tr>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
                             <td>{{ $peerName }}</td>
+                            <td>{{ $peer->phone ?? '—' }}</td>
+                            <td>{{ ucfirst($item->event_type ?? '—') }}</td>
                             <td>{{ $item->event_name ?? '—' }}</td>
                             <td>{{ $formatDate($item->event_date ?? null) }}</td>
                             <td>{{ $item->visitor_full_name ?? '—' }}</td>
@@ -65,16 +93,17 @@
                             <td class="text-end">
                                 @if ($item->visitor_mobile)
                                     <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.visitor-registrations.index', $visitorSearch) }}">
-                                        View in Visitor Registrations
+                                        Open Approval Page
                                     </a>
                                 @else
                                     <span class="text-muted">—</span>
                                 @endif
                             </td>
+                            <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center text-muted">No visitor registrations found.</td>
+                            <td colspan="13" class="text-center text-muted">No visitor registrations found.</td>
                         </tr>
                     @endforelse
                 </tbody>

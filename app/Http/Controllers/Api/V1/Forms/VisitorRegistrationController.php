@@ -51,10 +51,8 @@ class VisitorRegistrationController extends BaseApiController
                 'event_date',
                 'visitor_full_name',
                 'visitor_mobile',
-                'visitor_email',
                 'visitor_city',
                 'visitor_business',
-                'how_known',
                 'status',
                 'created_at',
             ]);

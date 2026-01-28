@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Forms;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Forms\StoreLeaderInterestRequest;
 use App\Models\LeaderInterestSubmission;
+use Illuminate\Http\Request;
 
 class LeaderInterestController extends BaseApiController
 {
@@ -40,5 +41,33 @@ class LeaderInterestController extends BaseApiController
         }
 
         return $this->success($payload, 'Leader interest submitted successfully.', 201);
+    }
+
+    public function myIndex(Request $request)
+    {
+        $authUser = $request->user();
+
+        $items = LeaderInterestSubmission::query()
+            ->where('user_id', $authUser->id)
+            ->orderByDesc('created_at')
+            ->get([
+                'applying_for',
+                'referred_name',
+                'referred_mobile',
+                'leadership_roles',
+                'contribute_city',
+                'primary_domain',
+                'why_interested',
+                'excitement',
+                'ownership',
+                'time_commitment',
+                'has_led_before',
+                'message',
+                'created_at',
+            ]);
+
+        return $this->success([
+            'items' => $items,
+        ], 'Leader interest history fetched successfully.');
     }
 }

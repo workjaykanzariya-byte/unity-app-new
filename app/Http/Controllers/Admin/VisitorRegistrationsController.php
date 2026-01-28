@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class VisitorRegistrationsController extends Controller
@@ -59,6 +60,10 @@ class VisitorRegistrationsController extends Controller
 
     public function approve(string $id, CoinsService $coinsService): RedirectResponse
     {
+        if (! Str::isUuid($id)) {
+            abort(404);
+        }
+
         $admin = Auth::guard('admin')->user();
         $message = DB::transaction(function () use ($id, $admin, $coinsService) {
             $registration = VisitorRegistration::query()
@@ -98,6 +103,10 @@ class VisitorRegistrationsController extends Controller
 
     public function reject(string $id): RedirectResponse
     {
+        if (! Str::isUuid($id)) {
+            abort(404);
+        }
+
         $admin = Auth::guard('admin')->user();
         $message = DB::transaction(function () use ($id, $admin) {
             $registration = VisitorRegistration::query()

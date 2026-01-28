@@ -22,6 +22,29 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="GET" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Search</label>
+                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Peer name/phone or recommended peer">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">How Well Known</label>
+                    <select name="how_well_known" class="form-select">
+                        @foreach ($knownOptions as $option)
+                            <option value="{{ $option }}" @selected($filters['how_well_known'] === $option)>{{ ucfirst(str_replace('_', ' ', $option)) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex flex-column gap-2">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                    <a href="{{ route('admin.activities.recommend-peer.index') }}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
@@ -29,6 +52,7 @@
                     <tr>
                         <th>Submitted At</th>
                         <th>Peer Name</th>
+                        <th>Peer Phone</th>
                         <th>Recommended Peer Name</th>
                         <th>Recommended Peer Mobile</th>
                         <th>How Well Known</th>
@@ -46,6 +70,7 @@
                         <tr>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
                             <td>{{ $peerName }}</td>
+                            <td>{{ $peer->phone ?? '—' }}</td>
                             <td>{{ $item->peer_name ?? '—' }}</td>
                             <td>{{ $item->peer_mobile ?? '—' }}</td>
                             <td>{{ $item->how_well_known ?? '—' }}</td>
@@ -55,7 +80,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted">No recommendations found.</td>
+                            <td colspan="9" class="text-center text-muted">No recommendations found.</td>
                         </tr>
                     @endforelse
                 </tbody>

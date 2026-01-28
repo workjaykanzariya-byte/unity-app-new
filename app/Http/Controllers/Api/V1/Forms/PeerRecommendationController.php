@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Forms\StorePeerRecommendationRequest;
 use App\Models\PeerRecommendation;
 use App\Services\Coins\CoinsService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PeerRecommendationController extends BaseApiController
@@ -59,5 +60,26 @@ class PeerRecommendationController extends BaseApiController
         }
 
         return $this->success($payload, 'Peer recommendation submitted successfully.', 201);
+    }
+
+    public function myIndex(Request $request)
+    {
+        $authUser = $request->user();
+
+        $items = PeerRecommendation::query()
+            ->where('user_id', $authUser->id)
+            ->orderByDesc('created_at')
+            ->get([
+                'peer_name',
+                'peer_mobile',
+                'how_well_known',
+                'is_aware',
+                'note',
+                'created_at',
+            ]);
+
+        return $this->success([
+            'items' => $items,
+        ], 'Peer recommendations fetched successfully.');
     }
 }

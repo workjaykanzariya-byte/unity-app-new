@@ -212,8 +212,11 @@ Route::prefix('v1')->group(function () {
 
         // Forms
         Route::post('/forms/leader-interest', [LeaderInterestController::class, 'store']);
+        Route::get('/forms/leader-interest/my', [LeaderInterestController::class, 'myIndex']);
         Route::post('/forms/recommend-peer', [PeerRecommendationController::class, 'store']);
+        Route::get('/forms/recommend-peer/my', [PeerRecommendationController::class, 'myIndex']);
         Route::post('/forms/register-visitor', [VisitorRegistrationController::class, 'store']);
+        Route::get('/forms/register-visitor/my', [VisitorRegistrationController::class, 'myIndex']);
         Route::get('/forms/visitor-registrations/my', [VisitorRegistrationController::class, 'myIndex']);
     });
 
