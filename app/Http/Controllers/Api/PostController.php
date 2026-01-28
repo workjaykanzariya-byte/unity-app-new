@@ -34,6 +34,8 @@ class PostController extends BaseApiController
         // For now, just show all public posts.
         // Do NOT filter by moderation status so that newly created posts appear immediately.
         $query->where('visibility', 'public');
+        $query->where('posts.is_deleted', false)
+            ->whereNull('posts.deleted_at');
 
         $posts = $query->get();
 
@@ -148,9 +150,12 @@ class PostController extends BaseApiController
                 'likes as is_liked_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
                 'saves as is_saved_by_me' => fn ($query) => $query->where('user_id', $request->user()->id),
             ])
-            ->find($id);
+            ->where('id', $id)
+            ->where('posts.is_deleted', false)
+            ->whereNull('posts.deleted_at')
+            ->first();
 
-        if (! $post || $post->is_deleted || $post->deleted_at) {
+        if (! $post) {
             return $this->error('Post not found', 404);
         }
 

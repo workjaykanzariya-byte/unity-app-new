@@ -55,7 +55,7 @@ class Post extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function circle(): BelongsTo
@@ -76,6 +76,11 @@ class Post extends Model
     public function saves(): HasMany
     {
         return $this->hasMany(PostSave::class, 'post_id');
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(PostReport::class);
     }
 
     public function savers(): BelongsToMany
