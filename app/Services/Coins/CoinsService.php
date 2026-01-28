@@ -44,4 +44,33 @@ class CoinsService
             return CoinsLedger::create($ledgerData);
         });
     }
+
+    public function reward(User $user, int $amount, string $reference, ?string $createdBy = null): ?CoinsLedger
+    {
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($user, $amount, $reference, $createdBy) {
+            $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
+
+            $newBalance = $user->coins_balance + $amount;
+
+            $user->update([
+                'coins_balance' => $newBalance,
+            ]);
+
+            $ledgerData = [
+                'transaction_id' => Str::uuid()->toString(),
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'balance_after' => $newBalance,
+                'reference' => $reference,
+                'created_by' => $createdBy ?? $user->id,
+                'created_at' => now(),
+            ];
+
+            return CoinsLedger::create($ledgerData);
+        });
+    }
 }

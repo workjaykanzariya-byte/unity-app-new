@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ActivitiesExportRequest;
 use App\Models\BusinessDeal;
+use App\Models\LeaderInterestSubmission;
 use App\Models\P2pMeeting;
+use App\Models\PeerRecommendation;
 use App\Models\Referral;
 use App\Models\Requirement;
 use App\Models\Testimonial;
 use App\Models\User;
+use App\Models\VisitorRegistration;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +70,9 @@ class ActivitiesController extends Controller
             $businessDealCounts = [];
             $p2pMeetingCounts = [];
             $requirementCounts = [];
+            $leaderInterestCounts = [];
+            $peerRecommendationCounts = [];
+            $visitorRegistrationCounts = [];
         } else {
             $testimonialQuery = Testimonial::query()
                 ->where('is_deleted', false)
@@ -96,6 +102,18 @@ class ActivitiesController extends Controller
                 ->whereNull('deleted_at');
             $this->applyCircleScopeToActivityQuery($requirementQuery, $admin, 'user_id', null);
             $requirementCounts = $this->countByMember($requirementQuery, $memberIds, 'user_id', null);
+
+            $leaderInterestQuery = LeaderInterestSubmission::query();
+            $this->applyCircleScopeToActivityQuery($leaderInterestQuery, $admin, 'user_id', null);
+            $leaderInterestCounts = $this->countByMember($leaderInterestQuery, $memberIds, 'user_id', null);
+
+            $peerRecommendationQuery = PeerRecommendation::query();
+            $this->applyCircleScopeToActivityQuery($peerRecommendationQuery, $admin, 'user_id', null);
+            $peerRecommendationCounts = $this->countByMember($peerRecommendationQuery, $memberIds, 'user_id', null);
+
+            $visitorRegistrationQuery = VisitorRegistration::query();
+            $this->applyCircleScopeToActivityQuery($visitorRegistrationQuery, $admin, 'user_id', null);
+            $visitorRegistrationCounts = $this->countByMember($visitorRegistrationQuery, $memberIds, 'user_id', null);
         }
 
         $membershipStatuses = User::query()
@@ -119,6 +137,9 @@ class ActivitiesController extends Controller
                 'business_deals' => $businessDealCounts,
                 'p2p_meetings' => $p2pMeetingCounts,
                 'requirements' => $requirementCounts,
+                'become_a_leader' => $leaderInterestCounts,
+                'recommend_peer' => $peerRecommendationCounts,
+                'register_visitor' => $visitorRegistrationCounts,
             ],
         ]);
     }
@@ -340,10 +361,12 @@ class ActivitiesController extends Controller
 
         $query = DB::table($this->activityTable($activityType) . ' as activity')
             ->leftJoin('users as member_user', 'member_user.id', '=', 'activity.' . $memberKey)
-            ->leftJoin('users as related_user', 'related_user.id', '=', $this->relatedUserJoinColumn($activityType))
             ->select($this->exportSelectColumns($activityType));
 
         $requiresPeer = $this->activityRequiresPeer($activityType);
+        if ($requiresPeer) {
+            $query->leftJoin('users as related_user', 'related_user.id', '=', $this->relatedUserJoinColumn($activityType));
+        }
         $this->applyCircleScopeToActivityQuery(
             $query,
             auth('admin')->user(),
@@ -455,6 +478,41 @@ class ActivitiesController extends Controller
                 ['key' => 'remarks', 'label' => 'Remarks'],
                 ['key' => 'created_at', 'label' => 'Created At'],
             ],
+            'become_a_leader' => [
+                ['key' => 'member_name', 'label' => 'Peer Name'],
+                ['key' => 'member_email', 'label' => 'Peer Email'],
+                ['key' => 'applying_for', 'label' => 'Applying For'],
+                ['key' => 'referred_name', 'label' => 'Referred Name'],
+                ['key' => 'referred_mobile', 'label' => 'Referred Mobile'],
+                ['key' => 'leadership_roles', 'label' => 'Leadership Roles'],
+                ['key' => 'contribute_city', 'label' => 'City / Region'],
+                ['key' => 'primary_domain', 'label' => 'Primary Domain'],
+                ['key' => 'why_interested', 'label' => 'Why Interested'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'recommend_peer' => [
+                ['key' => 'member_name', 'label' => 'Peer Name'],
+                ['key' => 'member_email', 'label' => 'Peer Email'],
+                ['key' => 'peer_name', 'label' => 'Recommended Peer Name'],
+                ['key' => 'peer_mobile', 'label' => 'Recommended Peer Mobile'],
+                ['key' => 'how_well_known', 'label' => 'How Well Known'],
+                ['key' => 'is_aware', 'label' => 'Is Aware'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
+            'register_visitor' => [
+                ['key' => 'member_name', 'label' => 'Peer Name'],
+                ['key' => 'member_email', 'label' => 'Peer Email'],
+                ['key' => 'event_type', 'label' => 'Event Type'],
+                ['key' => 'event_name', 'label' => 'Event Name'],
+                ['key' => 'event_date', 'label' => 'Event Date'],
+                ['key' => 'visitor_full_name', 'label' => 'Visitor Name'],
+                ['key' => 'visitor_mobile', 'label' => 'Visitor Mobile'],
+                ['key' => 'visitor_city', 'label' => 'Visitor City'],
+                ['key' => 'visitor_business', 'label' => 'Visitor Business'],
+                ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'coins_awarded', 'label' => 'Coins Awarded'],
+                ['key' => 'created_at', 'label' => 'Created At'],
+            ],
             default => [],
         };
     }
@@ -469,8 +527,35 @@ class ActivitiesController extends Controller
             'region' => $this->resolveRegion($row['region_filter'] ?? null),
             'category' => $this->resolveCategory($row['category_filter'] ?? null),
             'attachment_url' => $this->resolveAttachmentUrl($row),
+            'leadership_roles' => $this->formatLeadershipRoles($row['leadership_roles'] ?? null),
+            'is_aware' => $this->formatYesNo($row['is_aware'] ?? null),
+            'coins_awarded' => $this->formatYesNo($row['coins_awarded'] ?? null),
             default => $row[$key] ?? null,
         };
+    }
+
+    private function formatLeadershipRoles($value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $decoded = is_string($value) ? json_decode($value, true) : $value;
+        if (is_array($decoded)) {
+            $decoded = array_filter($decoded);
+            return $decoded ? implode(', ', $decoded) : null;
+        }
+
+        return (string) $value;
+    }
+
+    private function formatYesNo($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return (bool) $value ? 'Yes' : 'No';
     }
 
     private function resolveRegion($value): ?string
@@ -505,6 +590,9 @@ class ActivitiesController extends Controller
             'business_deals' => 'from_user_id',
             'p2p_meetings' => 'initiator_user_id',
             'requirements' => 'user_id',
+            'become_a_leader' => 'user_id',
+            'recommend_peer' => 'user_id',
+            'register_visitor' => 'user_id',
             default => 'user_id',
         };
     }
@@ -517,6 +605,9 @@ class ActivitiesController extends Controller
             'business_deals' => BusinessDeal::class,
             'p2p_meetings' => P2pMeeting::class,
             'requirements' => Requirement::class,
+            'become_a_leader' => LeaderInterestSubmission::class,
+            'recommend_peer' => PeerRecommendation::class,
+            'register_visitor' => VisitorRegistration::class,
             default => Requirement::class,
         };
 
@@ -584,6 +675,38 @@ class ActivitiesController extends Controller
                 'activity.remarks',
                 'activity.created_at',
                 DB::raw('related_user.id as related_member_id'),
+            ],
+            'become_a_leader' => [
+                'activity.applying_for',
+                'activity.referred_name',
+                'activity.referred_mobile',
+                'activity.leadership_roles',
+                'activity.contribute_city',
+                'activity.primary_domain',
+                'activity.why_interested',
+                'activity.created_at',
+                DB::raw('member_user.id as member_id'),
+            ],
+            'recommend_peer' => [
+                'activity.peer_name',
+                'activity.peer_mobile',
+                'activity.how_well_known',
+                'activity.is_aware',
+                'activity.created_at',
+                DB::raw('member_user.id as member_id'),
+            ],
+            'register_visitor' => [
+                'activity.event_type',
+                'activity.event_name',
+                'activity.event_date',
+                'activity.visitor_full_name',
+                'activity.visitor_mobile',
+                'activity.visitor_city',
+                'activity.visitor_business',
+                'activity.status',
+                'activity.coins_awarded',
+                'activity.created_at',
+                DB::raw('member_user.id as member_id'),
             ],
             default => [],
         };

@@ -34,6 +34,9 @@
                         <th>Business Deals</th>
                         <th>P2P Meetings</th>
                         <th>Requirements</th>
+                        <th>Become A Leader</th>
+                        <th>Recommend A Peer</th>
+                        <th>Register A Visitor</th>
                     </tr>
                     <tr class="bg-light align-middle">
                         <th></th>
@@ -68,6 +71,15 @@
                         <th>
                             <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
                         </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
+                        <th>
+                            <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
+                        </th>
                         <th class="text-end">
                             <form id="activitiesFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
                                 <input type="hidden" name="search" value="{{ request('q', $filters['search']) }}">
@@ -86,6 +98,9 @@
                             $businessDealCount = $counts['business_deals'][$member->id] ?? 0;
                             $p2pMeetingCount = $counts['p2p_meetings'][$member->id] ?? 0;
                             $requirementCount = $counts['requirements'][$member->id] ?? 0;
+                            $becomeLeaderCount = $counts['become_a_leader'][$member->id] ?? 0;
+                            $recommendPeerCount = $counts['recommend_peer'][$member->id] ?? 0;
+                            $registerVisitorCount = $counts['register_visitor'][$member->id] ?? 0;
                         @endphp
                         <tr>
                             <td>
@@ -96,24 +111,65 @@
                                 <div class="text-muted small">{{ $member->email }}</div>
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $testimonialCount }}</a>
+                                @if ($testimonialCount > 0)
+                                    <a href="{{ route('admin.activities.testimonials', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $testimonialCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $referralCount }}</a>
+                                @if ($referralCount > 0)
+                                    <a href="{{ route('admin.activities.referrals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $referralCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $businessDealCount }}</a>
+                                @if ($businessDealCount > 0)
+                                    <a href="{{ route('admin.activities.business-deals', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $businessDealCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $p2pMeetingCount }}</a>
+                                @if ($p2pMeetingCount > 0)
+                                    <a href="{{ route('admin.activities.p2p-meetings', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $p2pMeetingCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                             <td>
-                                <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
+                                @if ($requirementCount > 0)
+                                    <a href="{{ route('admin.activities.requirements', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $requirementCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($becomeLeaderCount > 0)
+                                    <a href="{{ route('admin.activities.become-a-leader.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $becomeLeaderCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($recommendPeerCount > 0)
+                                    <a href="{{ route('admin.activities.recommend-peer.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $recommendPeerCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if ($registerVisitorCount > 0)
+                                    <a href="{{ route('admin.activities.register-visitor.show', $member) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener noreferrer">{{ $registerVisitorCount }}</a>
+                                @else
+                                    <span class="text-muted">0</span>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No peers found.</td>
+                            <td colspan="10" class="text-center text-muted">No peers found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -139,6 +195,9 @@
                                 <option value="business_deals">Business Deals</option>
                                 <option value="p2p_meetings">P2P Meetings</option>
                                 <option value="requirements">Requirements</option>
+                                <option value="become_a_leader">Become A Leader</option>
+                                <option value="recommend_peer">Recommend A Peer</option>
+                                <option value="register_visitor">Register A Visitor</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -155,7 +214,7 @@
                         <input type="hidden" name="q" value="{{ request('q', $filters['search']) }}">
                         <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] }}">
                         <div id="selectedMemberIdsContainer"></div>
-                        <div class="text-danger small d-none" id="exportSelectionError">Please select at least one member.</div>
+                        <div class="text-danger small d-none" id="exportSelectionError">Please select at least one peer.</div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -9,15 +9,19 @@ use App\Http\Controllers\Admin\Circles\CircleMemberController;
 use App\Http\Controllers\Admin\Users\UserSearchController;
 use App\Http\Controllers\Admin\ActivitiesController;
 use App\Http\Controllers\Admin\ActivitiesBusinessDealsController;
+use App\Http\Controllers\Admin\ActivitiesLeaderInterestController;
 use App\Http\Controllers\Admin\ActivitiesP2PMeetingsController;
+use App\Http\Controllers\Admin\ActivitiesPeerRecommendationController;
 use App\Http\Controllers\Admin\ActivitiesReferralsController;
 use App\Http\Controllers\Admin\ActivitiesRequirementsController;
 use App\Http\Controllers\Admin\ActivitiesTestimonialsController;
+use App\Http\Controllers\Admin\ActivitiesVisitorRegistrationController;
 use App\Http\Controllers\Admin\CoinsController;
 use App\Http\Controllers\Admin\EventGalleryController;
 use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\PostReportsController;
 use App\Http\Controllers\Admin\PostModerationController;
+use App\Http\Controllers\Admin\VisitorRegistrationsController;
 
 Route::get('/', function () {
     return view('landing');
@@ -52,6 +56,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/activities/p2p-meetings/export', [ActivitiesP2PMeetingsController::class, 'export'])->name('activities.p2p-meetings.export');
         Route::get('/activities/business-deals', [ActivitiesBusinessDealsController::class, 'index'])->name('activities.business-deals.index');
         Route::get('/activities/business-deals/export', [ActivitiesBusinessDealsController::class, 'export'])->name('activities.business-deals.export');
+        Route::get('/activities/become-a-leader', [ActivitiesLeaderInterestController::class, 'index'])->name('activities.become-a-leader.index');
+        Route::get('/activities/recommend-peer', [ActivitiesPeerRecommendationController::class, 'index'])->name('activities.recommend-peer.index');
+        Route::get('/activities/register-visitor', [ActivitiesVisitorRegistrationController::class, 'index'])->name('activities.register-visitor.index');
+        Route::get('/activities/{peer}/become-a-leader', [ActivitiesLeaderInterestController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.become-a-leader.show');
+        Route::get('/activities/{peer}/recommend-peer', [ActivitiesPeerRecommendationController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.recommend-peer.show');
+        Route::get('/activities/{peer}/register-visitor', [ActivitiesVisitorRegistrationController::class, 'show'])
+            ->whereUuid('peer')
+            ->name('activities.register-visitor.show');
         Route::get('/activities/{member}/testimonials', [ActivitiesController::class, 'testimonials'])->name('activities.testimonials');
         Route::get('/activities/{member}/referrals', [ActivitiesController::class, 'referrals'])->name('activities.referrals');
         Route::get('/activities/{member}/business-deals', [ActivitiesController::class, 'businessDeals'])->name('activities.business-deals');
@@ -94,5 +110,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/post-reports/{report}/resolve', [PostReportsController::class, 'resolve'])->name('post-reports.resolve');
         Route::post('/posts/{post}/deactivate', [PostModerationController::class, 'deactivate'])->name('posts.deactivate');
         Route::post('/posts/{post}/restore', [PostModerationController::class, 'restore'])->name('posts.restore');
+        Route::get('/visitor-registrations', [VisitorRegistrationsController::class, 'index'])->name('visitor-registrations.index');
+        Route::post('/visitor-registrations/{id}/approve', [VisitorRegistrationsController::class, 'approve'])
+            ->whereUuid('id')
+            ->name('visitor-registrations.approve');
+        Route::post('/visitor-registrations/{id}/reject', [VisitorRegistrationsController::class, 'reject'])
+            ->whereUuid('id')
+            ->name('visitor-registrations.reject');
     });
 });

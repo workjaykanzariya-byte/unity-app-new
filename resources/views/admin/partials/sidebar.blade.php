@@ -13,6 +13,7 @@
         ? [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
@@ -20,6 +21,7 @@
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
+            ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
@@ -39,6 +41,9 @@
         ['label' => 'Referrals', 'route' => 'admin.activities.referrals.index'],
         ['label' => 'P2P Meetings', 'route' => 'admin.activities.p2p-meetings.index'],
         ['label' => 'Business Deals', 'route' => 'admin.activities.business-deals.index'],
+        ['label' => 'Become A Leader', 'route' => 'admin.activities.become-a-leader.index'],
+        ['label' => 'Recommend A Peer', 'route' => 'admin.activities.recommend-peer.index'],
+        ['label' => 'Register A Visitor', 'route' => 'admin.activities.register-visitor.index'],
     ] : [];
 
     $activityActive = request()->routeIs('admin.activities.*');
