@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\EventGalleryController;
 use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\PostReportsController;
 use App\Http\Controllers\Admin\PostModerationController;
+use App\Http\Controllers\Admin\VisitorRegistrationsController;
 
 Route::get('/', function () {
     return view('landing');
@@ -94,5 +95,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/post-reports/{report}/resolve', [PostReportsController::class, 'resolve'])->name('post-reports.resolve');
         Route::post('/posts/{post}/deactivate', [PostModerationController::class, 'deactivate'])->name('posts.deactivate');
         Route::post('/posts/{post}/restore', [PostModerationController::class, 'restore'])->name('posts.restore');
+        Route::get('/visitor-registrations', [VisitorRegistrationsController::class, 'index'])->name('visitor-registrations.index');
+        Route::post('/visitor-registrations/{id}/approve', [VisitorRegistrationsController::class, 'approve'])->name('visitor-registrations.approve');
+        Route::post('/visitor-registrations/{id}/reject', [VisitorRegistrationsController::class, 'reject'])->name('visitor-registrations.reject');
     });
 });

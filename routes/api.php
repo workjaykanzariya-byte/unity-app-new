@@ -31,6 +31,9 @@ use App\Http\Controllers\Api\V1\PostReportController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
+use App\Http\Controllers\Api\V1\Forms\LeaderInterestController;
+use App\Http\Controllers\Api\V1\Forms\PeerRecommendationController;
+use App\Http\Controllers\Api\V1\Forms\VisitorRegistrationController;
 use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
@@ -206,6 +209,12 @@ Route::prefix('v1')->group(function () {
         // Membership payments
         Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);
         Route::post('/payments/verify', [PaymentController::class, 'verify']);
+
+        // Forms
+        Route::post('/forms/leader-interest', [LeaderInterestController::class, 'store']);
+        Route::post('/forms/recommend-peer', [PeerRecommendationController::class, 'store']);
+        Route::post('/forms/register-visitor', [VisitorRegistrationController::class, 'store']);
+        Route::get('/forms/visitor-registrations/my', [VisitorRegistrationController::class, 'myIndex']);
     });
 
     Route::get('/membership-plans', [MembershipPlanController::class, 'index']);
