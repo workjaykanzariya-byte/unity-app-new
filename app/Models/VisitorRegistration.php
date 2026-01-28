@@ -26,14 +26,14 @@ class VisitorRegistration extends Model
         'how_known',
         'note',
         'status',
-        'reviewed_at',
         'reviewed_by_admin_user_id',
+        'reviewed_at',
         'coins_awarded',
         'coins_awarded_at',
     ];
 
     protected $casts = [
-        'event_date' => 'date',
+        'event_date' => 'datetime',
         'reviewed_at' => 'datetime',
         'coins_awarded' => 'boolean',
         'coins_awarded_at' => 'datetime',
