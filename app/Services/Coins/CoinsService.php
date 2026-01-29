@@ -45,32 +45,37 @@ class CoinsService
         });
     }
 
-    public function reward(User $user, int $amount, string $reference, ?string $createdBy = null): ?CoinsLedger
+    public function reward(User $user, int $amount, string $reasonLabel, array $meta = []): ?CoinsLedger
     {
         if ($amount <= 0) {
             return null;
         }
 
-        return DB::transaction(function () use ($user, $amount, $reference, $createdBy) {
-            $user = User::where('id', $user->id)->lockForUpdate()->firstOrFail();
+        $reference = $meta['reference'] ?? $reasonLabel;
+        $createdBy = $meta['created_by'] ?? $user->id;
+        $activityId = $meta['activity_id'] ?? null;
 
-            $newBalance = $user->coins_balance + $amount;
+        return DB::transaction(function () use ($user, $amount, $reference, $createdBy, $activityId) {
+            $txRow = DB::selectOne(
+                "SELECT coins_apply_transaction(?, ?, ?, ?, ?) AS transaction_id",
+                [
+                    $user->id,
+                    $amount,
+                    $activityId,
+                    $reference,
+                    $createdBy,
+                ]
+            );
 
-            $user->update([
-                'coins_balance' => $newBalance,
-            ]);
+            $transactionId = $txRow->transaction_id ?? null;
 
-            $ledgerData = [
-                'transaction_id' => Str::uuid()->toString(),
-                'user_id' => $user->id,
-                'amount' => $amount,
-                'balance_after' => $newBalance,
-                'reference' => $reference,
-                'created_by' => $createdBy ?? $user->id,
-                'created_at' => now(),
-            ];
+            if (! $transactionId) {
+                return null;
+            }
 
-            return CoinsLedger::create($ledgerData);
+            return CoinsLedger::query()
+                ->where('transaction_id', $transactionId)
+                ->first();
         });
     }
 }

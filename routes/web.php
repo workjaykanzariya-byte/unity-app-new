@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\EventGalleryController;
 use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\PostReportsController;
 use App\Http\Controllers\Admin\PostModerationController;
+use App\Http\Controllers\Admin\PeerRecommendationsController;
 use App\Http\Controllers\Admin\VisitorRegistrationsController;
 
 Route::get('/', function () {
@@ -68,6 +69,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/activities/{peer}/register-visitor', [ActivitiesVisitorRegistrationController::class, 'show'])
             ->whereUuid('peer')
             ->name('activities.register-visitor.show');
+        Route::post('/peer-recommendations/{id}/approve', [PeerRecommendationsController::class, 'approve'])
+            ->whereUuid('id')
+            ->name('peer-recommendations.approve');
         Route::get('/activities/{member}/testimonials', [ActivitiesController::class, 'testimonials'])->name('activities.testimonials');
         Route::get('/activities/{member}/referrals', [ActivitiesController::class, 'referrals'])->name('activities.referrals');
         Route::get('/activities/{member}/business-deals', [ActivitiesController::class, 'businessDeals'])->name('activities.business-deals');

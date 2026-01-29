@@ -16,12 +16,17 @@ class ActivitiesPeerRecommendationController extends Controller
     {
         $search = trim((string) $request->query('search', ''));
         $known = $request->query('how_well_known', 'all');
+        $status = $request->query('status', 'pending');
 
         $query = PeerRecommendation::query()
             ->with(['user:id,display_name,first_name,last_name,phone']);
 
         if ($known && $known !== 'all') {
             $query->where('how_well_known', $known);
+        }
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
         }
 
         if ($search !== '') {
@@ -50,6 +55,7 @@ class ActivitiesPeerRecommendationController extends Controller
             'filters' => [
                 'search' => $search,
                 'how_well_known' => $known,
+                'status' => $status,
             ],
             'knownOptions' => [
                 'all',
@@ -57,6 +63,12 @@ class ActivitiesPeerRecommendationController extends Controller
                 'business_associate',
                 'client',
                 'community_contact',
+            ],
+            'statusOptions' => [
+                'all',
+                'pending',
+                'approved',
+                'rejected',
             ],
         ]);
     }

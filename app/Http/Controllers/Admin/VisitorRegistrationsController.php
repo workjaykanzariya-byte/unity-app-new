@@ -85,7 +85,10 @@ class VisitorRegistrationsController extends Controller
             $registration->save();
 
             $amount = (int) config('coins.register_visitor', 0);
-            $ledger = $coinsService->reward($registration->user, $amount, 'Register a Visitor (Approved)');
+            $ledger = $coinsService->reward($registration->user, $amount, 'Register a Visitor (Approved)', [
+                'type' => 'register_visitor',
+                'reference_id' => (string) $registration->id,
+            ]);
 
             if ($ledger) {
                 $registration->coins_awarded = true;

@@ -37,6 +37,14 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        @foreach ($statusOptions as $option)
+                            <option value="{{ $option }}" @selected($filters['status'] === $option)>{{ ucfirst($option) }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-2 d-flex flex-column gap-2">
                     <button type="submit" class="btn btn-primary">Apply</button>
                     <a href="{{ route('admin.activities.recommend-peer.index') }}" class="btn btn-outline-secondary">Reset</a>
@@ -57,8 +65,11 @@
                         <th>Recommended Peer Mobile</th>
                         <th>How Well Known</th>
                         <th>Is Aware</th>
+                        <th>Status</th>
+                        <th>Reviewed At</th>
                         <th>Coins Awarded</th>
                         <th>Created At</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,12 +86,24 @@
                             <td>{{ $item->peer_mobile ?? '—' }}</td>
                             <td>{{ $item->how_well_known ?? '—' }}</td>
                             <td>{{ $item->is_aware ? 'Yes' : 'No' }}</td>
+                            <td>{{ ucfirst($item->status ?? 'pending') }}</td>
+                            <td>{{ $formatDateTime($item->reviewed_at ?? null) }}</td>
                             <td>{{ $item->coins_awarded ? 'Yes' : 'No' }}</td>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
+                            <td>
+                                @if (($item->status ?? 'pending') === 'pending')
+                                    <form method="POST" action="{{ route('admin.peer-recommendations.approve', $item->id) }}">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No recommendations found.</td>
+                            <td colspan="12" class="text-center text-muted">No recommendations found.</td>
                         </tr>
                     @endforelse
                 </tbody>
