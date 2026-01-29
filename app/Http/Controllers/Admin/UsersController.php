@@ -187,6 +187,7 @@ class UsersController extends Controller
             'long_bio_html' => ['nullable', 'string'],
             'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug,' . $user->id],
             'membership_status' => ['required', 'in:' . implode(',', $membershipStatuses)],
+            'status' => ['required', 'in:active,inactive'],
             'membership_expiry' => ['nullable', 'date'],
             'coins_balance' => ['required', 'integer', 'min:0'],
             'influencer_stars' => ['nullable', 'integer', 'min:0'],
@@ -234,7 +235,8 @@ class UsersController extends Controller
             $validated[$field] = $request->boolean($field);
         }
 
-        $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id']);
+        // Manual test: update a user to inactive and verify admin list shows "Inactive".
+        $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id', 'status']);
         $currentAdminRoleIds = $user->roles()->whereIn('roles.id', $adminRoleIds)->pluck('roles.id');
 
         if ($request->filled('role_ids') && $currentAdminRoleIds->isNotEmpty()) {
@@ -245,6 +247,7 @@ class UsersController extends Controller
 
         DB::transaction(function () use ($user, $updatable, $validated, $request) {
             $user->fill($updatable);
+            $user->status = $validated['status'];
 
             if ($request->filled('profile_photo_file_id')) {
                 $user->profile_photo_file_id = $request->input('profile_photo_file_id');
@@ -573,6 +576,7 @@ class UsersController extends Controller
                 'profile_photo_file_id',
                 'cover_photo_file_id',
                 'deleted_at',
+                'status',
             ])
             ->with('city');
 

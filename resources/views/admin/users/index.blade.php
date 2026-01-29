@@ -130,7 +130,8 @@
                         $name = $user->display_name ?? trim($user->first_name . ' ' . $user->last_name);
                         $avatar = $user->profile_photo_url ?? ($user->profile_photo_file_id ? url('/api/v1/files/' . $user->profile_photo_file_id) : null);
                         $cityName = $user->city->name ?? $user->city ?? '—';
-                        $isActive = $user->deleted_at === null;
+                        $statusValue = $user->status ?? 'active';
+                        $isActive = $statusValue === 'active';
                         $detailsId = 'details-' . $user->id;
                     @endphp
                     <tr>
@@ -162,7 +163,7 @@
                         <td>{{ optional($user->last_login_at)->format('Y-m-d H:i') ?? '—' }}</td>
                         <td>
                             <span class="badge {{ $isActive ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">
-                                {{ $isActive ? 'Active' : 'Deleted' }}
+                                {{ $isActive ? 'Active' : 'Inactive' }}
                             </span>
                         </td>
                         <td class="text-end">

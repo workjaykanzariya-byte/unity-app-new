@@ -88,6 +88,15 @@ class AuthController extends BaseApiController
             ], 401);
         }
 
+        if (($user->status ?? 'active') !== 'active') {
+            // Manual test: inactive user login should return 403 and no token.
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is inactive. Please contact support.',
+                'data'    => null,
+            ], 403);
+        }
+
         // Create Sanctum token
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -116,6 +125,15 @@ class AuthController extends BaseApiController
                 'message' => 'You are not a registered user.',
                 'data' => null,
             ], 404);
+        }
+
+        if (($user->status ?? 'active') !== 'active') {
+            // Manual test: inactive user request OTP should return 403 and not send OTP.
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is inactive. Please contact support.',
+                'data' => null,
+            ], 403);
         }
 
         $otp = (string) random_int(1000, 9999);
@@ -190,6 +208,15 @@ class AuthController extends BaseApiController
 
         if ($user->membership_status === 'suspended') {
             return $this->error('Account is suspended', 403);
+        }
+
+        if (($user->status ?? 'active') !== 'active') {
+            // Manual test: inactive user OTP login should return 403 and no token.
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is inactive. Please contact support.',
+                'data' => null,
+            ], 403);
         }
 
         $user->last_login_at = now();
