@@ -5,18 +5,17 @@ namespace App\Http\Controllers\Api\V1\Forms;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Forms\StorePeerRecommendationRequest;
 use App\Models\PeerRecommendation;
-use App\Services\Coins\CoinsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PeerRecommendationController extends BaseApiController
 {
-    public function store(StorePeerRecommendationRequest $request, CoinsService $coinsService)
+    public function store(StorePeerRecommendationRequest $request)
     {
         $authUser = $request->user();
         $data = $request->validated();
 
-        $result = DB::transaction(function () use ($authUser, $data, $coinsService) {
+        $result = DB::transaction(function () use ($authUser, $data) {
             $recommendation = PeerRecommendation::create([
                 'user_id' => $authUser->id,
                 'peer_name' => $data['peer_name'],
@@ -28,41 +27,21 @@ class PeerRecommendationController extends BaseApiController
                 'is_aware' => (bool) $data['is_aware'],
                 'note' => $data['note'] ?? null,
                 'coins_awarded' => false,
+                'status' => 'pending',
             ]);
 
-            $currentBalance = null;
-
-            if (! $recommendation->coins_awarded) {
-                $amount = (int) config('coins.recommend_peer', 0);
-                $ledger = $coinsService->reward($authUser, $amount, 'Recommend a Peer', [
-                    'type' => 'recommend_peer',
-                    'reference_id' => (string) $recommendation->id,
-                ]);
-
-                if ($ledger) {
-                    $recommendation->coins_awarded = true;
-                    $recommendation->coins_awarded_at = now();
-                    $recommendation->save();
-                    $currentBalance = $ledger->balance_after;
-                }
-            }
-
-            return [$recommendation, $currentBalance];
+            return $recommendation;
         });
 
         /** @var \App\Models\PeerRecommendation $recommendation */
-        [$recommendation, $currentBalance] = $result;
+        $recommendation = $result;
 
         $payload = [
             'id' => $recommendation->id,
-            'coins_awarded' => (bool) $recommendation->coins_awarded,
+            'status' => $recommendation->status ?? 'pending',
         ];
 
-        if ($currentBalance !== null) {
-            $payload['current_coins_balance'] = (int) $currentBalance;
-        }
-
-        return $this->success($payload, 'Peer recommendation submitted successfully.', 201);
+        return $this->success($payload, 'Recommendation submitted. Pending admin approval.', 201);
     }
 
     public function myIndex(Request $request)

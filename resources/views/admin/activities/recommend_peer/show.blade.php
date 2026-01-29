@@ -37,8 +37,11 @@
                         <th>Recommended Peer Mobile</th>
                         <th>How Well Known</th>
                         <th>Is Aware</th>
+                        <th>Status</th>
+                        <th>Reviewed At</th>
                         <th>Coins Awarded</th>
                         <th>Created At</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -49,12 +52,24 @@
                             <td>{{ $item->peer_mobile ?? '—' }}</td>
                             <td>{{ $item->how_well_known ?? '—' }}</td>
                             <td>{{ $item->is_aware ? 'Yes' : 'No' }}</td>
+                            <td>{{ ucfirst($item->status ?? 'pending') }}</td>
+                            <td>{{ $formatDateTime($item->reviewed_at ?? null) }}</td>
                             <td>{{ $item->coins_awarded ? 'Yes' : 'No' }}</td>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
+                            <td>
+                                @if (($item->status ?? 'pending') === 'pending')
+                                    <form method="POST" action="{{ route('admin.peer-recommendations.approve', $item->id) }}">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No entries found.</td>
+                            <td colspan="10" class="text-center text-muted">No entries found.</td>
                         </tr>
                     @endforelse
                 </tbody>

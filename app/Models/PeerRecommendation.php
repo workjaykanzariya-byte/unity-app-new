@@ -23,6 +23,9 @@ class PeerRecommendation extends Model
         'how_well_known',
         'is_aware',
         'note',
+        'status',
+        'reviewed_at',
+        'reviewed_by_admin_user_id',
         'coins_awarded',
         'coins_awarded_at',
     ];
@@ -31,6 +34,7 @@ class PeerRecommendation extends Model
         'is_aware' => 'boolean',
         'coins_awarded' => 'boolean',
         'coins_awarded_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
