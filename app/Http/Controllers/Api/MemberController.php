@@ -34,6 +34,11 @@ class MemberController extends BaseApiController
             ])
             ->with('city:id,name');
 
+        // Manual test: inactive members should be excluded from the members list API.
+        $query->where(function ($statusQuery) {
+            $statusQuery->whereNull('status')->orWhere('status', 'active');
+        });
+
         if ($search = trim((string) $request->input('q', ''))) {
             $query->whereRaw(
                 "search_vector @@ plainto_tsquery('simple', unaccent(?))",
@@ -83,6 +88,9 @@ class MemberController extends BaseApiController
         $members = User::query()
             ->select('id', 'display_name')
             ->whereNull('deleted_at')
+            ->where(function ($statusQuery) {
+                $statusQuery->whereNull('status')->orWhere('status', 'active');
+            })
             ->orderBy('display_name', 'asc')
             ->get();
 

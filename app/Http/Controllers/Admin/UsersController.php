@@ -187,6 +187,7 @@ class UsersController extends Controller
             'long_bio_html' => ['nullable', 'string'],
             'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug,' . $user->id],
             'membership_status' => ['required', 'in:' . implode(',', $membershipStatuses)],
+            'status' => ['required', 'in:active,inactive'],
             'membership_expiry' => ['nullable', 'date'],
             'coins_balance' => ['required', 'integer', 'min:0'],
             'influencer_stars' => ['nullable', 'integer', 'min:0'],
@@ -234,6 +235,7 @@ class UsersController extends Controller
             $validated[$field] = $request->boolean($field);
         }
 
+        // Manual test: update a user to inactive and verify admin list shows "Inactive".
         $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id']);
         $currentAdminRoleIds = $user->roles()->whereIn('roles.id', $adminRoleIds)->pluck('roles.id');
 
@@ -573,6 +575,7 @@ class UsersController extends Controller
                 'profile_photo_file_id',
                 'cover_photo_file_id',
                 'deleted_at',
+                'status',
             ])
             ->with('city');
 

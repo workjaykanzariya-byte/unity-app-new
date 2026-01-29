@@ -176,6 +176,16 @@
                         </select>
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select" required>
+                            @php
+                                $statusValue = old('status', $user->status ?? 'active');
+                            @endphp
+                            <option value="active" @selected($statusValue === 'active')>Active</option>
+                            <option value="inactive" @selected($statusValue === 'inactive')>Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">Membership Expiry</label>
                         <input type="datetime-local" name="membership_expiry" class="form-control" value="{{ old('membership_expiry', optional($user->membership_expiry)->format('Y-m-d\TH:i')) }}">
                     </div>
