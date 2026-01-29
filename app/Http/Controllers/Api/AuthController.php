@@ -127,6 +127,15 @@ class AuthController extends BaseApiController
             ], 404);
         }
 
+        if (($user->status ?? 'active') !== 'active') {
+            // Manual test: inactive user request OTP should return 403 and not send OTP.
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is inactive. Please contact support.',
+                'data' => null,
+            ], 403);
+        }
+
         $otp = (string) random_int(1000, 9999);
 
         OtpCode::create([
