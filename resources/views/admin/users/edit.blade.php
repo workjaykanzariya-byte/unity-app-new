@@ -171,7 +171,7 @@
                         <label class="form-label">Membership Status</label>
                         <select name="membership_status" class="form-select" required>
                             @foreach ($membershipStatuses as $status)
-                                <option value="{{ $status }}" @selected(old('membership_status', $user->membership_status) === $status)>{{ ucfirst($status) }}</option>
+                                <option value="{{ $status }}" @selected(old('membership_status', $user->membership_status) === $status)>{{ $status }}</option>
                             @endforeach
                         </select>
                     </div>

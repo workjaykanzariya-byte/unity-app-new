@@ -79,7 +79,7 @@ class UsersController extends Controller
             'short_bio' => ['nullable', 'string'],
             'long_bio_html' => ['nullable', 'string'],
             'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug'],
-            'membership_status' => ['nullable', 'in:' . implode(',', $membershipStatuses)],
+            'membership_status' => ['nullable', Rule::in($membershipStatuses)],
             'membership_expiry' => ['nullable', 'date'],
             'coins_balance' => ['nullable', 'integer', 'min:0'],
             'is_sponsored_member' => ['boolean'],
@@ -115,7 +115,7 @@ class UsersController extends Controller
 
         $validated['social_links'] = $this->parseSocialLinks($request->input('social_links'));
         $validated['is_sponsored_member'] = $request->boolean('is_sponsored_member');
-        $validated['membership_status'] = $validated['membership_status'] ?: 'visitor';
+        $validated['membership_status'] = $validated['membership_status'] ?: ($membershipStatuses[0] ?? null);
         $validated['coins_balance'] = $validated['coins_balance'] ?? 0;
         $validated['password_hash'] = Hash::make(Str::random(32));
 
@@ -186,7 +186,7 @@ class UsersController extends Controller
             'short_bio' => ['nullable', 'string'],
             'long_bio_html' => ['nullable', 'string'],
             'public_profile_slug' => ['nullable', 'string', 'max:80', 'unique:users,public_profile_slug,' . $user->id],
-            'membership_status' => ['required', 'in:' . implode(',', $membershipStatuses)],
+            'membership_status' => ['required', Rule::in($membershipStatuses)],
             'status' => ['required', 'in:active,inactive'],
             'membership_expiry' => ['nullable', 'date'],
             'coins_balance' => ['required', 'integer', 'min:0'],
@@ -237,6 +237,9 @@ class UsersController extends Controller
 
         // Manual test: update a user to inactive and verify admin list shows "Inactive".
         $updatable = Arr::except($validated, ['role_ids', 'profile_photo_file_id', 'cover_photo_file_id', 'status']);
+        if ($user->membership_status !== $validated['membership_status']) {
+            $updatable['membership_expiry'] = null;
+        }
         $currentAdminRoleIds = $user->roles()->whereIn('roles.id', $adminRoleIds)->pluck('roles.id');
 
         if ($request->filled('role_ids') && $currentAdminRoleIds->isNotEmpty()) {
@@ -384,7 +387,7 @@ class UsersController extends Controller
                         'display_name' => $data['display_name'] ?: ($data['first_name'] ?? 'User'),
                         'phone' => $data['phone'] ?? null,
                         'company_name' => $data['company_name'] ?? null,
-                        'membership_status' => $membership ?: 'visitor',
+                        'membership_status' => $membership ?: ($membershipStatuses[0] ?? null),
                         'city' => $data['city'] ?? null,
                         'coins_balance' => isset($data['coins_balance']) && $data['coins_balance'] !== '' ? (int) $data['coins_balance'] : 0,
                         'password_hash' => bcrypt(Str::random(32)),
@@ -471,12 +474,7 @@ class UsersController extends Controller
 
     private function membershipStatuses(): array
     {
-        return [
-            'visitor',
-            'premium',
-            'charter',
-            'suspended',
-        ];
+        return config('membership.statuses', []);
     }
 
     private function csvToArray(?string $value): array
