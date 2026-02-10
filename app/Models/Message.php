@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Message extends Model
 {
     use HasFactory;
     use HasUuids;
+    use SoftDeletes;
 
     protected $table = 'messages';
 
@@ -32,6 +34,9 @@ class Message extends Model
     protected $casts = [
         'attachments' => 'array',
         'is_read' => 'boolean',
+        'deleted_at' => 'datetime',
+        'deleted_for_user1_at' => 'datetime',
+        'deleted_for_user2_at' => 'datetime',
     ];
 
     public function chat(): BelongsTo
