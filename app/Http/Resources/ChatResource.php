@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class ChatResource extends JsonResource
 {
@@ -24,6 +25,7 @@ class ChatResource extends JsonResource
                 'id' => $this->lastMessage->id,
                 'sender_id' => $this->lastMessage->sender_id,
                 'content' => $this->lastMessage->content,
+                'snippet' => Str::limit((string) $this->lastMessage->content, 120),
                 'attachments' => $this->lastMessage->attachments,
                 'is_read' => (bool) $this->lastMessage->is_read,
                 'created_at' => $this->lastMessage->created_at,
@@ -45,9 +47,7 @@ class ChatResource extends JsonResource
             'other_user' => $otherUser ? [
                 'id' => $otherUser->id,
                 'display_name' => $otherUser->display_name,
-                'first_name' => $otherUser->first_name,
-                'last_name' => $otherUser->last_name,
-                'profile_photo_url' => $otherUser->profile_photo_url,
+                'avatar_url' => $otherUser->profile_photo_url,
             ] : null,
             'last_message' => $lastMessage,
             'unread_count' => $unreadCount,

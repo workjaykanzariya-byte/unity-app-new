@@ -45,4 +45,10 @@ class Chat extends Model
     {
         return $this->belongsTo(Message::class, 'last_message_id');
     }
+
+    public function canAccessChat(User $user): bool
+    {
+        return (string) $this->user1_id === (string) $user->id
+            || (string) $this->user2_id === (string) $user->id;
+    }
 }
