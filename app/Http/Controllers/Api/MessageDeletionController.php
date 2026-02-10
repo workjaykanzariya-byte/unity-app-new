@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Message;
-use Illuminate\Http\Request;
 
 class MessageDeletionController extends BaseApiController
 {
-    public function deleteForMe(Request $request, Message $message)
+    public function deleteForMe(Message $message)
     {
-        $user = $request->user();
+        $user = auth()->user();
         $chat = $message->chat;
 
         if (! $chat || ! $chat->canAccessChat($user)) {
@@ -30,9 +29,9 @@ class MessageDeletionController extends BaseApiController
         ]);
     }
 
-    public function deleteForEveryone(Request $request, Message $message)
+    public function deleteForEveryone(Message $message)
     {
-        $user = $request->user();
+        $user = auth()->user();
         $chat = $message->chat;
 
         if (! $chat || ! $chat->canAccessChat($user)) {
@@ -43,8 +42,7 @@ class MessageDeletionController extends BaseApiController
             return $this->error('Forbidden', 403);
         }
 
-        $message->deleted_at = now();
-        $message->save();
+        $message->delete();
 
         return response()->json([
             'success' => true,

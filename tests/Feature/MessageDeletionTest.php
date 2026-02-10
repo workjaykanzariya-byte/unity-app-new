@@ -40,6 +40,10 @@ class MessageDeletionTest extends TestCase
                 'message' => 'Message deleted for you',
             ]);
 
+        $message->refresh();
+        $this->assertNotNull($message->deleted_for_user1_at ?? $message->deleted_for_user2_at);
+        $this->assertNull($message->deleted_at);
+
         $this->actingAs($userA, 'sanctum')
             ->getJson('/api/v1/chats/' . $chat->id . '/messages')
             ->assertOk()
@@ -71,6 +75,9 @@ class MessageDeletionTest extends TestCase
                 'message' => 'Message deleted for everyone',
             ]);
 
+        $message->refresh();
+        $this->assertNotNull($message->deleted_at);
+
         $this->actingAs($userA, 'sanctum')
             ->getJson('/api/v1/chats/' . $chat->id . '/messages')
             ->assertOk()
@@ -80,6 +87,8 @@ class MessageDeletionTest extends TestCase
             ->getJson('/api/v1/chats/' . $chat->id . '/messages')
             ->assertOk()
             ->assertJsonCount(0, 'data.items');
+
+        $this->assertDatabaseCount('messages', 1);
     }
 
     public function test_non_sender_cannot_delete_for_everyone(): void
@@ -97,6 +106,9 @@ class MessageDeletionTest extends TestCase
         $this->actingAs($userB, 'sanctum')
             ->postJson('/api/v1/messages/' . $message->id . '/delete-for-everyone')
             ->assertForbidden();
+
+        $message->refresh();
+        $this->assertNull($message->deleted_at);
     }
 
     private function makeTwoUserChat(): array
