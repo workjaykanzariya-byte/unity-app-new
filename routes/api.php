@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\MessageDeletionController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
@@ -190,6 +191,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/chats/{id}', [ChatController::class, 'showChat']);
         Route::get('/chats/{id}/messages', [ChatController::class, 'listMessages']);
         Route::post('/chats/{id}/messages', [ChatController::class, 'storeMessage']);
+        Route::post('/messages/{message}/delete-for-me', [MessageDeletionController::class, 'deleteForMe']);
+        Route::post('/messages/{message}/delete-for-everyone', [MessageDeletionController::class, 'deleteForEveryone']);
         Route::post('/chats/{chat}/typing/start', [ChatTypingController::class, 'start']);
         Route::post('/chats/{chat}/typing/stop', [ChatTypingController::class, 'stop']);
         Route::post('/chats/{id}/mark-read', [ChatController::class, 'markRead']);
