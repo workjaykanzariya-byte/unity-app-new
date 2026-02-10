@@ -14,7 +14,7 @@ use App\Models\Message;
 use App\Models\User;
 use App\Events\Chat\ChatReadUpdated;
 use App\Events\Chat\MessageSent;
-use App\Events\Chat\TypingIndicator;
+use App\Events\Chat\ChatTyping;
 use App\Support\Chat\AuthorizesChatAccess;
 use App\Support\Media\Probe;
 use Illuminate\Http\Request;
@@ -357,7 +357,7 @@ class ChatController extends BaseApiController
             return $this->error('Chat not found', 404);
         }
 
-        broadcast(new TypingIndicator($chat, $authUser, (bool) $data['is_typing']))->toOthers();
+        broadcast(new ChatTyping((string) $chat->id, (string) $authUser->id, (bool) $data['is_typing']))->toOthers();
 
         return $this->success([
             'is_typing' => (bool) $data['is_typing'],
