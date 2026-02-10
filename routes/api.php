@@ -12,11 +12,13 @@ use App\Http\Controllers\Api\AdminActivityController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatTypingController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\MemberController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
@@ -184,11 +186,13 @@ Route::prefix('v1')->group(function () {
         Route::patch('/support/admin/{id}', [SupportController::class, 'adminUpdate']);
 
         // Chats & Messages
-        Route::get('/chats', [ChatController::class, 'listChats']);
+        Route::get('/chats', [ChatController::class, 'index']);
         Route::post('/chats', [ChatController::class, 'storeChat']);
         Route::get('/chats/{id}', [ChatController::class, 'showChat']);
-        Route::get('/chats/{id}/messages', [ChatController::class, 'listMessages']);
-        Route::post('/chats/{id}/messages', [ChatController::class, 'storeMessage']);
+        Route::get('/chats/{chat}/messages', [MessageController::class, 'index']);
+        Route::post('/chats/{chat}/messages', [MessageController::class, 'store']);
+        Route::post('/chats/{chat}/typing/start', [ChatTypingController::class, 'start']);
+        Route::post('/chats/{chat}/typing/stop', [ChatTypingController::class, 'stop']);
         Route::post('/chats/{id}/mark-read', [ChatController::class, 'markRead']);
         Route::post('/chats/{id}/typing', [ChatController::class, 'typing']);
 

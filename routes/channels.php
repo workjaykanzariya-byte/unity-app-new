@@ -1,10 +1,21 @@
 <?php
 
-use App\Models\Chat;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB;
+
+Broadcast::channel('chat.{chatId}', function ($user, string $chatId) {
+    return DB::table('chats')
+        ->where('id', $chatId)
+        ->where(function ($q) use ($user) {
+            $q->where('user1_id', $user->id)
+                ->orWhere('user2_id', $user->id);
+        })
+        ->exists();
+});
 
 Broadcast::channel('private-chat.{chatId}', function ($user, string $chatId) {
-    return Chat::where('id', $chatId)
+    return DB::table('chats')
+        ->where('id', $chatId)
         ->where(function ($q) use ($user) {
             $q->where('user1_id', $user->id)
                 ->orWhere('user2_id', $user->id);
@@ -13,21 +24,22 @@ Broadcast::channel('private-chat.{chatId}', function ($user, string $chatId) {
 });
 
 Broadcast::channel('presence-chat.{chatId}', function ($user, string $chatId) {
-    $isMember = Chat::where('id', $chatId)
+    $allowed = DB::table('chats')
+        ->where('id', $chatId)
         ->where(function ($q) use ($user) {
             $q->where('user1_id', $user->id)
                 ->orWhere('user2_id', $user->id);
         })
         ->exists();
 
-    if (! $isMember) {
+    if (! $allowed) {
         return false;
     }
 
     return [
         'id' => (string) $user->id,
         'display_name' => $user->display_name
-            ?? trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+            ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
     ];
 });
 

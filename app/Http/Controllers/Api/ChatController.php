@@ -14,19 +14,28 @@ use App\Models\User;
 use App\Events\Chat\ChatReadUpdated;
 use App\Events\Chat\MessageSent;
 use App\Events\Chat\TypingIndicator;
+use App\Support\Chat\AuthorizesChatAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
 {
+    use AuthorizesChatAccess;
+
+    public function index(Request $request)
+    {
+        return $this->listChats($request);
+    }
+
     public function listChats(Request $request)
     {
         $authUser = $request->user();
+        $me = $authUser->id;
 
         $query = Chat::with(['user1', 'user2', 'lastMessage'])
-            ->where(function ($q) use ($authUser) {
-                $q->where('user1_id', $authUser->id)
-                    ->orWhere('user2_id', $authUser->id);
+            ->where(function ($q) use ($me) {
+                $q->where('user1_id', $me)
+                    ->orWhere('user2_id', $me);
             });
 
         $query->withCount(['messages as unread_count' => function ($q) use ($authUser) {
@@ -36,6 +45,7 @@ class ChatController extends BaseApiController
         }]);
 
         $chats = $query
+            ->orderByRaw('last_message_at IS NULL ASC')
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
             ->get();
