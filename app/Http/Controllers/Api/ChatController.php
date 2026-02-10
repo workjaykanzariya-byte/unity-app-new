@@ -163,6 +163,11 @@ class ChatController extends BaseApiController
         $paginator = Message::with('sender')
             ->where('chat_id', $chat->id)
             ->whereNull('deleted_at')
+            ->when((string) $chat->user1_id === (string) $authUser->id, function ($query) {
+                $query->whereNull('deleted_for_user1_at');
+            }, function ($query) {
+                $query->whereNull('deleted_for_user2_at');
+            })
             ->orderBy('created_at', 'asc')
             ->paginate($perPage);
 

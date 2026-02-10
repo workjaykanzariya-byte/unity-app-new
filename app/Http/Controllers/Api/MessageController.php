@@ -28,6 +28,11 @@ class MessageController extends BaseApiController
         $messages = $chat->messages()
             ->with('sender:id,display_name,first_name,last_name,profile_photo_url')
             ->whereNull('deleted_at')
+            ->when((string) $chat->user1_id === (string) $user->id, function ($query) {
+                $query->whereNull('deleted_for_user1_at');
+            }, function ($query) {
+                $query->whereNull('deleted_for_user2_at');
+            })
             ->orderByDesc('created_at')
             ->paginate($perPage);
 
