@@ -7,6 +7,7 @@ use App\Http\Requests\Chat\StoreChatRequest;
 use App\Http\Requests\Chat\StoreMessageRequest;
 use App\Http\Resources\ChatResource;
 use App\Http\Resources\MessageResource;
+use App\Models\FileModel;
 use App\Models\Notification;
 use App\Models\Chat;
 use App\Models\Message;
@@ -15,12 +16,20 @@ use App\Events\Chat\ChatReadUpdated;
 use App\Events\Chat\MessageSent;
 use App\Events\Chat\TypingIndicator;
 use App\Support\Chat\AuthorizesChatAccess;
+use App\Support\Media\Probe;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
 {
     use AuthorizesChatAccess;
+
+    public function __construct(
+        private readonly Probe $probe
+    ) {
+    }
 
     public function index(Request $request)
     {
@@ -55,9 +64,9 @@ class ChatController extends BaseApiController
 
     public function storeChat(StoreChatRequest $request)
     {
-        $authUserId = auth()->id();
+        $authUserId = (string) auth()->id();
         $data = $request->validated();
-        $otherUserId = $data['user_id'] ?? $request->input('user_id');
+        $otherUserId = (string) ($data['user_id'] ?? $request->input('user_id'));
 
         if ($authUserId === $otherUserId) {
             return $this->error('You cannot start a chat with yourself', 422);
@@ -68,21 +77,29 @@ class ChatController extends BaseApiController
             return $this->error('User not found', 404);
         }
 
-        $chat = Chat::where(function ($q) use ($authUserId, $otherUserId) {
-                $q->where('user1_id', $authUserId)
-                    ->where('user2_id', $otherUserId);
-            })
-            ->orWhere(function ($q) use ($authUserId, $otherUserId) {
-                $q->where('user1_id', $otherUserId)
-                    ->where('user2_id', $authUserId);
-            })
+        [$userSmall, $userBig] = strcmp($authUserId, $otherUserId) <= 0
+            ? [$authUserId, $otherUserId]
+            : [$otherUserId, $authUserId];
+
+        $chat = Chat::where('user1_id', $userSmall)
+            ->where('user2_id', $userBig)
             ->first();
 
         if (! $chat) {
-            $chat = Chat::create([
-                'user1_id' => $authUserId,
-                'user2_id' => $otherUserId,
-            ]);
+            try {
+                $chat = Chat::create([
+                    'user1_id' => $userSmall,
+                    'user2_id' => $userBig,
+                ]);
+            } catch (QueryException $e) {
+                $chat = Chat::where('user1_id', $userSmall)
+                    ->where('user2_id', $userBig)
+                    ->first();
+
+                if (! $chat) {
+                    throw $e;
+                }
+            }
         }
 
         $chat->load([
@@ -165,7 +182,7 @@ class ChatController extends BaseApiController
     public function storeMessage(StoreMessageRequest $request, string $id)
     {
         $authUser = $request->user();
-        $data = $request->validated() ?? $request->all();
+        $data = $request->validated() ?? [];
 
         $chat = Chat::where('id', $id)
             ->where(function ($q) use ($authUser) {
@@ -178,10 +195,24 @@ class ChatController extends BaseApiController
             return $this->error('Chat not found', 404);
         }
 
+        $filesInput = $request->file('files', []);
+        $files = is_array($filesInput) ? $filesInput : ($filesInput ? [$filesInput] : []);
+
+        $attachments = is_array($data['attachments'] ?? null) ? $data['attachments'] : [];
+        foreach ($files as $file) {
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                continue;
+            }
+
+            $attachments[] = $this->storeAttachment($file, (string) $authUser->id);
+        }
+
+        $content = $data['content_text'] ?? $data['content'] ?? null;
+
         $message = $chat->messages()->create([
             'sender_id' => $authUser->id,
-            'content' => $data['content_text'] ?? $data['content'] ?? null,
-            'attachments' => $data['attachments'] ?? null,
+            'content' => $content,
+            'attachments' => $attachments ?: null,
             'is_read' => false,
         ]);
 
@@ -219,6 +250,55 @@ class ChatController extends BaseApiController
         broadcast(new MessageSent($chat, $message, $authUser))->toOthers();
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
+    }
+
+    private function storeAttachment(UploadedFile $file, string $uploaderUserId): array
+    {
+        $disk = config('filesystems.default', 'public');
+        $folder = 'uploads/' . now()->format('Y/m/d');
+        $safeName = preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
+        $storeName = (string) Str::uuid() . '_' . ($safeName ?: 'attachment');
+        $path = $file->storeAs($folder, $storeName, $disk);
+
+        $mime = $file->getMimeType() ?: $file->getClientMimeType() ?: 'application/octet-stream';
+
+        $width = null;
+        $height = null;
+        $duration = null;
+
+        if ($this->probe->isImageMime($mime)) {
+            $dimensions = $this->probe->imageDimensions($file->getRealPath());
+            $width = $dimensions['width'] ?? null;
+            $height = $dimensions['height'] ?? null;
+        } elseif ($this->probe->isVideoMime($mime)) {
+            $metadata = $this->probe->videoMetadata($file->getRealPath());
+            $width = $metadata['width'] ?? null;
+            $height = $metadata['height'] ?? null;
+            $duration = $metadata['duration'] ?? null;
+        }
+
+        $storedFile = FileModel::create([
+            'uploader_user_id' => $uploaderUserId,
+            's3_key' => $path,
+            'mime_type' => $mime,
+            'size_bytes' => $file->getSize(),
+            'width' => $width,
+            'height' => $height,
+            'duration' => $duration,
+        ]);
+
+        $kind = $this->probe->isImageMime($mime)
+            ? 'image'
+            : ($this->probe->isVideoMime($mime) ? 'video' : 'file');
+
+        return [
+            'file_id' => (string) $storedFile->id,
+            'kind' => $kind,
+            'name' => $file->getClientOriginalName(),
+            'mime' => $mime,
+            'size' => (int) $storedFile->size_bytes,
+            'url' => '/api/v1/files/' . $storedFile->id,
+        ];
     }
 
     public function markRead(Request $request, string $id)
