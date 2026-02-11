@@ -41,6 +41,7 @@ class NewChatMessage implements ShouldBroadcastNow
                 'chat_id' => (string) $this->message->chat_id,
                 'sender_id' => (string) $this->message->sender_id,
                 'content' => $this->message->content,
+                'preview' => filled($this->message->content) ? $this->message->content : '📎 Attachment',
                 'attachments' => $this->message->attachments ?? [],
                 'is_read' => (bool) $this->message->is_read,
                 'created_at' => $this->message->created_at,

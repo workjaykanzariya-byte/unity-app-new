@@ -21,12 +21,15 @@ class ChatResource extends JsonResource
         }
 
         $lastMessage = $this->whenLoaded('lastMessage', function () {
+            $preview = $this->buildPreview($this->lastMessage->content, $this->lastMessage->attachments);
+
             return [
                 'id' => $this->lastMessage->id,
                 'sender_id' => $this->lastMessage->sender_id,
                 'content' => $this->lastMessage->content,
-                'snippet' => Str::limit((string) $this->lastMessage->content, 120),
-                'attachments' => $this->lastMessage->attachments,
+                'snippet' => $preview,
+                'preview' => $preview,
+                'attachments' => $this->lastMessage->attachments ?? [],
                 'is_read' => (bool) $this->lastMessage->is_read,
                 'created_at' => $this->lastMessage->created_at,
             ];
@@ -52,5 +55,18 @@ class ChatResource extends JsonResource
             'last_message' => $lastMessage,
             'unread_count' => $unreadCount,
         ];
+    }
+
+    private function buildPreview(?string $content, mixed $attachments): string
+    {
+        if (filled($content)) {
+            return Str::limit($content, 120);
+        }
+
+        if (is_array($attachments) && isset($attachments[0]['name']) && filled($attachments[0]['name'])) {
+            return '📎 ' . (string) $attachments[0]['name'];
+        }
+
+        return '📎 Attachment';
     }
 }

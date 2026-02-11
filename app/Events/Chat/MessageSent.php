@@ -40,7 +40,10 @@ class MessageSent implements ShouldBroadcastNow
             'chat_id' => (string) $this->chat->id,
             'message' => [
                 'id' => (string) $this->message->id,
-                'body' => $this->message->content,
+                'body' => filled($this->message->content) ? $this->message->content : '📎 Attachment',
+                'content' => $this->message->content,
+                'preview' => filled($this->message->content) ? $this->message->content : '📎 Attachment',
+                'attachments' => $this->message->attachments ?? [],
                 'sender' => [
                     'id' => (string) $this->sender->id,
                     'display_name' => $this->sender->display_name

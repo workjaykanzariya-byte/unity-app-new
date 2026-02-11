@@ -43,12 +43,12 @@ class MessageController extends BaseApiController
         }
 
         $validated = $request->validate([
-            'content' => ['nullable', 'string'],
-            'files' => ['nullable', 'array'],
+            'content' => ['nullable', 'string', 'max:5000'],
+            'files' => ['nullable', 'array', 'max:10'],
             'files.*' => [
                 'file',
-                'max:51200',
-                'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'max:10240',
+                'mimetypes:image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,video/mp4,video/webm,video/quicktime,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ],
         ]);
 
@@ -57,7 +57,7 @@ class MessageController extends BaseApiController
             $uploadedFiles = [$uploadedFiles];
         }
 
-        $content = $validated['content'] ?? null;
+        $content = $this->normalizeContent($validated['content'] ?? null);
         if (blank($content) && count($uploadedFiles) === 0) {
             return $this->error('Either content or files is required.', 422);
         }
@@ -71,12 +71,18 @@ class MessageController extends BaseApiController
             $attachments[] = $this->storeAttachment($file, $user->id);
         }
 
-        $message = $chat->messages()->create([
+        $messageData = [
             'sender_id' => $user->id,
             'content' => $content,
             'attachments' => $attachments ?: null,
             'is_read' => false,
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('messages', 'kind')) {
+            $messageData['kind'] = $this->resolveMessageKind($content, $attachments);
+        }
+
+        $message = $chat->messages()->create($messageData);
 
         $chat->forceFill([
             'last_message_at' => now(),
@@ -88,6 +94,38 @@ class MessageController extends BaseApiController
         broadcast(new NewChatMessage($chat, $message))->toOthers();
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
+    }
+
+    private function normalizeContent(mixed $content): ?string
+    {
+        if (! is_string($content)) {
+            return null;
+        }
+
+        $trimmed = trim($content);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $lowered = mb_strtolower($trimmed);
+        if (in_array($lowered, ['none', 'null'], true)) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    private function resolveMessageKind(?string $content, array $attachments): string
+    {
+        if (filled($content) && count($attachments) > 0) {
+            return 'mixed';
+        }
+
+        if (count($attachments) > 0) {
+            return 'media';
+        }
+
+        return 'text';
     }
 
     private function storeAttachment(UploadedFile $file, string $uploaderUserId): array

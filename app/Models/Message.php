@@ -28,6 +28,7 @@ class Message extends Model
         'sender_id',
         'content',
         'attachments',
+        'kind',
         'is_read',
     ];
 

@@ -212,14 +212,21 @@ class ChatController extends BaseApiController
             $attachments[] = $this->storeAttachment($file, (string) $authUser->id);
         }
 
-        $content = $data['content_text'] ?? $data['content'] ?? null;
+        $content = $data['content'] ?? $data['content_text'] ?? null;
+        $messageKind = $this->resolveMessageKind($content, $attachments);
 
-        $message = $chat->messages()->create([
+        $messagePayload = [
             'sender_id' => $authUser->id,
             'content' => $content,
             'attachments' => $attachments ?: null,
             'is_read' => false,
-        ]);
+        ];
+
+        if ($this->messageHasKindColumn()) {
+            $messagePayload['kind'] = $messageKind;
+        }
+
+        $message = $chat->messages()->create($messagePayload);
 
         $message->refresh();
         $message->load('sender');
@@ -243,7 +250,7 @@ class ChatController extends BaseApiController
                     'chat_id' => (string) $chat->id,
                     'message_id' => (string) $message->id,
                     'sender' => $senderPayload,
-                    'preview' => Str::limit((string) ($message->content ?? ''), 120, ''),
+                    'preview' => $this->messagePreview($message->content, $message->attachments),
                     'type' => 'chat_message',
                 ],
                 'is_read' => false,
@@ -362,6 +369,44 @@ class ChatController extends BaseApiController
         return $this->success([
             'is_typing' => (bool) $data['is_typing'],
         ], 'Typing updated');
+    }
+
+
+    private function resolveMessageKind(?string $content, array $attachments): string
+    {
+        if (filled($content) && count($attachments) > 0) {
+            return 'mixed';
+        }
+
+        if (count($attachments) > 0) {
+            return 'media';
+        }
+
+        return 'text';
+    }
+
+    private function messagePreview(?string $content, mixed $attachments): string
+    {
+        if (filled($content)) {
+            return Str::limit($content, 120, '');
+        }
+
+        if (is_array($attachments) && isset($attachments[0]['name']) && filled($attachments[0]['name'])) {
+            return '📎 ' . (string) $attachments[0]['name'];
+        }
+
+        return '📎 Attachment';
+    }
+
+    private function messageHasKindColumn(): bool
+    {
+        static $hasKind = null;
+
+        if ($hasKind === null) {
+            $hasKind = \Illuminate\Support\Facades\Schema::hasColumn('messages', 'kind');
+        }
+
+        return $hasKind;
     }
 
     private function formatUserPayload(User $user): array
