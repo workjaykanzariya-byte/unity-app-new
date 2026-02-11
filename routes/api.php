@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -201,6 +202,10 @@ Route::prefix('v1')->group(function () {
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+
+        // Push tokens
+        Route::post('/push-tokens', [PushTokenController::class, 'store']);
+        Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
 
         // Referrals & Visitors
         Route::post('/referrals/links', [ReferralController::class, 'storeLink']);

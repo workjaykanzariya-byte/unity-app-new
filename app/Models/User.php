@@ -258,6 +258,11 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'sender_id');
     }
 
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(UserPushToken::class);
+    }
+
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
