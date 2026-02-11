@@ -212,7 +212,7 @@ class ChatController extends BaseApiController
             $attachments[] = $this->storeAttachment($file, (string) $authUser->id);
         }
 
-        $content = $data['content_text'] ?? $data['content'] ?? null;
+        $content = $this->normalizedContent($data['content_text'] ?? $data['content'] ?? null);
 
         $message = $chat->messages()->create([
             'sender_id' => $authUser->id,
@@ -243,7 +243,7 @@ class ChatController extends BaseApiController
                     'chat_id' => (string) $chat->id,
                     'message_id' => (string) $message->id,
                     'sender' => $senderPayload,
-                    'preview' => Str::limit((string) ($message->content ?? ''), 120, ''),
+                    'preview' => $this->messagePreview($message->content, $message->attachments),
                     'type' => 'chat_message',
                 ],
                 'is_read' => false,
@@ -255,6 +255,34 @@ class ChatController extends BaseApiController
         broadcast(new MessageSent($chat, $message, $authUser))->toOthers();
 
         return $this->success(new MessageResource($message), 'Message sent', 201);
+    }
+
+
+    private function normalizedContent(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '' || in_array(strtolower($trimmed), ['none', 'null'], true)) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    private function messagePreview(mixed $content, mixed $attachments): string
+    {
+        $normalizedContent = $this->normalizedContent($content);
+        if ($normalizedContent !== null) {
+            return Str::limit($normalizedContent, 120, '');
+        }
+
+        $attachmentList = is_array($attachments) ? $attachments : [];
+
+        return count($attachmentList) > 0 ? '📎 Attachment' : '';
     }
 
     private function storeAttachment(UploadedFile $file, string $uploaderUserId): array

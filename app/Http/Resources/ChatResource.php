@@ -25,8 +25,8 @@ class ChatResource extends JsonResource
                 'id' => $this->lastMessage->id,
                 'sender_id' => $this->lastMessage->sender_id,
                 'content' => $this->lastMessage->content,
-                'snippet' => Str::limit((string) $this->lastMessage->content, 120),
-                'attachments' => $this->lastMessage->attachments,
+                'snippet' => $this->snippetFromMessage($this->lastMessage->content, $this->lastMessage->attachments),
+                'attachments' => is_array($this->lastMessage->attachments) ? $this->lastMessage->attachments : [],
                 'is_read' => (bool) $this->lastMessage->is_read,
                 'created_at' => $this->lastMessage->created_at,
             ];
@@ -52,5 +52,25 @@ class ChatResource extends JsonResource
             'last_message' => $lastMessage,
             'unread_count' => $unreadCount,
         ];
+    }
+
+    private function snippetFromMessage(mixed $content, mixed $attachments): string
+    {
+        $text = is_string($content) ? trim($content) : '';
+        if ($text !== '') {
+            return Str::limit($text, 120);
+        }
+
+        $attachmentList = is_array($attachments) ? $attachments : [];
+
+        if (count($attachmentList) === 0) {
+            return '';
+        }
+
+        $firstAttachmentName = $attachmentList[0]['name'] ?? null;
+
+        return is_string($firstAttachmentName) && trim($firstAttachmentName) !== ''
+            ? Str::limit(trim($firstAttachmentName), 120)
+            : '📎 Attachment';
     }
 }
