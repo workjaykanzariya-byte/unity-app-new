@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class SendPushNotificationJob implements ShouldQueue
@@ -29,22 +30,36 @@ class SendPushNotificationJob implements ShouldQueue
     public function handle(FcmService $fcmService): void
     {
         try {
+            Log::info('SendPushNotificationJob started', [
+                'user_id' => $this->user->id,
+            ]);
+
             if (($this->user->status ?? null) !== 'active') {
                 return;
             }
 
             $tokens = $this->user->pushTokens()->get();
 
-            foreach ($tokens as $pushToken) {
+            foreach ($tokens as $token) {
                 try {
+                    Log::info('Sending push to token', [
+                        'token' => substr((string) $token->token, 0, 20) . '...',
+                    ]);
+
                     $fcmService->sendToToken(
-                        (string) $pushToken->token,
+                        (string) $token->token,
                         $this->title,
                         $this->body,
                         $this->data,
                     );
-                } catch (Throwable $throwable) {
-                    report($throwable);
+
+                    Log::info('Push sent successfully');
+                } catch (Throwable $e) {
+                    Log::error('Push send failed', [
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    report($e);
                 }
             }
         } catch (Throwable $throwable) {

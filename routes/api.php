@@ -207,6 +207,30 @@ Route::prefix('v1')->group(function () {
         Route::post('/push-tokens', [PushTokenController::class, 'store']);
         Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
 
+        Route::post('/v1/debug/push-test', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+
+            \Illuminate\Support\Facades\Log::info('Dispatching test push job', [
+                'user_id' => $user->id,
+            ]);
+
+            \App\Jobs\SendPushNotificationJob::dispatch(
+                $user,
+                'Test Push',
+                'Hello from Laravel ✅',
+                [
+                    'type' => 'test',
+                    'time' => now()->toDateTimeString(),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Push job dispatched',
+                'data' => [],
+            ]);
+        });
+
         // Referrals & Visitors
         Route::post('/referrals/links', [ReferralController::class, 'storeLink']);
         Route::get('/referrals/links', [ReferralController::class, 'listLinks']);
