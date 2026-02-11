@@ -17,7 +17,8 @@ class MessageResource extends JsonResource
             'chat_id' => (string) $this->chat_id,
             'sender_id' => (string) $this->sender_id,
             'content' => $this->content,
-            'attachments' => $this->attachments,
+            'attachments' => is_array($this->attachments) ? $this->attachments : [],
+            'preview' => $this->messagePreview(),
             'is_read' => (bool) $this->is_read,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
@@ -31,5 +32,17 @@ class MessageResource extends JsonResource
                 ];
             }),
         ];
+    }
+
+    private function messagePreview(): string
+    {
+        $content = is_string($this->content) ? trim($this->content) : '';
+        if ($content !== '') {
+            return $content;
+        }
+
+        $attachments = is_array($this->attachments) ? $this->attachments : [];
+
+        return count($attachments) > 0 ? '📎 Attachment' : '';
     }
 }

@@ -10,6 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 class MessageSent implements ShouldBroadcastNow
 {
@@ -40,7 +41,9 @@ class MessageSent implements ShouldBroadcastNow
             'chat_id' => (string) $this->chat->id,
             'message' => [
                 'id' => (string) $this->message->id,
-                'body' => $this->message->content,
+                'body' => $this->previewBody(),
+                'content' => $this->message->content,
+                'attachments' => is_array($this->message->attachments) ? $this->message->attachments : [],
                 'sender' => [
                     'id' => (string) $this->sender->id,
                     'display_name' => $this->sender->display_name
@@ -50,5 +53,17 @@ class MessageSent implements ShouldBroadcastNow
                 'created_at' => $this->message->created_at,
             ],
         ];
+    }
+
+    private function previewBody(): string
+    {
+        $content = is_string($this->message->content) ? trim($this->message->content) : '';
+        if ($content !== '') {
+            return Str::limit($content, 120, '');
+        }
+
+        $attachments = is_array($this->message->attachments) ? $this->message->attachments : [];
+
+        return count($attachments) > 0 ? '📎 Attachment' : '';
     }
 }
