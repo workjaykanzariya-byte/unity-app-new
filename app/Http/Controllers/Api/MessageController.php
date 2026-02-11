@@ -10,6 +10,8 @@ use App\Support\Chat\AuthorizesChatAccess;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
+use RecursiveArrayIterator;
+use RecursiveIteratorIterator;
 
 class MessageController extends BaseApiController
 {
@@ -50,19 +52,23 @@ class MessageController extends BaseApiController
             'files[].*' => ['file', 'max:20480'],
         ]);
 
-        $uploadedFiles = $request->file('files');
-        if ($uploadedFiles === null) {
-            $uploadedFiles = $request->file('files[]');
-        }
-        if ($uploadedFiles === null) {
-            $uploadedFiles = [];
-        }
-        if (! is_array($uploadedFiles)) {
-            $uploadedFiles = [$uploadedFiles];
+        $allFiles = $request->allFiles();
+        $flatFiles = [];
+
+        if (! empty($allFiles)) {
+            $iterator = new RecursiveIteratorIterator(new RecursiveArrayIterator($allFiles));
+
+            foreach ($iterator as $file) {
+                if ($file instanceof UploadedFile) {
+                    $flatFiles[] = $file;
+                }
+            }
         }
 
+        $uploadedFiles = $flatFiles;
+
         $hasContent = ! empty(trim((string) $request->input('content')));
-        $hasAnyFile = count($uploadedFiles) > 0;
+        $hasAnyFile = count($flatFiles) > 0;
 
         if (! $hasContent && ! $hasAnyFile) {
             return response()->json([
