@@ -207,7 +207,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/push-tokens', [PushTokenController::class, 'store']);
         Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
 
-        Route::post('/v1/debug/push-test', function (\Illuminate\Http\Request $request) {
+        Route::post('/debug/push-test', function (\Illuminate\Http\Request $request) {
             $user = $request->user();
 
             \Illuminate\Support\Facades\Log::info('Dispatching test push job', [
