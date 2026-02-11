@@ -21,6 +21,7 @@ use App\Support\Media\Probe;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
@@ -258,15 +259,23 @@ class ChatController extends BaseApiController
                 continue;
             }
 
+            Log::info('Dispatching chat push notification job', [
+                'chat_id' => (string) $chat->id,
+                'message_id' => (string) $message->id,
+                'sender_id' => (string) $authUser->id,
+                'receiver_id' => (string) $receiverUser->id,
+            ]);
+
             // Queue worker required to process push jobs: php artisan queue:work
             SendPushNotificationJob::dispatch(
                 $receiverUser,
-                $this->resolveDisplayName($authUser),
+                $this->resolveDisplayName($authUser) ?: 'New message',
                 $message->content ?? 'Sent you a file',
                 [
                     'type' => 'chat',
                     'chat_id' => (string) $chat->id,
                     'sender_id' => (string) $authUser->id,
+                    'message_id' => (string) $message->id,
                 ]
             );
         }
