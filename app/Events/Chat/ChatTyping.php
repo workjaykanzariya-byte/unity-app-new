@@ -23,7 +23,7 @@ class ChatTyping implements ShouldBroadcastNow
 
     public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel('chat.' . $this->chatId);
+        return new PrivateChannel('private-chat.' . $this->chatId);
     }
 
     public function broadcastAs(): string
