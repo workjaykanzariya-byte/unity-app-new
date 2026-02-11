@@ -45,12 +45,20 @@ class MessageController extends BaseApiController
         $validated = $request->validate([
             'content' => ['nullable', 'string'],
             'files' => ['nullable', 'array'],
-            'files.*' => [
-                'file',
-                'max:51200',
-                'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            ],
+            'files.*' => ['file', 'max:20480'],
         ]);
+
+        if (
+            empty($request->content) &&
+            (! $request->hasFile('files') || count($request->file('files')) === 0)
+        ) {
+            return response()->json([
+                'message' => 'Either content or attachments is required.',
+                'errors' => [
+                    'content' => ['Either content or attachments is required.'],
+                ],
+            ], 422);
+        }
 
         $uploadedFiles = $request->file('files', []);
         if (! is_array($uploadedFiles)) {
@@ -58,9 +66,6 @@ class MessageController extends BaseApiController
         }
 
         $content = $validated['content'] ?? null;
-        if (blank($content) && count($uploadedFiles) === 0) {
-            return $this->error('Either content or files is required.', 422);
-        }
 
         $attachments = [];
         foreach ($uploadedFiles as $file) {
