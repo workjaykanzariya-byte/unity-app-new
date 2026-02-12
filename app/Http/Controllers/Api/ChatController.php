@@ -226,6 +226,7 @@ class ChatController extends BaseApiController
 
         $message->refresh();
         $message->load('sender');
+        $messageAttachments = is_array($message->attachments) ? $message->attachments : [];
 
         $chat->last_message_id = $message->id;
         $chat->last_message_at = $message->created_at;
@@ -267,7 +268,7 @@ class ChatController extends BaseApiController
                 'receiver_id' => (string) $receiverUser->id,
             ]);
 
-            $attachmentList = is_array($message->attachments) ? $message->attachments : [];
+            $attachmentList = $messageAttachments;
             $firstImageAttachment = collect($attachmentList)
                 ->first(fn ($attachment) => Arr::get($attachment, 'kind') === 'image');
 
@@ -348,7 +349,11 @@ class ChatController extends BaseApiController
         $hasImage = collect($attachmentList)
             ->contains(fn ($attachment) => Arr::get($attachment, 'kind') === 'image');
 
-        return $hasImage ? '📷 Photo' : '';
+        if ($hasImage) {
+            return '📷 Photo';
+        }
+
+        return count($attachmentList) > 0 ? '📎 Attachment' : '';
     }
 
     private function toAbsoluteFileUrl(string $relativeUrl): string

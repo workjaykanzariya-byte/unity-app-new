@@ -6,6 +6,7 @@ use App\Models\UserPushToken;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -41,19 +42,36 @@ class FcmService
                 'body' => $body,
             ];
 
+            $androidNotification = [];
+
             if ($resolvedImageUrl !== null) {
                 $notification['image'] = $resolvedImageUrl;
+                $androidNotification['image'] = $resolvedImageUrl;
             }
+
+            $payload = [
+                'message' => [
+                    'token' => $token,
+                    'notification' => $notification,
+                    'data' => $this->normalizeData($data),
+                ],
+            ];
+
+            if ($androidNotification !== []) {
+                $payload['message']['android'] = [
+                    'notification' => $androidNotification,
+                ];
+            }
+
+            Log::info('Sending FCM request', [
+                'token_prefix' => substr($token, 0, 20) . '...',
+                'title' => $title,
+                'has_image' => $resolvedImageUrl !== null,
+            ]);
 
             $response = Http::withToken($accessToken)
                 ->acceptJson()
-                ->post($endpoint, [
-                    'message' => [
-                        'token' => $token,
-                        'notification' => $notification,
-                        'data' => $this->normalizeData($data),
-                    ],
-                ]);
+                ->post($endpoint, $payload);
 
             if ($response->successful()) {
                 return;

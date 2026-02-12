@@ -35,7 +35,11 @@ class SendPushNotificationJob implements ShouldQueue
 
             Log::info('SendPushNotificationJob started', [
                 'user_id' => $this->user->id,
+            ]);
+
+            Log::info('Push payload meta', [
                 'has_image' => $hasImage,
+                'image_url' => $imageUrl,
             ]);
 
             if (($this->user->status ?? null) !== 'active') {
