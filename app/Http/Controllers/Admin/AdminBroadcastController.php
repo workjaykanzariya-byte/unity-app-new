@@ -11,6 +11,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class AdminBroadcastController extends Controller
@@ -20,6 +21,7 @@ class AdminBroadcastController extends Controller
         $this->authorizeSuperAdmin($request);
 
         $broadcasts = AdminBroadcast::query()
+            ->with('createdBy')
             ->latest('created_at')
             ->paginate(20);
 
@@ -228,7 +230,8 @@ class AdminBroadcastController extends Controller
 
     private function markSendingAndDispatch(AdminBroadcast $broadcast): void
     {
-        DB::transaction(function () use ($broadcast): void {
+        try {
+            DB::transaction(function () use ($broadcast): void {
             $fresh = AdminBroadcast::query()->lockForUpdate()->findOrFail($broadcast->id);
 
             if (in_array($fresh->status, ['sending', 'sent'], true)) {
@@ -240,8 +243,28 @@ class AdminBroadcastController extends Controller
             $fresh->next_run_at = null;
             $fresh->save();
 
+            $queueConnection = (string) config('queue.default');
+
+            if ($queueConnection === 'sync') {
+                (new SendAdminBroadcastJob((string) $fresh->id))->handle();
+
+                return;
+            }
+
             SendAdminBroadcastJob::dispatch((string) $fresh->id);
-        });
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to start broadcast dispatch.', [
+                'broadcast_id' => (string) $broadcast->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $broadcast->status = $broadcast->isRecurring() ? 'scheduled' : 'draft';
+            $broadcast->next_run_at = $broadcast->isRecurring() ? $broadcast->computeNextRunAt() : null;
+            $broadcast->save();
+
+            throw $e;
+        }
     }
 
     private function successMessage(Request $request): string

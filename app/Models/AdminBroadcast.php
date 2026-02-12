@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class AdminBroadcast extends Model
@@ -59,6 +60,12 @@ class AdminBroadcast extends Model
                 $broadcast->id = (string) Str::uuid();
             }
         });
+    }
+
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'created_by_admin_id');
     }
 
     public function isRecurring(): bool

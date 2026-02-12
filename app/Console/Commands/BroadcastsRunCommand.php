@@ -39,7 +39,15 @@ class BroadcastsRunCommand extends Command
             return self::SUCCESS;
         }
 
+        $queueConnection = (string) config('queue.default');
+
         foreach ($dueRows as $row) {
+            if ($queueConnection === 'sync') {
+                (new SendAdminBroadcastJob((string) $row->id))->handle();
+
+                continue;
+            }
+
             SendAdminBroadcastJob::dispatch((string) $row->id);
         }
 

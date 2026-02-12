@@ -39,7 +39,7 @@
                             <td><span class="badge bg-{{ $broadcast->status === 'sent' ? 'success' : ($broadcast->status === 'scheduled' ? 'info' : ($broadcast->status === 'sending' ? 'warning text-dark' : 'secondary')) }}">{{ ucfirst($broadcast->status) }}</span></td>
                             <td>{{ $broadcast->next_run_at?->timezone('Asia/Kolkata')->format('Y-m-d H:i') ?? $broadcast->send_at?->timezone('Asia/Kolkata')->format('Y-m-d H:i') ?? '—' }}</td>
                             <td>{{ ucfirst($broadcast->recurrence) }}</td>
-                            <td>{{ $broadcast->created_by_admin_id }}</td>
+                            <td>{{ $broadcast->createdBy->name ?? $broadcast->createdBy->email ?? $broadcast->created_by_admin_id }}</td>
                             <td>{{ $broadcast->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
                             <td class="text-end d-flex gap-2 justify-content-end">
                                 <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.broadcasts.edit', $broadcast) }}">Edit</a>
