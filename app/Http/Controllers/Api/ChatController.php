@@ -280,25 +280,27 @@ class ChatController extends BaseApiController
                     : $this->toAbsoluteFileUrl($rawImageUrl);
             }
 
-            $hasMedia = count($attachmentList) > 0;
-            $mediaKind = $hasMedia
-                ? ($firstImageAttachment ? 'image' : 'file')
-                : null;
+            $hasImage = is_string($imageUrl) && $imageUrl !== '';
+
+            $pushData = [
+                'type' => 'chat',
+                'chat_id' => (string) $chat->id,
+                'sender_id' => (string) $authUser->id,
+                'message_id' => (string) $message->id,
+                'has_media' => $hasImage ? '1' : '0',
+                'media_kind' => $hasImage ? 'image' : null,
+            ];
+
+            if ($hasImage) {
+                $pushData['image_url'] = $imageUrl;
+            }
 
             // Queue worker required to process push jobs: php artisan queue:work
             SendPushNotificationJob::dispatch(
                 $receiverUser,
                 $this->resolveDisplayName($authUser) ?: 'New message',
                 $this->pushBody($message->content, $message->attachments),
-                [
-                    'type' => 'chat',
-                    'chat_id' => (string) $chat->id,
-                    'sender_id' => (string) $authUser->id,
-                    'message_id' => (string) $message->id,
-                    'has_media' => $hasMedia ? '1' : '0',
-                    'media_kind' => $mediaKind,
-                    'image_url' => $imageUrl,
-                ]
+                $pushData
             );
         }
 
@@ -346,15 +348,7 @@ class ChatController extends BaseApiController
         $hasImage = collect($attachmentList)
             ->contains(fn ($attachment) => Arr::get($attachment, 'kind') === 'image');
 
-        if ($hasImage) {
-            return '📷 Photo';
-        }
-
-        if (count($attachmentList) > 0) {
-            return '📎 File';
-        }
-
-        return '';
+        return $hasImage ? '📷 Photo' : '';
     }
 
     private function toAbsoluteFileUrl(string $relativeUrl): string
