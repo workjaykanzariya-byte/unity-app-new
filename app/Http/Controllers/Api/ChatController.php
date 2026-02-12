@@ -21,6 +21,7 @@ use App\Support\Media\Probe;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -266,16 +267,37 @@ class ChatController extends BaseApiController
                 'receiver_id' => (string) $receiverUser->id,
             ]);
 
+            $attachmentList = is_array($message->attachments) ? $message->attachments : [];
+            $firstImageAttachment = collect($attachmentList)
+                ->first(fn ($attachment) => Arr::get($attachment, 'kind') === 'image');
+
+            $imageUrl = null;
+            $rawImageUrl = Arr::get($firstImageAttachment, 'url');
+
+            if (is_string($rawImageUrl) && $rawImageUrl !== '') {
+                $imageUrl = filter_var($rawImageUrl, FILTER_VALIDATE_URL)
+                    ? $rawImageUrl
+                    : $this->toAbsoluteFileUrl($rawImageUrl);
+            }
+
+            $hasMedia = count($attachmentList) > 0;
+            $mediaKind = $hasMedia
+                ? ($firstImageAttachment ? 'image' : 'file')
+                : null;
+
             // Queue worker required to process push jobs: php artisan queue:work
             SendPushNotificationJob::dispatch(
                 $receiverUser,
                 $this->resolveDisplayName($authUser) ?: 'New message',
-                $message->content ?? 'Sent you a file',
+                $this->pushBody($message->content, $message->attachments),
                 [
                     'type' => 'chat',
                     'chat_id' => (string) $chat->id,
                     'sender_id' => (string) $authUser->id,
                     'message_id' => (string) $message->id,
+                    'has_media' => $hasMedia ? '1' : '0',
+                    'media_kind' => $mediaKind,
+                    'image_url' => $imageUrl,
                 ]
             );
         }
@@ -311,6 +333,43 @@ class ChatController extends BaseApiController
         $attachmentList = is_array($attachments) ? $attachments : [];
 
         return count($attachmentList) > 0 ? '📎 Attachment' : '';
+    }
+
+    private function pushBody(mixed $content, mixed $attachments): string
+    {
+        $normalizedContent = $this->normalizedContent($content);
+        if ($normalizedContent !== null) {
+            return Str::limit($normalizedContent, 120);
+        }
+
+        $attachmentList = is_array($attachments) ? $attachments : [];
+        $hasImage = collect($attachmentList)
+            ->contains(fn ($attachment) => Arr::get($attachment, 'kind') === 'image');
+
+        if ($hasImage) {
+            return '📷 Photo';
+        }
+
+        if (count($attachmentList) > 0) {
+            return '📎 File';
+        }
+
+        return '';
+    }
+
+    private function toAbsoluteFileUrl(string $relativeUrl): string
+    {
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+
+        if ($baseUrl === '' && app()->bound('request')) {
+            $baseUrl = rtrim((string) request()->getSchemeAndHttpHost(), '/');
+        }
+
+        if ($baseUrl === '') {
+            return $relativeUrl;
+        }
+
+        return $baseUrl . (Str::startsWith($relativeUrl, '/') ? $relativeUrl : '/' . $relativeUrl);
     }
 
     private function storeAttachment(UploadedFile $file, string $uploaderUserId): array

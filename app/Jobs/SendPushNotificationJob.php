@@ -32,6 +32,7 @@ class SendPushNotificationJob implements ShouldQueue
         try {
             Log::info('SendPushNotificationJob started', [
                 'user_id' => $this->user->id,
+                'image_url' => $this->data['image_url'] ?? null,
             ]);
 
             if (($this->user->status ?? null) !== 'active') {
@@ -44,6 +45,7 @@ class SendPushNotificationJob implements ShouldQueue
                 try {
                     Log::info('Sending push to token', [
                         'token' => substr((string) $token->token, 0, 20) . '...',
+                        'image_url' => $this->data['image_url'] ?? null,
                     ]);
 
                     $fcmService->sendToToken(

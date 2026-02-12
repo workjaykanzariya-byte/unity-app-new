@@ -11,7 +11,7 @@ use Throwable;
 
 class FcmService
 {
-    public function sendToToken(string $token, string $title, string $body, array $data = []): void
+    public function sendToToken(string $token, string $title, string $body, array $data = [], ?string $imageUrl = null): void
     {
         try {
             $projectId = (string) config('firebase.project_id');
@@ -23,15 +23,34 @@ class FcmService
             $accessToken = $this->getAccessToken();
             $endpoint = sprintf('https://fcm.googleapis.com/v1/projects/%s/messages:send', $projectId);
 
+            $resolvedImageUrl = $imageUrl;
+
+            if ($resolvedImageUrl === null) {
+                $candidateImageUrl = $data['image_url'] ?? null;
+                if (is_string($candidateImageUrl) && $candidateImageUrl !== '') {
+                    $resolvedImageUrl = $candidateImageUrl;
+                }
+            }
+
+            if ($resolvedImageUrl !== null) {
+                $data['image_url'] = $resolvedImageUrl;
+            }
+
+            $notification = [
+                'title' => $title,
+                'body' => $body,
+            ];
+
+            if ($resolvedImageUrl !== null) {
+                $notification['image'] = $resolvedImageUrl;
+            }
+
             $response = Http::withToken($accessToken)
                 ->acceptJson()
                 ->post($endpoint, [
                     'message' => [
                         'token' => $token,
-                        'notification' => [
-                            'title' => $title,
-                            'body' => $body,
-                        ],
+                        'notification' => $notification,
                         'data' => $this->normalizeData($data),
                     ],
                 ]);
