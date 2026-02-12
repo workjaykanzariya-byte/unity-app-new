@@ -6,12 +6,13 @@ use App\Models\UserPushToken;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
 class FcmService
 {
-    public function sendToToken(string $token, string $title, string $body, array $data = []): void
+    public function sendToToken(string $token, string $title, string $body, array $data = [], ?string $imageUrl = null): void
     {
         try {
             $projectId = (string) config('firebase.project_id');
@@ -23,18 +24,54 @@ class FcmService
             $accessToken = $this->getAccessToken();
             $endpoint = sprintf('https://fcm.googleapis.com/v1/projects/%s/messages:send', $projectId);
 
+            $resolvedImageUrl = $imageUrl;
+
+            if ($resolvedImageUrl === null) {
+                $candidateImageUrl = $data['image_url'] ?? null;
+                if (is_string($candidateImageUrl) && $candidateImageUrl !== '') {
+                    $resolvedImageUrl = $candidateImageUrl;
+                }
+            }
+
+            if ($resolvedImageUrl !== null) {
+                $data['image_url'] = $resolvedImageUrl;
+            }
+
+            $notification = [
+                'title' => $title,
+                'body' => $body,
+            ];
+
+            $androidNotification = [];
+
+            if ($resolvedImageUrl !== null) {
+                $notification['image'] = $resolvedImageUrl;
+                $androidNotification['image'] = $resolvedImageUrl;
+            }
+
+            $payload = [
+                'message' => [
+                    'token' => $token,
+                    'notification' => $notification,
+                    'data' => $this->normalizeData($data),
+                ],
+            ];
+
+            if ($androidNotification !== []) {
+                $payload['message']['android'] = [
+                    'notification' => $androidNotification,
+                ];
+            }
+
+            Log::info('Sending FCM request', [
+                'token_prefix' => substr($token, 0, 20) . '...',
+                'title' => $title,
+                'has_image' => $resolvedImageUrl !== null,
+            ]);
+
             $response = Http::withToken($accessToken)
                 ->acceptJson()
-                ->post($endpoint, [
-                    'message' => [
-                        'token' => $token,
-                        'notification' => [
-                            'title' => $title,
-                            'body' => $body,
-                        ],
-                        'data' => $this->normalizeData($data),
-                    ],
-                ]);
+                ->post($endpoint, $payload);
 
             if ($response->successful()) {
                 return;

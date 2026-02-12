@@ -30,8 +30,16 @@ class SendPushNotificationJob implements ShouldQueue
     public function handle(FcmService $fcmService): void
     {
         try {
+            $imageUrl = $this->data['image_url'] ?? null;
+            $hasImage = is_string($imageUrl) && $imageUrl !== '';
+
             Log::info('SendPushNotificationJob started', [
                 'user_id' => $this->user->id,
+            ]);
+
+            Log::info('Push payload meta', [
+                'has_image' => $hasImage,
+                'image_url' => $imageUrl,
             ]);
 
             if (($this->user->status ?? null) !== 'active') {
@@ -43,7 +51,9 @@ class SendPushNotificationJob implements ShouldQueue
             foreach ($tokens as $token) {
                 try {
                     Log::info('Sending push to token', [
-                        'token' => substr((string) $token->token, 0, 20) . '...',
+                        'token_prefix' => substr((string) $token->token, 0, 20) . '...',
+                        'has_image' => $hasImage,
+                        'image_url_prefix' => $hasImage ? substr((string) $imageUrl, 0, 40) . '...' : null,
                     ]);
 
                     $fcmService->sendToToken(
