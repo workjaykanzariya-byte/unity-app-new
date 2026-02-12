@@ -16,6 +16,7 @@
             ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
+            ...($isGlobalAdmin ? [['icon' => 'bi-megaphone', 'label' => 'Broadcasts', 'route' => 'admin.broadcasts.index']] : []),
         ]
         : [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
@@ -24,6 +25,7 @@
             ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
+            ...($isGlobalAdmin ? [['icon' => 'bi-megaphone', 'label' => 'Broadcasts', 'route' => 'admin.broadcasts.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
             ['icon' => 'bi-calendar-event', 'label' => 'Events', 'route' => '#'],

@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\PostReportsController;
 use App\Http\Controllers\Admin\PostModerationController;
 use App\Http\Controllers\Admin\VisitorRegistrationsController;
+use App\Http\Controllers\Admin\AdminBroadcastController;
 
 Route::get('/', function () {
     return view('landing');
@@ -84,6 +85,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/unity-peers-plans/{plan}/edit', [MembershipPlanController::class, 'edit'])->name('unity-peers-plans.edit');
         Route::put('/unity-peers-plans/{plan}', [MembershipPlanController::class, 'update'])->name('unity-peers-plans.update');
         Route::post('/files/upload', [\App\Http\Controllers\Admin\AdminFileUploadController::class, 'upload'])->name('files.upload');
+
+        Route::get('/broadcasts', [AdminBroadcastController::class, 'index'])->name('broadcasts.index');
+        Route::get('/broadcasts/create', [AdminBroadcastController::class, 'create'])->name('broadcasts.create');
+        Route::post('/broadcasts', [AdminBroadcastController::class, 'store'])->name('broadcasts.store');
+        Route::get('/broadcasts/{broadcast}/edit', [AdminBroadcastController::class, 'edit'])->name('broadcasts.edit');
+        Route::put('/broadcasts/{broadcast}', [AdminBroadcastController::class, 'update'])->name('broadcasts.update');
+        Route::post('/broadcasts/{broadcast}/send-now', [AdminBroadcastController::class, 'sendNow'])->name('broadcasts.send-now');
+        Route::post('/broadcasts/{broadcast}/schedule', [AdminBroadcastController::class, 'schedule'])->name('broadcasts.schedule');
+        Route::post('/broadcasts/{broadcast}/cancel', [AdminBroadcastController::class, 'cancel'])->name('broadcasts.cancel');
         Route::get('/users/import', [UsersController::class, 'importForm'])->name('users.import');
         Route::post('/users/import', [UsersController::class, 'import'])->name('users.import.submit');
         Route::post('/users/export/csv', [UsersController::class, 'exportCsv'])->name('users.export.csv');
