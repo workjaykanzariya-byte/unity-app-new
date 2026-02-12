@@ -212,6 +212,8 @@ class MemberController extends BaseApiController
                 'connection_accepted',
                 [
                     'request_id' => (string) $connection->id,
+                    'from_user_id' => (string) $authUser->id,
+                    'to_user_id' => (string) $requesterUser->id,
                     'title' => 'Connection Accepted',
                     'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' accepted your connection request',
                 ],
