@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\Testimonial;
 use App\Models\User;
 use App\Services\Coins\CoinsService;
+use App\Services\Notifications\NotifyUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -105,7 +106,7 @@ class TestimonialController extends BaseApiController
         ]);
     }
 
-    public function store(StoreTestimonialRequest $request)
+    public function store(StoreTestimonialRequest $request, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -149,6 +150,37 @@ class TestimonialController extends BaseApiController
                 (string) $authUser->id,
                 $testimonial->to_user_id ? (string) $testimonial->to_user_id : null
             ));
+
+            $targetUser = User::find($testimonial->to_user_id);
+
+            if ($targetUser) {
+                $notifyUserService->notifyUser(
+                    $targetUser,
+                    $authUser,
+                    'activity_testimonial',
+                    [
+                        'activity_type' => 'testimonial',
+                        'activity_id' => (string) $testimonial->id,
+                        'title' => 'New Testimonial',
+                        'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' sent you a testimonial',
+                    ],
+                    $testimonial
+                );
+            }
+
+            // Postman example (testimonial create):
+            // {
+            //   "to_user_id": "<receiver-user-uuid>",
+            //   "content": "Great collaborator!",
+            //   "media_id": "<optional-file-uuid>"
+            // }
+            // Verify SQL:
+            // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
+            // Postman example (requirement create - MUST NOT notify):
+            // {
+            //   "subject": "Need growth partner",
+            //   "description": "Looking for channel partnerships"
+            // }
 
             $data = $testimonial->toArray();
             $data['media'] = $this->addUrlsToMedia($testimonial->media ?? []);

@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\BusinessDeal;
 use App\Models\User;
 use App\Services\Coins\CoinsService;
+use App\Services\Notifications\NotifyUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -113,7 +114,7 @@ class BusinessDealController extends BaseApiController
         ]);
     }
 
-    public function store(StoreBusinessDealRequest $request)
+    public function store(StoreBusinessDealRequest $request, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -151,6 +152,34 @@ class BusinessDealController extends BaseApiController
                 (string) $authUser->id,
                 $businessDeal->to_user_id ? (string) $businessDeal->to_user_id : null
             ));
+
+            $targetUser = User::find($businessDeal->to_user_id);
+
+            if ($targetUser) {
+                $notifyUserService->notifyUser(
+                    $targetUser,
+                    $authUser,
+                    'activity_business_deal',
+                    [
+                        'activity_type' => 'business_deal',
+                        'activity_id' => (string) $businessDeal->id,
+                        'title' => 'New Business Deal',
+                        'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' recorded a business deal with you',
+                    ],
+                    $businessDeal
+                );
+            }
+
+            // Postman example (business deal create):
+            // {
+            //   "to_user_id": "<receiver-user-uuid>",
+            //   "deal_date": "2026-01-20",
+            //   "deal_amount": 5000,
+            //   "business_type": "B2B",
+            //   "comment": "Closed via referral"
+            // }
+            // Verify SQL:
+            // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
 
             return $this->success($businessDeal, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {

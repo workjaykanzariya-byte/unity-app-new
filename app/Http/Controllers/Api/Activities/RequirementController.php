@@ -63,6 +63,15 @@ class RequirementController extends BaseApiController
 
     public function store(StoreRequirementRequest $request)
     {
+        // Postman example (requirement create - MUST NOT notify):
+        // {
+        //   "subject": "Need growth support",
+        //   "description": "Looking for partners to scale",
+        //   "visibility": "public"
+        // }
+        // Verify SQL (should return no new requirement notification rows):
+        // select * from notifications where user_id = '<any-target-user-uuid>' order by created_at desc limit 20;
+
         $user = $request->user();
         $data = $request->validated();
 

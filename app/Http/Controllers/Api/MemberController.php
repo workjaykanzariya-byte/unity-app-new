@@ -7,6 +7,7 @@ use App\Http\Resources\PublicUserResource;
 use App\Http\Resources\UserResource;
 use App\Models\Connection;
 use App\Models\User;
+use App\Services\Notifications\NotifyUserService;
 use Illuminate\Http\Request;
 
 class MemberController extends BaseApiController
@@ -124,7 +125,7 @@ class MemberController extends BaseApiController
         return $this->success(new PublicUserResource($user));
     }
 
-    public function sendConnectionRequest(Request $request, string $id)
+    public function sendConnectionRequest(Request $request, string $id, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -163,10 +164,27 @@ class MemberController extends BaseApiController
 
         $connection->load(['requester', 'addressee']);
 
+        $notifyUserService->notifyUser(
+            $target,
+            $authUser,
+            'connection_request',
+            [
+                'request_id' => (string) $connection->id,
+                'title' => 'New Connection Request',
+                'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' sent you a connection request',
+            ],
+            $connection
+        );
+
+        // Postman example (send connection request):
+        // POST /api/v1/members/{id}/connect
+        // Verify SQL:
+        // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
+
         return $this->success(new ConnectionResource($connection), 'Connection request sent', 201);
     }
 
-    public function acceptConnection(Request $request, string $id)
+    public function acceptConnection(Request $request, string $id, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -184,6 +202,27 @@ class MemberController extends BaseApiController
         $connection->save();
 
         $connection->load(['requester', 'addressee']);
+
+        $requesterUser = $connection->requester;
+
+        if ($requesterUser) {
+            $notifyUserService->notifyUser(
+                $requesterUser,
+                $authUser,
+                'connection_accepted',
+                [
+                    'request_id' => (string) $connection->id,
+                    'title' => 'Connection Accepted',
+                    'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' accepted your connection request',
+                ],
+                $connection
+            );
+        }
+
+        // Postman example (accept connection request):
+        // POST /api/v1/members/{requesterUserId}/accept
+        // Verify SQL:
+        // select * from notifications where user_id = '<requester-user-uuid>' order by created_at desc limit 20;
 
         return $this->success(new ConnectionResource($connection), 'Connection request accepted');
     }

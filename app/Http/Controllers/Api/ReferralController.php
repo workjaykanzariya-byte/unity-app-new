@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Events\ActivityCreated;
 use App\Models\Referral;
+use App\Models\User;
 use App\Services\Coins\CoinsService;
+use App\Services\Notifications\NotifyUserService;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -56,7 +58,7 @@ class ReferralController extends BaseApiController
         ]);
     }
 
-    public function store(StoreReferralRequest $request)
+    public function store(StoreReferralRequest $request, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -96,6 +98,38 @@ class ReferralController extends BaseApiController
                 (string) $authUser->id,
                 $referral->to_user_id ? (string) $referral->to_user_id : null
             ));
+
+            $targetUser = User::find($referral->to_user_id);
+
+            if ($targetUser) {
+                $notifyUserService->notifyUser(
+                    $targetUser,
+                    $authUser,
+                    'activity_referral',
+                    [
+                        'activity_type' => 'referral',
+                        'activity_id' => (string) $referral->id,
+                        'title' => 'New Referral',
+                        'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' sent you a referral',
+                    ],
+                    $referral
+                );
+            }
+
+            // Postman example (referral create):
+            // {
+            //   "to_user_id": "<receiver-user-uuid>",
+            //   "referral_type": "service",
+            //   "referral_date": "2026-01-20",
+            //   "referral_of": "Acme Corp",
+            //   "phone": "+1234567890",
+            //   "email": "lead@example.com",
+            //   "address": "Downtown",
+            //   "hot_value": "hot",
+            //   "remarks": "High intent"
+            // }
+            // Verify SQL:
+            // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
 
             return $this->success($referral, 'Referral saved successfully', 201);
         } catch (Throwable $e) {

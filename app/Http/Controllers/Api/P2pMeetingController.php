@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Events\ActivityCreated;
 use App\Services\Coins\CoinsService;
+use App\Services\Notifications\NotifyUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -82,7 +83,7 @@ class P2pMeetingController extends BaseApiController
         ]);
     }
 
-    public function store(StoreP2pMeetingRequest $request)
+    public function store(StoreP2pMeetingRequest $request, NotifyUserService $notifyUserService)
     {
         $authUser = $request->user();
 
@@ -119,6 +120,33 @@ class P2pMeetingController extends BaseApiController
                 (string) $authUser->id,
                 $meeting->peer_user_id ? (string) $meeting->peer_user_id : null
             ));
+
+            $targetUser = User::find($meeting->peer_user_id);
+
+            if ($targetUser) {
+                $notifyUserService->notifyUser(
+                    $targetUser,
+                    $authUser,
+                    'activity_p2p_meeting',
+                    [
+                        'activity_type' => 'p2p_meeting',
+                        'activity_id' => (string) $meeting->id,
+                        'title' => 'New P2P Meeting',
+                        'body' => ($authUser->display_name ?? $authUser->name ?? 'A member') . ' scheduled a P2P meeting with you',
+                    ],
+                    $meeting
+                );
+            }
+
+            // Postman example (p2p meeting create):
+            // {
+            //   "peer_user_id": "<receiver-user-uuid>",
+            //   "meeting_date": "2026-01-20",
+            //   "meeting_place": "Peers HQ",
+            //   "remarks": "Let's discuss collaboration"
+            // }
+            // Verify SQL:
+            // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
 
             return $this->success($meeting, 'P2P meeting saved successfully', 201);
         } catch (Throwable $e) {
