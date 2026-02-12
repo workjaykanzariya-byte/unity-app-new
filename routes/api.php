@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -201,6 +202,36 @@ Route::prefix('v1')->group(function () {
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+
+        // Push tokens
+        Route::post('/push-tokens', [PushTokenController::class, 'store']);
+        Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
+
+        if (app()->environment(['local', 'staging'])) {
+            Route::post('/debug/push-test', function (\Illuminate\Http\Request $request) {
+                $user = $request->user();
+
+                \Illuminate\Support\Facades\Log::info('Dispatching test push job', [
+                    'user_id' => $user->id,
+                ]);
+
+                \App\Jobs\SendPushNotificationJob::dispatch(
+                    $user,
+                    'Test Push',
+                    'Hello from Laravel ✅',
+                    [
+                        'type' => 'test',
+                        'time' => now()->toDateTimeString(),
+                    ]
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Push job dispatched',
+                    'data' => [],
+                ]);
+            });
+        }
 
         // Referrals & Visitors
         Route::post('/referrals/links', [ReferralController::class, 'storeLink']);

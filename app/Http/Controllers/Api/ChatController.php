@@ -15,11 +15,13 @@ use App\Models\User;
 use App\Events\Chat\ChatReadUpdated;
 use App\Events\Chat\MessageSent;
 use App\Events\Chat\ChatTyping;
+use App\Jobs\SendPushNotificationJob;
 use App\Support\Chat\AuthorizesChatAccess;
 use App\Support\Media\Probe;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ChatController extends BaseApiController
@@ -250,6 +252,32 @@ class ChatController extends BaseApiController
                 'created_at' => now(),
                 'read_at' => null,
             ]);
+
+            $receiverUser = User::find($recipientId);
+
+            if (! $receiverUser) {
+                continue;
+            }
+
+            Log::info('Dispatching chat push notification job', [
+                'chat_id' => (string) $chat->id,
+                'message_id' => (string) $message->id,
+                'sender_id' => (string) $authUser->id,
+                'receiver_id' => (string) $receiverUser->id,
+            ]);
+
+            // Queue worker required to process push jobs: php artisan queue:work
+            SendPushNotificationJob::dispatch(
+                $receiverUser,
+                $this->resolveDisplayName($authUser) ?: 'New message',
+                $message->content ?? 'Sent you a file',
+                [
+                    'type' => 'chat',
+                    'chat_id' => (string) $chat->id,
+                    'sender_id' => (string) $authUser->id,
+                    'message_id' => (string) $message->id,
+                ]
+            );
         }
 
         broadcast(new MessageSent($chat, $message, $authUser))->toOthers();
