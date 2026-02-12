@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -51,37 +52,44 @@ class SendAdminBroadcastJob implements ShouldQueue
                 return;
             }
 
-            $now = now();
             $title = $broadcast->title ?: 'Peers Global Unity';
             $senderUserId = $this->resolveSenderUserId($broadcast);
-
-            $rows = [];
-            foreach ($users as $user) {
-                $rows[] = [
-                    'user_id' => $user->id,
-                    'type' => 'admin_broadcast',
-                    'payload' => json_encode([
-                        'notification_type' => 'admin_broadcast',
-                        'title' => $title,
-                        'body' => $broadcast->message,
-                        'from_user_id' => $senderUserId,
-                        'to_user_id' => (string) $user->id,
-                        'data' => [
-                            'broadcast_id' => (string) $broadcast->id,
-                            'image_file_id' => $broadcast->image_file_id,
-                        ],
-                        'notifiable_type' => AdminBroadcast::class,
-                        'notifiable_id' => (string) $broadcast->id,
-                    ], JSON_THROW_ON_ERROR),
-                    'is_read' => false,
-                    'created_at' => $now,
-                    'read_at' => null,
-                ];
-            }
-
-            Notification::query()->insert($rows);
-
             $failureCount = 0;
+            $usersCount = $users->count();
+            $lastUserId = (string) $users->last()->id;
+
+            DB::transaction(function () use ($users, $broadcast, $title, $senderUserId): void {
+                $now = now();
+                $rows = [];
+
+                foreach ($users as $user) {
+                    $rows[] = [
+                        'user_id' => $user->id,
+                        'type' => 'admin_broadcast',
+                        'payload' => json_encode([
+                            'notification_type' => 'admin_broadcast',
+                            'title' => $title,
+                            'body' => $broadcast->message,
+                            'from_user_id' => $senderUserId,
+                            'to_user_id' => (string) $user->id,
+                            'data' => [
+                                'broadcast_id' => (string) $broadcast->id,
+                                'image_file_id' => $broadcast->image_file_id,
+                            ],
+                            'notifiable_type' => AdminBroadcast::class,
+                            'notifiable_id' => (string) $broadcast->id,
+                        ], JSON_THROW_ON_ERROR),
+                        'is_read' => false,
+                        'created_at' => $now,
+                        'read_at' => null,
+                    ];
+                }
+
+                Notification::query()->insert($rows);
+
+                $broadcast->increment('sent_count', $users->count());
+                $broadcast->increment('success_count', $users->count());
+            });
 
             foreach ($users as $user) {
                 try {
@@ -106,17 +114,18 @@ class SendAdminBroadcastJob implements ShouldQueue
                 }
             }
 
-            $broadcast->increment('sent_count', $users->count());
-            $broadcast->increment('success_count', $users->count() - $failureCount);
-            $broadcast->increment('failure_count', $failureCount);
+            if ($failureCount > 0) {
+                $broadcast->decrement('success_count', $failureCount);
+                $broadcast->increment('failure_count', $failureCount);
+            }
 
-            if ($users->count() < $this->chunkSize) {
+            if ($usersCount < $this->chunkSize) {
                 $this->finalizeBroadcast($broadcast->fresh());
 
                 return;
             }
 
-            self::dispatch($this->broadcastId, (string) $users->last()->id, $this->chunkSize);
+            self::dispatch($this->broadcastId, $lastUserId, $this->chunkSize);
         } catch (Throwable $e) {
             Log::error('Broadcast send job failed.', [
                 'broadcast_id' => (string) $this->broadcastId,
@@ -125,6 +134,7 @@ class SendAdminBroadcastJob implements ShouldQueue
             ]);
 
             $fresh = AdminBroadcast::query()->find($this->broadcastId);
+
             if ($fresh) {
                 $fresh->status = $fresh->isRecurring() ? 'scheduled' : 'draft';
                 $fresh->next_run_at = $fresh->isRecurring() ? $fresh->computeNextRunAt() : null;

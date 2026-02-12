@@ -230,38 +230,50 @@ class AdminBroadcastController extends Controller
 
     private function markSendingAndDispatch(AdminBroadcast $broadcast): void
     {
-        try {
-            DB::transaction(function () use ($broadcast): void {
-            $fresh = AdminBroadcast::query()->lockForUpdate()->findOrFail($broadcast->id);
+        $shouldDispatch = false;
+        $broadcastId = (string) $broadcast->id;
 
-            if (in_array($fresh->status, ['sending', 'sent'], true)) {
+        try {
+            DB::transaction(function () use ($broadcastId, &$shouldDispatch): void {
+                $fresh = AdminBroadcast::query()->lockForUpdate()->findOrFail($broadcastId);
+
+                if (in_array($fresh->status, ['sending', 'sent'], true)) {
+                    return;
+                }
+
+                $fresh->status = 'sending';
+                $fresh->last_sent_at = now();
+                $fresh->next_run_at = null;
+                $fresh->save();
+
+                $shouldDispatch = true;
+            });
+
+            if (! $shouldDispatch) {
                 return;
             }
-
-            $fresh->status = 'sending';
-            $fresh->last_sent_at = now();
-            $fresh->next_run_at = null;
-            $fresh->save();
 
             $queueConnection = (string) config('queue.default');
 
             if ($queueConnection === 'sync') {
-                (new SendAdminBroadcastJob((string) $fresh->id))->handle();
+                (new SendAdminBroadcastJob($broadcastId))->handle();
 
                 return;
             }
 
-            SendAdminBroadcastJob::dispatch((string) $fresh->id);
-            });
+            SendAdminBroadcastJob::dispatch($broadcastId);
         } catch (\Throwable $e) {
             Log::error('Failed to start broadcast dispatch.', [
-                'broadcast_id' => (string) $broadcast->id,
+                'broadcast_id' => $broadcastId,
                 'error' => $e->getMessage(),
             ]);
 
-            $broadcast->status = $broadcast->isRecurring() ? 'scheduled' : 'draft';
-            $broadcast->next_run_at = $broadcast->isRecurring() ? $broadcast->computeNextRunAt() : null;
-            $broadcast->save();
+            $fresh = AdminBroadcast::query()->find($broadcastId);
+            if ($fresh) {
+                $fresh->status = $fresh->isRecurring() ? 'scheduled' : 'draft';
+                $fresh->next_run_at = $fresh->isRecurring() ? $fresh->computeNextRunAt() : null;
+                $fresh->save();
+            }
 
             throw $e;
         }
