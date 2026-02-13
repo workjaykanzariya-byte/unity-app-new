@@ -20,6 +20,7 @@ class LoginHistoryController extends Controller
             'circle' => ['nullable', 'string', 'max:255'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],
+            'joined' => ['nullable', 'in:all,yes,no'],
             'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
         ]);
 
@@ -27,16 +28,26 @@ class LoginHistoryController extends Controller
         $city = trim((string) ($validated['city'] ?? ''));
         $company = trim((string) ($validated['company'] ?? ''));
         $circle = trim((string) ($validated['circle'] ?? ''));
+        $joined = (string) ($validated['joined'] ?? 'all');
+        $perPage = (int) ($validated['per_page'] ?? 20);
+
         $from = isset($validated['from']) && $validated['from'] !== ''
             ? Carbon::parse($validated['from'])
             : null;
         $to = isset($validated['to']) && $validated['to'] !== ''
             ? Carbon::parse($validated['to'])
             : null;
-        $perPage = (int) ($validated['per_page'] ?? 20);
 
         $hasUsersName = Schema::hasColumn('users', 'name');
         $hasUsersCompany = Schema::hasColumn('users', 'company');
+
+        $peerNameExpression = $hasUsersName
+            ? "COALESCE(NULLIF(users.display_name, ''), users.name)"
+            : "NULLIF(users.display_name, '')";
+
+        $companyExpression = $hasUsersCompany
+            ? "COALESCE(users.company_name, users.company, '')"
+            : "COALESCE(users.company_name, '')";
 
         $loginLastSubquery = DB::table('user_login_histories')
             ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
@@ -98,7 +109,7 @@ class LoginHistoryController extends Controller
                         ->where('circles_filter.name', 'ilike', $likeQuery);
                 });
             })
-            ->selectRaw("\n                users.id,\n                users.display_name,\n                users.email,\n                COALESCE(NULLIF(users.city, ''), cities.name) as city,\n                users.company_name,\n                login_last.last_login_at,\n                COUNT(DISTINCT circles.id) as circles_count,\n                COALESCE(STRING_AGG(DISTINCT circles.name, ', '), '') as circles_names\n            ")
+            ->selectRaw("\n                users.id,\n                {$peerNameExpression} as peer_name,\n                users.email,\n                COALESCE(NULLIF(users.city, ''), cities.name) as city,\n                {$companyExpression} as company,\n                login_last.last_login_at,\n                COUNT(DISTINCT circles.id) as circles_count,\n                COALESCE(STRING_AGG(DISTINCT circles.name, ', '), '') as circles_names,\n                CASE WHEN COUNT(DISTINCT circles.id) > 0 THEN true ELSE false END as has_circle\n            ")
             ->groupBy(
                 'users.id',
                 'users.display_name',
@@ -106,8 +117,12 @@ class LoginHistoryController extends Controller
                 'users.city',
                 'cities.name',
                 'users.company_name',
-                'login_last.last_login_at'
+                'login_last.last_login_at',
+                ...($hasUsersName ? ['users.name'] : []),
+                ...($hasUsersCompany ? ['users.company'] : [])
             )
+            ->when($joined === 'yes', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) > 0'))
+            ->when($joined === 'no', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) = 0'))
             ->orderByDesc('login_last.last_login_at')
             ->paginate($perPage)
             ->withQueryString();
@@ -119,8 +134,9 @@ class LoginHistoryController extends Controller
                 'city' => $city,
                 'company' => $company,
                 'circle' => $circle,
-                'from' => $from?->format('Y-m-d\TH:i') ?? '',
-                'to' => $to?->format('Y-m-d\TH:i') ?? '',
+                'from' => $from?->format('Y-m-d\\TH:i') ?? '',
+                'to' => $to?->format('Y-m-d\\TH:i') ?? '',
+                'joined' => in_array($joined, ['all', 'yes', 'no'], true) ? $joined : 'all',
                 'per_page' => $perPage,
             ],
         ]);
