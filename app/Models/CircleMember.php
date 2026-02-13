@@ -11,6 +11,8 @@ use RuntimeException;
 
 class CircleMember extends Model
 {
+    protected $table = 'circle_members';
+
     use HasFactory;
     use SoftDeletes;
 
@@ -75,17 +77,22 @@ class CircleMember extends Model
         });
     }
 
-    public function circle(): BelongsTo
-    {
-        return $this->belongsTo(Circle::class);
-    }
-
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function circle(): BelongsTo
+    {
+        return $this->belongsTo(Circle::class, 'circle_id');
     }
 
     public function roleRef(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    public function roleModel(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id');
     }

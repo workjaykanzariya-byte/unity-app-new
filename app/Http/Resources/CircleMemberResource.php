@@ -10,20 +10,27 @@ class CircleMemberResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'circle_id' => $this->circle_id,
             'role' => $this->role,
             'status' => $this->status,
-            'substitute_count' => $this->substitute_count,
             'joined_at' => $this->joined_at,
             'left_at' => $this->left_at,
-            'created_at' => $this->created_at,
+            'substitute_count' => $this->substitute_count,
+            'role_id' => $this->role_id,
+
             'user' => $this->whenLoaded('user', function () {
                 return [
                     'id' => $this->user->id,
-                    'display_name' => $this->user->display_name,
-                    'first_name' => $this->user->first_name,
-                    'last_name' => $this->user->last_name,
-                    'profile_photo_url' => $this->user->profile_photo_url,
-                    'membership_status' => $this->user->membership_status,
+                    'name' => $this->user->name,
+                    'email' => $this->user->email,
+                ];
+            }),
+
+            'role_details' => $this->whenLoaded('roleModel', function () {
+                return [
+                    'id' => $this->roleModel->id,
+                    'name' => $this->roleModel->name ?? null,
+                    'slug' => $this->roleModel->slug ?? null,
                 ];
             }),
         ];

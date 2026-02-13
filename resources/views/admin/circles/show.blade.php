@@ -71,6 +71,22 @@
 </div>
 
 <div class="card mt-3">
+    <div class="card-header fw-semibold">Circle Settings</div>
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-4"><strong>Meeting Mode:</strong> {{ $circle->meeting_mode ?? '—' }}</div>
+            <div class="col-md-4"><strong>Meeting Frequency:</strong> {{ $circle->meeting_frequency ?? '—' }}</div>
+            <div class="col-md-4"><strong>Launch Date:</strong> {{ optional($circle->launch_date)->format('Y-m-d') ?? '—' }}</div>
+            <div class="col-md-6"><strong>Director:</strong> {{ $circle->director?->display_name ?? '—' }}</div>
+            <div class="col-md-6"><strong>Industry Director:</strong> {{ $circle->industryDirector?->display_name ?? '—' }}</div>
+            <div class="col-md-6"><strong>DED:</strong> {{ $circle->ded?->display_name ?? '—' }}</div>
+            <div class="col-md-12"><strong>Meeting Repeat:</strong> <pre class="mb-0">{{ $circle->meeting_repeat ? json_encode($circle->meeting_repeat, JSON_PRETTY_PRINT) : '—' }}</pre></div>
+            <div class="col-md-12"><strong>Cover:</strong> @if($circle->cover_file_id)<a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank">View Cover</a>@else — @endif</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3">
     <div class="card-header fw-semibold">Peers</div>
     <div class="card-body">
         <form action="{{ route('admin.circles.members.store', $circle) }}" method="POST" class="row g-2 align-items-end mb-4">

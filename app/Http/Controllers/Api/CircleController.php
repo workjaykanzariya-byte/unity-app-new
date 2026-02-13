@@ -11,19 +11,53 @@ use App\Models\Circle;
 use App\Models\CircleMember;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CircleController extends BaseApiController
 {
+    /**
+     * Example GET /api/v1/circles response item:
+     * {
+     *   "id": "uuid",
+     *   "name": "Winners",
+     *   "slug": "winners",
+     *   "type": "private",
+     *   "status": "active",
+     *   "country": "India",
+     *   "city_id": "uuid",
+     *   "city": { "id":"uuid","name":"Ahmedabad","state":null,"district":null,"country":"India","country_code":null },
+     *   "industry_tags": ["MSME","Real Estate"],
+     *   "meeting_mode": "online",
+     *   "meeting_frequency": "monthly",
+     *   "meeting_repeat": { "repeat_every": 1, "unit": "month", "weekday": "saturday", "time": "10:00" },
+     *   "launch_date": "2026-01-19",
+     *   "founder_user_id": "uuid",
+     *   "director_user_id": "uuid",
+     *   "industry_director_user_id": "uuid",
+     *   "ded_user_id": "uuid",
+     *   "cover_file_id": "uuid",
+     *   "cover_image_url": "https://peersunity.com/api/v1/files/{id}",
+     *   "peers_count": 4,
+     *   "created_at": "...",
+     *   "updated_at": "..."
+     * }
+     */
     public function index(Request $request)
     {
         $query = Circle::query()
             ->with([
-                'founder:id,first_name,last_name,display_name,profile_photo_url',
-                'city:id,name',
+                'founder:id,first_name,last_name,display_name,profile_photo_url,email,phone',
+                'director:id,first_name,last_name,display_name,email,phone',
+                'industryDirector:id,first_name,last_name,display_name,email,phone',
+                'ded:id,first_name,last_name,display_name,email,phone',
+                'city:id,name,state,district,country,country_code',
             ])
             ->withCount([
                 'members as members_count' => function ($q) {
+                    $q->where('status', 'approved');
+                },
+                'members as peers_count' => function ($q) {
                     $q->where('status', 'approved');
                 },
             ]);
@@ -33,21 +67,18 @@ class CircleController extends BaseApiController
                 $like = '%' . $search . '%';
                 $q->where('name', 'ILIKE', $like)
                     ->orWhere('description', 'ILIKE', $like)
-                    ->orWhere('purpose', 'ILIKE', $like);
+                    ->orWhere('purpose', 'ILIKE', $like)
+                    ->orWhere('slug', 'ILIKE', $like);
             });
         }
 
-        if ($cityId = $request->input('city_id')) {
-            $query->where('city_id', $cityId);
+        foreach (['city_id', 'status', 'type', 'country'] as $filter) {
+            if ($value = $request->input($filter)) {
+                $query->where($filter, $value);
+            }
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
-        }
-
-        $paginator = $query
-            ->orderBy('name')
-            ->paginate(20);
+        $paginator = $query->orderBy('name')->paginate((int) $request->input('per_page', 20));
 
         $circleIds = collect($paginator->items())->pluck('id');
         $memberships = CircleMember::whereIn('circle_id', $circleIds)
@@ -59,7 +90,7 @@ class CircleController extends BaseApiController
             $circle->setRelation('currentMember', $memberships->get($circle->id));
         }
 
-        $data = [
+        return $this->success([
             'items' => CircleResource::collection($paginator->items()),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
@@ -67,16 +98,23 @@ class CircleController extends BaseApiController
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
             ],
-        ];
-
-        return $this->success($data);
+        ]);
     }
 
     public function show(string $id)
     {
-        $circle = Circle::with(['city', 'founder'])
+        $circle = Circle::with([
+            'city:id,name,state,district,country,country_code',
+            'founder:id,first_name,last_name,display_name,profile_photo_url,email,phone',
+            'director:id,first_name,last_name,display_name,email,phone',
+            'industryDirector:id,first_name,last_name,display_name,email,phone',
+            'ded:id,first_name,last_name,display_name,email,phone',
+        ])
             ->withCount([
                 'members as members_count' => function ($q) {
+                    $q->where('status', 'approved');
+                },
+                'members as peers_count' => function ($q) {
                     $q->where('status', 'approved');
                 },
             ])
@@ -167,16 +205,22 @@ class CircleController extends BaseApiController
 
         $paginator = Circle::whereIn('id', $circleIds)
             ->with([
-                'founder:id,first_name,last_name,display_name,profile_photo_url',
-                'city:id,name',
+                'founder:id,first_name,last_name,display_name,profile_photo_url,email,phone',
+                'director:id,first_name,last_name,display_name,email,phone',
+                'industryDirector:id,first_name,last_name,display_name,email,phone',
+                'ded:id,first_name,last_name,display_name,email,phone',
+                'city:id,name,state,district,country,country_code',
             ])
             ->withCount([
                 'members as members_count' => function ($q) {
                     $q->where('status', 'approved');
                 },
+                'members as peers_count' => function ($q) {
+                    $q->where('status', 'approved');
+                },
             ])
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate((int) $request->input('per_page', 20));
 
         $memberships = CircleMember::whereIn('circle_id', $paginator->pluck('id'))
             ->where('user_id', $user->id)
@@ -187,7 +231,7 @@ class CircleController extends BaseApiController
             $circle->setRelation('currentMember', $memberships->get($circle->id));
         }
 
-        $data = [
+        return $this->success([
             'items' => CircleResource::collection($paginator->items()),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),
@@ -195,11 +239,24 @@ class CircleController extends BaseApiController
                 'per_page' => $paginator->perPage(),
                 'total' => $paginator->total(),
             ],
-        ];
-
-        return $this->success($data);
+        ]);
     }
 
+    /**
+     * Example GET /api/v1/circles/{circle}/members response item:
+     * {
+     *   "id":"uuid",
+     *   "circle_id":"uuid",
+     *   "role":"member",
+     *   "status":"approved",
+     *   "joined_at":"2026-01-19T00:00:00Z",
+     *   "left_at":null,
+     *   "substitute_count":0,
+     *   "role_id":"uuid-or-null",
+     *   "user":{"id":"uuid","name":"Demo1 Demo1","email":"work.jaykanjariya@gmail.com"},
+     *   "role_details": { "id":"uuid","name":"Circle Member","slug":"member" }
+     * }
+     */
     public function members(Request $request, string $id)
     {
         $circle = Circle::find($id);
@@ -207,19 +264,44 @@ class CircleController extends BaseApiController
             return $this->error('Circle not found', 404);
         }
 
-        $status = $request->input('status', 'approved');
-
-        $membersQuery = CircleMember::with('user')
+        $membersQuery = CircleMember::query()
+            ->with('user')
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at');
 
-        if ($status) {
+        if (Schema::hasTable('roles')) {
+            $membersQuery->with('roleModel');
+        }
+
+        if ($status = $request->input('status')) {
             $membersQuery->where('status', $status);
         }
 
-        $members = $membersQuery->orderBy('role')->orderBy('joined_at')->get();
+        if ($role = $request->input('role')) {
+            $membersQuery->where('role', $role);
+        }
 
-        return $this->success(CircleMemberResource::collection($members));
+        if ($search = trim((string) $request->input('search', ''))) {
+            $membersQuery->whereHas('user', function ($query) use ($search) {
+                $like = '%' . $search . '%';
+                $query->where('display_name', 'ILIKE', $like)
+                    ->orWhere('first_name', 'ILIKE', $like)
+                    ->orWhere('last_name', 'ILIKE', $like)
+                    ->orWhere('email', 'ILIKE', $like);
+            });
+        }
+
+        $members = $membersQuery->orderBy('role')->orderBy('joined_at')->paginate((int) $request->input('per_page', 20));
+
+        return $this->success([
+            'items' => CircleMemberResource::collection($members->items()),
+            'pagination' => [
+                'current_page' => $members->currentPage(),
+                'last_page' => $members->lastPage(),
+                'per_page' => $members->perPage(),
+                'total' => $members->total(),
+            ],
+        ]);
     }
 
     public function updateMember(UpdateCircleMemberRequest $request, string $circleId, string $memberId)

@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
+use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -95,7 +96,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('/circles/{id}', [CircleController::class, 'update']);
         Route::post('/circles/{id}/join', [CircleController::class, 'join']);
         Route::get('/my/circles', [CircleController::class, 'myCircles']);
-        Route::get('/circles/{id}/members', [CircleController::class, 'members']);
+        Route::get('/circles/{circle}/members', [V1CircleMemberController::class, 'index']);
         Route::put('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
         Route::patch('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
 
