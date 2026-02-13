@@ -30,11 +30,17 @@
     $founderId = old('founder_user_id', $defaultFounder?->id);
     $founderLabel = old('founder_search', $defaultFounderLabel);
     $calendar = $circle->calendar ?? [];
-    $calendarFrequency = old('calendar_frequency', data_get($calendar, 'frequency', ''));
-    $calendarDay = old('calendar_day', data_get($calendar, 'default_meet_day', ''));
-    $calendarTime = old('calendar_time', data_get($calendar, 'default_meet_time', ''));
-    $calendarWeekRule = old('calendar_week_rule', data_get($calendar, 'monthly_rule', ''));
-    $calendarTimezone = old('calendar_timezone', data_get($calendar, 'timezone', 'Asia/Kolkata'));
+    $calendarMeetings = old('calendar_meetings');
+    if (! is_array($calendarMeetings)) {
+        $calendarMeetings = is_array(data_get($calendar, 'meetings')) && data_get($calendar, 'meetings') !== []
+            ? array_values(data_get($calendar, 'meetings'))
+            : [[
+                'frequency' => data_get($calendar, 'frequency', ''),
+                'default_meet_day' => data_get($calendar, 'default_meet_day', ''),
+                'default_meet_time' => data_get($calendar, 'default_meet_time', ''),
+                'monthly_rule' => data_get($calendar, 'monthly_rule', ''),
+            ]];
+    }
 @endphp
 
 <form action="{{ route('admin.circles.update', $circle) }}" method="POST">
@@ -176,50 +182,68 @@
 
         <div class="col-12">
             <div class="card">
-                <div class="card-header fw-semibold">Meeting Schedule</div>
-                <div class="card-body row g-3" id="calendarScheduleSection">
-                    <div class="col-md-3">
-                        <label class="form-label">Frequency</label>
-                        <select name="calendar_frequency" id="calendarFrequency" class="form-select">
-                            <option value="">Select frequency</option>
-                            <option value="weekly" @selected($calendarFrequency === 'weekly')>Weekly</option>
-                            <option value="monthly" @selected($calendarFrequency === 'monthly')>Monthly</option>
-                            <option value="quarterly" @selected($calendarFrequency === 'quarterly')>Quarterly</option>
-                        </select>
-                        <div class="form-text">Weekly: choose day + time.</div>
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                    <span>Meeting Schedule</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="addMeetingBtn">+ Add Meeting</button>
+                </div>
+                <div class="card-body">
+                    <div id="meetingRows" class="d-flex flex-column gap-3">
+                        @foreach ($calendarMeetings as $index => $meeting)
+                            @php
+                                $rowFrequency = strtolower((string) data_get($meeting, 'frequency', ''));
+                                $rowDay = strtolower((string) data_get($meeting, 'default_meet_day', ''));
+                                $rowTime = (string) data_get($meeting, 'default_meet_time', '');
+                                $rowRule = strtolower((string) data_get($meeting, 'monthly_rule', ''));
+                            @endphp
+                            <div class="border rounded p-3 meeting-row" data-index="{{ $index }}">
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label">Frequency</label>
+                                        <select class="form-select js-meeting-frequency" name="calendar_meetings[{{ $index }}][frequency]">
+                                            <option value="">Select frequency</option>
+                                            <option value="weekly" @selected($rowFrequency === 'weekly')>Weekly</option>
+                                            <option value="monthly" @selected($rowFrequency === 'monthly')>Monthly</option>
+                                            <option value="quarterly" @selected($rowFrequency === 'quarterly')>Quarterly</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 js-meeting-time-wrap">
+                                        <label class="form-label">Default Meet Time</label>
+                                        <input type="time" class="form-control js-meeting-time" name="calendar_meetings[{{ $index }}][default_meet_time]" value="{{ $rowTime }}">
+                                    </div>
+                                    <div class="col-md-3 js-meeting-day-wrap">
+                                        <label class="form-label">Day of Week</label>
+                                        <select class="form-select js-meeting-day" name="calendar_meetings[{{ $index }}][default_meet_day]">
+                                            <option value="">Select day</option>
+                                            @foreach (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
+                                                <option value="{{ $day }}" @selected($rowDay === $day)>{{ ucfirst($day) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 js-meeting-rule-wrap">
+                                        <label class="form-label">Week Rule</label>
+                                        <select class="form-select js-meeting-rule" name="calendar_meetings[{{ $index }}][monthly_rule]">
+                                            <option value="">Select</option>
+                                            @foreach (['first','second','third','fourth','last'] as $rule)
+                                                <option value="{{ $rule }}" @selected($rowRule === $rule)>{{ ucfirst($rule) }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-1 text-end">
+                                        <button type="button" class="btn btn-sm btn-outline-danger js-remove-meeting" @if($index===0) disabled @endif>Remove</button>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="small text-muted">Preview: <span class="js-meeting-preview">—</span></div>
+                                        <div class="small text-muted">Weekly: day + time. Monthly/Quarterly: week rule + day + time.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Default Meet Time</label>
-                        <input type="time" name="calendar_time" id="calendarMeetTime" class="form-control" value="{{ $calendarTime }}">
-                    </div>
-                    <div class="col-md-3" id="calendarDayWrap">
-                        <label class="form-label">Day of Week</label>
-                        <select name="calendar_day" id="calendarMeetDay" class="form-select">
-                            <option value="">Select day</option>
-                            @foreach (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
-                                <option value="{{ $day }}" @selected($calendarDay === $day)>{{ ucfirst($day) }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3" id="calendarMonthlyRuleWrap">
-                        <label class="form-label">Week of Month</label>
-                        <select name="calendar_week_rule" id="calendarMonthlyRule" class="form-select">
-                            <option value="">Select week rule</option>
-                            @foreach (['first','second','third','fourth','last'] as $rule)
-                                <option value="{{ $rule }}" @selected($calendarWeekRule === $rule)>{{ ucfirst($rule) }}</option>
-                            @endforeach
-                        </select>
-                        <div class="form-text">Monthly/Quarterly: choose week rule + day + time (e.g. first monday).</div>
-                    </div>
-                    <input type="hidden" name="calendar_timezone" id="calendarTimezone" value="{{ $calendarTimezone ?: 'Asia/Kolkata' }}">
-                    <div class="col-12">
-                        <div class="small text-muted">Preview: <span id="calendarPreview">—</span></div>
-                    </div>
+                    <input type="hidden" name="calendar_timezone" value="Asia/Kolkata">
                 </div>
             </div>
         </div>
-
-        <div class="col-12">
+<div class="col-12">
             <div class="card">
                 <div class="card-header fw-semibold">Location</div>
                 <div class="card-body row g-3">
@@ -312,60 +336,88 @@
     });
 
 
-    const calendarFrequency = document.getElementById('calendarFrequency');
-    const calendarDayWrap = document.getElementById('calendarDayWrap');
-    const calendarMonthlyRuleWrap = document.getElementById('calendarMonthlyRuleWrap');
-    const calendarTimezone = document.getElementById('calendarTimezone');
+    const meetingRows = document.getElementById('meetingRows');
+    const addMeetingBtn = document.getElementById('addMeetingBtn');
 
-    const updateCalendarPreview = () => {
-        const frequency = (calendarFrequency?.value || '').toLowerCase();
-        const day = document.getElementById('calendarMeetDay')?.value || '';
-        const time = document.getElementById('calendarMeetTime')?.value || '';
-        const weekRule = document.getElementById('calendarMonthlyRule')?.value || '';
-        const preview = document.getElementById('calendarPreview');
-        if (!preview) return;
+    const title = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 
-        if (!frequency) {
-            preview.textContent = '—';
-            return;
-        }
+    const updateMeetingRowState = (row) => {
+        const frequency = row.querySelector('.js-meeting-frequency')?.value || '';
+        const day = row.querySelector('.js-meeting-day')?.value || '';
+        const time = row.querySelector('.js-meeting-time')?.value || '';
+        const rule = row.querySelector('.js-meeting-rule')?.value || '';
 
-        const title = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+        row.querySelector('.js-meeting-time-wrap')?.classList.toggle('d-none', !frequency);
+        row.querySelector('.js-meeting-day-wrap')?.classList.toggle('d-none', !frequency);
+        row.querySelector('.js-meeting-rule-wrap')?.classList.toggle('d-none', !['monthly', 'quarterly'].includes(frequency));
 
+        let preview = '—';
         if (frequency === 'weekly' && day && time) {
-            preview.textContent = `Every ${title(day)} at ${time}`;
-            return;
+            preview = `Every ${title(day)} at ${time}`;
+        } else if ((frequency === 'monthly' || frequency === 'quarterly') && rule && day && time) {
+            preview = `${title(rule)} ${title(day)} at ${time}${frequency === 'quarterly' ? ' (Quarterly)' : ''}`;
         }
 
-        if ((frequency === 'monthly' || frequency === 'quarterly') && weekRule && day && time) {
-            preview.textContent = `${title(weekRule)} ${title(day)} at ${time}${frequency === 'quarterly' ? ' (Quarterly)' : ''}`;
-            return;
+        const previewEl = row.querySelector('.js-meeting-preview');
+        if (previewEl) {
+            previewEl.textContent = preview;
         }
-
-        preview.textContent = '—';
     };
 
-    const toggleCalendarFields = () => {
-        const frequency = (calendarFrequency?.value || '').toLowerCase();
+    const bindMeetingRow = (row) => {
+        row.querySelectorAll('.js-meeting-frequency, .js-meeting-day, .js-meeting-time, .js-meeting-rule')
+            .forEach((input) => input.addEventListener('change', () => updateMeetingRowState(row)));
 
-        if (calendarTimezone && !calendarTimezone.value) {
-            calendarTimezone.value = 'Asia/Kolkata';
-        }
+        row.querySelector('.js-meeting-time')?.addEventListener('input', () => updateMeetingRowState(row));
+        row.querySelector('.js-remove-meeting')?.addEventListener('click', () => {
+            if (meetingRows.querySelectorAll('.meeting-row').length > 1) {
+                row.remove();
+                reindexMeetingRows();
+            }
+        });
 
-        if (!calendarDayWrap || !calendarMonthlyRuleWrap) {
-            return;
-        }
-
-        calendarDayWrap.classList.toggle('d-none', frequency === '');
-        calendarMonthlyRuleWrap.classList.toggle('d-none', !['monthly', 'quarterly'].includes(frequency));
+        updateMeetingRowState(row);
     };
 
-    calendarFrequency?.addEventListener('change', () => { toggleCalendarFields(); updateCalendarPreview(); });
-    document.getElementById('calendarMeetDay')?.addEventListener('change', updateCalendarPreview);
-    document.getElementById('calendarMeetTime')?.addEventListener('input', updateCalendarPreview);
-    document.getElementById('calendarMonthlyRule')?.addEventListener('change', updateCalendarPreview);
-    toggleCalendarFields();
-    updateCalendarPreview();
+    const reindexMeetingRows = () => {
+        const rows = meetingRows.querySelectorAll('.meeting-row');
+        rows.forEach((row, index) => {
+            row.dataset.index = String(index);
+            row.querySelectorAll('select, input').forEach((el) => {
+                const name = el.getAttribute('name');
+                if (!name) return;
+                el.setAttribute('name', name.replace(/calendar_meetings\[\d+\]/, `calendar_meetings[${index}]`));
+            });
+
+            const removeBtn = row.querySelector('.js-remove-meeting');
+            if (removeBtn) {
+                removeBtn.disabled = index === 0;
+            }
+        });
+    };
+
+    const createMeetingRow = () => {
+        const index = meetingRows.querySelectorAll('.meeting-row').length;
+        const template = meetingRows.querySelector('.meeting-row');
+        if (!template) return;
+
+        const clone = template.cloneNode(true);
+        clone.dataset.index = String(index);
+        clone.querySelectorAll('select, input').forEach((el) => {
+            const name = el.getAttribute('name');
+            if (!name) return;
+            el.setAttribute('name', name.replace(/calendar_meetings\[\d+\]/, `calendar_meetings[${index}]`));
+            if (el.tagName === 'SELECT') el.value = '';
+            if (el.tagName === 'INPUT' && el.type !== 'hidden') el.value = '';
+        });
+        clone.querySelector('.js-meeting-preview').textContent = '—';
+        meetingRows.appendChild(clone);
+        bindMeetingRow(clone);
+        reindexMeetingRows();
+    };
+
+    meetingRows?.querySelectorAll('.meeting-row').forEach((row) => bindMeetingRow(row));
+    addMeetingBtn?.addEventListener('click', createMeetingRow);
 
     (() => {
         const input = document.getElementById('founderSearch');

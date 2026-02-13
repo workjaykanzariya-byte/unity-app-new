@@ -107,7 +107,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendarFromInputs($request);
+        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
 
         if (empty($data['status'])) {
             unset($data['status']);
@@ -170,7 +170,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendarFromInputs($request);
+        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
 
         $originalName = $circle->name;
 
@@ -202,27 +202,65 @@ class CircleController extends Controller
     }
 
 
-    private function normalizeCalendarFromInputs(Request $request): ?array
+    private function normalizeCalendarMeetings(mixed $meetings): ?array
     {
-        $frequency = strtolower(trim((string) $request->input('calendar_frequency', '')));
-        $day = strtolower(trim((string) $request->input('calendar_day', '')));
-        $time = trim((string) $request->input('calendar_time', ''));
-        $weekRule = strtolower(trim((string) $request->input('calendar_week_rule', '')));
-        $timezone = trim((string) $request->input('calendar_timezone', 'Asia/Kolkata'));
+        if (! is_array($meetings)) {
+            return null;
+        }
 
-        if ($frequency === '') {
+        $normalized = [];
+
+        foreach ($meetings as $meeting) {
+            if (! is_array($meeting)) {
+                continue;
+            }
+
+            $frequency = strtolower(trim((string) ($meeting['frequency'] ?? '')));
+            $day = strtolower(trim((string) ($meeting['default_meet_day'] ?? '')));
+            $time = trim((string) ($meeting['default_meet_time'] ?? ''));
+            $monthlyRule = strtolower(trim((string) ($meeting['monthly_rule'] ?? '')));
+
+            if ($frequency === '' && $day === '' && $time === '' && $monthlyRule === '') {
+                continue;
+            }
+
+            if (! in_array($frequency, ['weekly', 'monthly', 'quarterly'], true)) {
+                continue;
+            }
+
+            if ($day === '' || $time === '') {
+                continue;
+            }
+
+            $row = [
+                'frequency' => $frequency,
+                'default_meet_day' => $day,
+                'default_meet_time' => $time,
+            ];
+
+            if (in_array($frequency, ['monthly', 'quarterly'], true) && $monthlyRule !== '') {
+                $row['monthly_rule'] = $monthlyRule;
+            }
+
+            $normalized[] = $row;
+        }
+
+        if ($normalized === []) {
             return null;
         }
 
         $payload = [
-            'frequency' => $frequency,
-            'default_meet_day' => $day,
-            'default_meet_time' => $time,
-            'timezone' => $timezone !== '' ? $timezone : 'Asia/Kolkata',
+            'timezone' => 'Asia/Kolkata',
+            'meetings' => array_values($normalized),
         ];
 
-        if (in_array($frequency, ['monthly', 'quarterly'], true)) {
-            $payload['monthly_rule'] = $weekRule;
+        $first = $payload['meetings'][0];
+        $payload['frequency'] = $first['frequency'];
+        $payload['default_meet_day'] = $first['default_meet_day'];
+        $payload['default_meet_time'] = $first['default_meet_time'];
+
+        if (isset($first['monthly_rule'])) {
+            $payload['monthly_rule'] = $first['monthly_rule'];
         }
 
         return $payload;

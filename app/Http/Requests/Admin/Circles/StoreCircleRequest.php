@@ -36,11 +36,11 @@ class StoreCircleRequest extends FormRequest
             'meeting_frequency' => ['nullable', Rule::in(Circle::MEETING_FREQUENCY_OPTIONS)],
             'launch_date' => ['nullable', 'date'],
             'meeting_repeat' => ['nullable', 'array'],
-            'calendar_frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'quarterly'])],
-            'calendar_day' => ['nullable', Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), 'required_with:calendar_frequency'],
-            'calendar_time' => ['nullable', 'date_format:H:i', 'required_with:calendar_frequency'],
-            'calendar_week_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last']), 'required_if:calendar_frequency,monthly,quarterly'],
-            'calendar_timezone' => ['nullable', 'string', 'max:100'],
+            'calendar_meetings' => ['nullable', 'array'],
+            'calendar_meetings.*.frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'quarterly'])],
+            'calendar_meetings.*.default_meet_day' => ['nullable', Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])],
+            'calendar_meetings.*.default_meet_time' => ['nullable', 'date_format:H:i'],
+            'calendar_meetings.*.monthly_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last'])],
         ];
     }
 

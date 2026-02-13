@@ -170,39 +170,55 @@
     <div class="card-body">
         @php
             $calendar = is_array($circle->calendar) ? $circle->calendar : null;
-            $calFrequency = data_get($calendar, 'frequency');
-            $calDay = data_get($calendar, 'default_meet_day');
-            $calTime = data_get($calendar, 'default_meet_time');
-            $calRule = data_get($calendar, 'monthly_rule');
-            $calTimezone = data_get($calendar, 'timezone');
+            $meetings = is_array(data_get($calendar, 'meetings')) && data_get($calendar, 'meetings') !== []
+                ? array_values(data_get($calendar, 'meetings'))
+                : (filled(data_get($calendar, 'frequency'))
+                    ? [[
+                        'frequency' => data_get($calendar, 'frequency'),
+                        'default_meet_day' => data_get($calendar, 'default_meet_day'),
+                        'default_meet_time' => data_get($calendar, 'default_meet_time'),
+                        'monthly_rule' => data_get($calendar, 'monthly_rule'),
+                    ]]
+                    : []);
+            $timezone = data_get($calendar, 'timezone', 'Asia/Kolkata');
 
-            $label = static fn ($value) => $value ? ucwords(str_replace('_', ' ', (string) $value)) : '—';
+            $formatMeeting = static function (array $meeting): string {
+                $frequency = strtolower((string) ($meeting['frequency'] ?? ''));
+                $day = ucfirst((string) ($meeting['default_meet_day'] ?? ''));
+                $time = (string) ($meeting['default_meet_time'] ?? '');
+                $rule = ucfirst((string) ($meeting['monthly_rule'] ?? ''));
 
-            $summary = '—';
-            if ($calFrequency === 'weekly' && $calDay && $calTime) {
-                $summary = 'Every ' . ucfirst($calDay) . ' at ' . $calTime;
-            } elseif (in_array($calFrequency, ['monthly', 'quarterly'], true) && $calRule && $calDay && $calTime) {
-                $summary = ucfirst($calRule) . ' ' . ucfirst($calDay) . ' at ' . $calTime;
-                if ($calFrequency === 'quarterly') {
-                    $summary .= ' (Quarterly)';
+                if ($frequency === 'weekly' && $day !== '' && $time !== '') {
+                    return "Every {$day} at {$time}";
                 }
-            }
+
+                if (in_array($frequency, ['monthly', 'quarterly'], true) && $rule !== '' && $day !== '' && $time !== '') {
+                    $summary = "{$rule} {$day} at {$time}";
+                    if ($frequency === 'quarterly') {
+                        $summary .= ' (Quarterly)';
+                    } else {
+                        $summary .= ' (Monthly)';
+                    }
+
+                    return $summary;
+                }
+
+                return '—';
+            };
         @endphp
 
-        <div class="row g-3">
-            <div class="col-md-4">
-                <div class="small text-muted">Frequency</div>
-                <div class="fw-semibold">{{ $label($calFrequency) }}</div>
-            </div>
-            <div class="col-md-4">
-                <div class="small text-muted">Default Schedule</div>
-                <div class="fw-semibold">{{ $summary }}</div>
-            </div>
-            <div class="col-md-4">
-                <div class="small text-muted">Timezone</div>
-                <div class="fw-semibold">{{ $calTimezone ?: '—' }}</div>
-            </div>
-        </div>
+        @if ($meetings === [])
+            <div class="text-muted">—</div>
+        @else
+            <ul class="list-group list-group-flush">
+                @foreach ($meetings as $index => $meeting)
+                    <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><strong>Meeting #{{ $index + 1 }}:</strong> {{ $formatMeeting($meeting) }}</span>
+                    </li>
+                @endforeach
+            </ul>
+            <div class="small text-muted mt-2">Timezone: {{ $timezone ?: 'Asia/Kolkata' }}</div>
+        @endif
     </div>
 </div>
 
