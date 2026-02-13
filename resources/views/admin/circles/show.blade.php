@@ -152,9 +152,11 @@
             <div class="col-md-4">
                 <div class="small text-muted">Cover</div>
                 @if ($circle->cover_file_id)
-                    <div class="d-flex flex-column gap-1">
+                    <div class="d-flex flex-column gap-2">
                         <img src="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" alt="Circle Cover" class="rounded border" style="max-height: 120px; width: auto; object-fit: cover;">
-                        <a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank" class="small">Open</a>
+                        <div>
+                            <a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        </div>
                     </div>
                 @else
                     <div class="text-muted">—</div>

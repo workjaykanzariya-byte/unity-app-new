@@ -19,6 +19,13 @@ class CircleMemberResource extends JsonResource
             'role_id' => $this->role_id,
 
             'user' => $this->whenLoaded('user', function () {
+                $photoFileId = data_get($this->user, 'profile_photo_file_id')
+                    ?: data_get($this->user, 'image_file_id')
+                    ?: data_get($this->user, 'avatar_file_id')
+                    ?: data_get($this->user, 'profile_image_file_id')
+                    ?: data_get($this->user, 'photo_file_id')
+                    ?: data_get($this->user, 'profile_file_id');
+
                 $name = $this->user->name
                     ?? $this->user->display_name
                     ?? trim(($this->user->first_name ?? '') . ' ' . ($this->user->last_name ?? ''))
@@ -42,9 +49,9 @@ class CircleMemberResource extends JsonResource
                     ] : null,
                     'membership_status' => $this->user->membership_status ?? null,
                     'is_active' => $this->user->is_active ?? null,
-                    'profile_photo_file_id' => $this->user->profile_photo_file_id ?? null,
-                    'profile_photo_url' => ! empty($this->user->profile_photo_file_id)
-                        ? url("/api/v1/files/{$this->user->profile_photo_file_id}")
+                    'profile_photo_file_id' => $photoFileId,
+                    'profile_photo_url' => $photoFileId
+                        ? url("/api/v1/files/{$photoFileId}")
                         : null,
                     'designation' => $this->user->designation ?? null,
                     'company_name' => $this->user->company_name ?? null,

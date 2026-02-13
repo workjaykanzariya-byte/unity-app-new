@@ -169,9 +169,16 @@
                         <label class="form-label">Cover Image</label>
                         <input type="hidden" name="cover_file_id" id="coverFileId" value="{{ old('cover_file_id', $circle->cover_file_id) }}">
                         @if ($circle->cover_file_id)
-                            <div class="mb-2"><a id="coverPreviewLink" href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank">View current cover</a></div>
+                            <div id="coverPreviewBlock" class="mb-2 d-flex align-items-center gap-2">
+                                <a id="coverPreviewLink" href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                                <small class="text-muted">File ID: {{ $circle->cover_file_id }}</small>
+                                <img id="coverPreviewImage" src="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" alt="Cover preview" class="rounded border" style="max-height:80px;border-radius:8px;">
+                            </div>
                         @else
-                            <div class="mb-2 d-none"><a id="coverPreviewLink" href="#" target="_blank">View current cover</a></div>
+                            <div id="coverPreviewBlock" class="mb-2 d-none align-items-center gap-2">
+                                <a id="coverPreviewLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                                <img id="coverPreviewImage" src="#" alt="Cover preview" class="rounded border" style="max-height:80px;border-radius:8px;">
+                            </div>
                         @endif
                         <input type="file" class="form-control" id="coverFileInput" accept="image/*">
                         <div class="form-text" id="coverUploadStatus">Upload up to 10MB.</div>
@@ -325,9 +332,16 @@
 
             document.getElementById('coverFileId').value = fileId;
             const previewLink = document.getElementById('coverPreviewLink');
+            const previewImage = document.getElementById('coverPreviewImage');
+            const previewBlock = document.getElementById('coverPreviewBlock');
             if (previewLink) {
                 previewLink.href = `/api/v1/files/${fileId}`;
-                previewLink.parentElement?.classList.remove('d-none');
+            }
+            if (previewImage) {
+                previewImage.src = `/api/v1/files/${fileId}`;
+            }
+            if (previewBlock) {
+                previewBlock.classList.remove('d-none');
             }
             statusEl.textContent = 'Upload successful.';
         } catch (error) {
