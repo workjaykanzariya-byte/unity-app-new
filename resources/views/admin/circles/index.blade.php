@@ -99,7 +99,14 @@
                         <td><span class="badge badge-soft-secondary text-uppercase">{{ $circle->status ?? 'pending' }}</span></td>
                         <td>{{ optional($circle->created_at)->format('Y-m-d') }}</td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-light" href="{{ route('admin.circles.show', $circle) }}">View</a>
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-light" href="{{ route('admin.circles.show', $circle) }}">View</a>
+                                <form action="{{ route('admin.circles.destroy', $circle) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this circle? This is a soft delete and can be restored by admin.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty

@@ -187,6 +187,15 @@ class CircleController extends Controller
             ->with('success', 'Circle updated successfully.');
     }
 
+    public function destroy(Circle $circle): RedirectResponse
+    {
+        $circle->delete();
+
+        return redirect()
+            ->route('admin.circles.index')
+            ->with('success', 'Circle deleted successfully.');
+    }
+
     private function normalizeIndustryTags(null|string|array $tags): ?array
     {
         if (is_array($tags)) {
