@@ -73,15 +73,93 @@
 <div class="card mt-3">
     <div class="card-header fw-semibold">Circle Settings</div>
     <div class="card-body">
-        <div class="row g-2">
-            <div class="col-md-4"><strong>Meeting Mode:</strong> {{ $circle->meeting_mode ?? '—' }}</div>
-            <div class="col-md-4"><strong>Meeting Frequency:</strong> {{ $circle->meeting_frequency ?? '—' }}</div>
-            <div class="col-md-4"><strong>Launch Date:</strong> {{ optional($circle->launch_date)->format('Y-m-d') ?? '—' }}</div>
-            <div class="col-md-6"><strong>Director:</strong> {{ $circle->director?->display_name ?? '—' }}</div>
-            <div class="col-md-6"><strong>Industry Director:</strong> {{ $circle->industryDirector?->display_name ?? '—' }}</div>
-            <div class="col-md-6"><strong>DED:</strong> {{ $circle->ded?->display_name ?? '—' }}</div>
-            <div class="col-md-12"><strong>Meeting Repeat:</strong> <pre class="mb-0">{{ $circle->meeting_repeat ? json_encode($circle->meeting_repeat, JSON_PRETTY_PRINT) : '—' }}</pre></div>
-            <div class="col-md-12"><strong>Cover:</strong> @if($circle->cover_file_id)<a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank">View Cover</a>@else — @endif</div>
+        @php
+            $displayValue = static function ($value) {
+                if (is_string($value)) {
+                    $value = trim($value);
+                }
+
+                return filled($value)
+                    ? '<span class="fw-semibold text-dark">' . e($value) . '</span>'
+                    : '<span class="text-muted">—</span>';
+            };
+
+            $formatUser = static function ($user) {
+                if (! $user) {
+                    return null;
+                }
+
+                $name = $user->name
+                    ?? $user->display_name
+                    ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+                $name = trim((string) $name);
+                $email = trim((string) ($user->email ?? ''));
+
+                if ($name !== '' && $email !== '') {
+                    return $name . ' (' . $email . ')';
+                }
+
+                return $name !== '' ? $name : ($email !== '' ? $email : null);
+            };
+
+            $meetingMode = $circle->meeting_mode ? ucfirst(strtolower($circle->meeting_mode)) : null;
+            $meetingFrequency = $circle->meeting_frequency ? ucfirst(strtolower($circle->meeting_frequency)) : null;
+            $launchDate = optional($circle->launch_date)->format('d M Y');
+            $meetingRepeat = is_array($circle->meeting_repeat) ? $circle->meeting_repeat : null;
+        @endphp
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="small text-muted">Meeting Mode</div>
+                {!! $displayValue($meetingMode) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Meeting Frequency</div>
+                {!! $displayValue($meetingFrequency) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Launch Date</div>
+                {!! $displayValue($launchDate) !!}
+            </div>
+
+            <div class="col-md-4">
+                <div class="small text-muted">Director</div>
+                {!! $displayValue($formatUser($circle->director)) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Industry Director</div>
+                {!! $displayValue($formatUser($circle->industryDirector)) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">DED</div>
+                {!! $displayValue($formatUser($circle->ded)) !!}
+            </div>
+
+            <div class="col-md-8">
+                <div class="small text-muted">Meeting Repeat</div>
+                @if ($meetingRepeat)
+                    <div class="small bg-light border rounded p-2">
+                        @foreach ($meetingRepeat as $key => $value)
+                            <div><span class="text-muted">{{ ucwords(str_replace('_', ' ', (string) $key)) }}:</span> <span class="fw-semibold">{{ is_scalar($value) ? $value : json_encode($value) }}</span></div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-muted">—</div>
+                @endif
+            </div>
+
+            <div class="col-md-4">
+                <div class="small text-muted">Cover</div>
+                @if ($circle->cover_file_id)
+                    <div class="d-flex flex-column gap-1">
+                        <img src="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" alt="Circle Cover" class="rounded border" style="max-height: 120px; width: auto; object-fit: cover;">
+                        <a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank" class="small">Open</a>
+                    </div>
+                @else
+                    <div class="text-muted">—</div>
+                @endif
+            </div>
         </div>
     </div>
 </div>

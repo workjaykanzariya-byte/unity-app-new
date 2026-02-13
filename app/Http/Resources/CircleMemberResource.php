@@ -19,10 +19,27 @@ class CircleMemberResource extends JsonResource
             'role_id' => $this->role_id,
 
             'user' => $this->whenLoaded('user', function () {
+                $name = $this->user->name
+                    ?? $this->user->display_name
+                    ?? trim(($this->user->first_name ?? '') . ' ' . ($this->user->last_name ?? ''))
+                    ?: $this->user->email;
+
                 return [
                     'id' => $this->user->id,
-                    'name' => $this->user->name,
+                    'name' => $name,
                     'email' => $this->user->email,
+                    'phone' => $this->user->phone ?? null,
+                    'country_code' => $this->user->country_code ?? null,
+                    'city_id' => $this->user->city_id ?? null,
+                    'membership_status' => $this->user->membership_status ?? null,
+                    'is_active' => $this->user->is_active ?? null,
+                    'profile_photo_file_id' => $this->user->profile_photo_file_id ?? null,
+                    'profile_photo_url' => ! empty($this->user->profile_photo_file_id)
+                        ? url("/api/v1/files/{$this->user->profile_photo_file_id}")
+                        : null,
+                    'designation' => $this->user->designation ?? null,
+                    'company_name' => $this->user->company_name ?? null,
+                    'created_at' => optional($this->user->created_at)->toISOString(),
                 ];
             }),
 
