@@ -66,29 +66,31 @@
                         >
                     </th>
                     <th>
-                        <input
-                            type="text"
-                            name="circle"
-                            form="loginHistoryFiltersForm"
-                            class="form-control form-control-sm mb-1"
-                            placeholder="Circle name"
-                            value="{{ $filters['circle'] ?? '' }}"
-                        >
-                        <select name="joined" form="loginHistoryFiltersForm" class="form-select form-select-sm">
-                            <option value="all" @selected(($filters['joined'] ?? 'all') === 'all')>All</option>
-                            <option value="yes" @selected(($filters['joined'] ?? 'all') === 'yes')>Only Joined (Yes)</option>
-                            <option value="no" @selected(($filters['joined'] ?? 'all') === 'no')>Not Joined (No)</option>
-                        </select>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input
+                                type="text"
+                                name="circle"
+                                form="loginHistoryFiltersForm"
+                                class="form-control form-control-sm"
+                                placeholder="Circle name"
+                                value="{{ $filters['circle'] ?? '' }}"
+                            >
+                            <select name="joined" form="loginHistoryFiltersForm" class="form-select form-select-sm" style="min-width: 180px;">
+                                <option value="all" @selected(($filters['joined'] ?? 'all') === 'all')>All</option>
+                                <option value="yes" @selected(($filters['joined'] ?? 'all') === 'yes')>Only Joined (Yes)</option>
+                                <option value="no" @selected(($filters['joined'] ?? 'all') === 'no')>Not Joined (No)</option>
+                            </select>
+                        </div>
                     </th>
                     <th>
-                        <div class="d-flex gap-2 justify-content-end">
+                        <div class="d-flex gap-2 align-items-center">
                             <input
                                 type="datetime-local"
                                 name="from"
                                 form="loginHistoryFiltersForm"
                                 value="{{ $filters['from'] ?? '' }}"
                                 class="form-control form-control-sm"
-                                style="min-width: 160px;"
+                                style="min-width: 180px;"
                                 title="From Time"
                             >
                             <input
@@ -97,7 +99,7 @@
                                 form="loginHistoryFiltersForm"
                                 value="{{ $filters['to'] ?? '' }}"
                                 class="form-control form-control-sm"
-                                style="min-width: 160px;"
+                                style="min-width: 180px;"
                                 title="To Time"
                             >
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>

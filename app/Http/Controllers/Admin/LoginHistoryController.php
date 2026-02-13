@@ -18,8 +18,8 @@ class LoginHistoryController extends Controller
             'city' => ['nullable', 'string', 'max:255'],
             'company' => ['nullable', 'string', 'max:255'],
             'circle' => ['nullable', 'string', 'max:255'],
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date'],
+            'from' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'to' => ['nullable', 'date_format:Y-m-d\TH:i'],
             'joined' => ['nullable', 'in:all,yes,no'],
             'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
         ]);
@@ -31,11 +31,14 @@ class LoginHistoryController extends Controller
         $joined = (string) ($validated['joined'] ?? 'all');
         $perPage = (int) ($validated['per_page'] ?? 20);
 
-        $from = isset($validated['from']) && $validated['from'] !== ''
-            ? Carbon::parse($validated['from'])
+        $fromInput = (string) ($validated['from'] ?? '');
+        $toInput = (string) ($validated['to'] ?? '');
+
+        $from = $fromInput !== ''
+            ? Carbon::createFromFormat('Y-m-d\TH:i:s', str_replace('T', ' ', $fromInput) . ':00')
             : null;
-        $to = isset($validated['to']) && $validated['to'] !== ''
-            ? Carbon::parse($validated['to'])
+        $to = $toInput !== ''
+            ? Carbon::createFromFormat('Y-m-d\TH:i:s', str_replace('T', ' ', $toInput) . ':00')
             : null;
 
         $hasUsersName = Schema::hasColumn('users', 'name');
@@ -51,8 +54,8 @@ class LoginHistoryController extends Controller
 
         $loginLastSubquery = DB::table('user_login_histories')
             ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
-            ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from))
-            ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to))
+            ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
+            ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
             ->groupBy('user_id');
 
         $records = DB::query()
@@ -134,8 +137,8 @@ class LoginHistoryController extends Controller
                 'city' => $city,
                 'company' => $company,
                 'circle' => $circle,
-                'from' => $from?->format('Y-m-d\\TH:i') ?? '',
-                'to' => $to?->format('Y-m-d\\TH:i') ?? '',
+                'from' => $fromInput,
+                'to' => $toInput,
                 'joined' => in_array($joined, ['all', 'yes', 'no'], true) ? $joined : 'all',
                 'per_page' => $perPage,
             ],
