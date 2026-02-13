@@ -164,6 +164,48 @@
     </div>
 </div>
 
+
+<div class="card mt-3">
+    <div class="card-header fw-semibold">Meeting Schedule</div>
+    <div class="card-body">
+        @php
+            $calendar = is_array($circle->calendar) ? $circle->calendar : null;
+            $calFrequency = data_get($calendar, 'frequency');
+            $calDay = data_get($calendar, 'default_meet_day');
+            $calTime = data_get($calendar, 'default_meet_time');
+            $calRule = data_get($calendar, 'monthly_rule');
+            $calTimezone = data_get($calendar, 'timezone');
+
+            $label = static fn ($value) => $value ? ucwords(str_replace('_', ' ', (string) $value)) : '—';
+
+            $summary = '—';
+            if ($calFrequency === 'weekly' && $calDay && $calTime) {
+                $summary = 'Every ' . ucfirst($calDay) . ' at ' . $calTime;
+            } elseif (in_array($calFrequency, ['monthly', 'quarterly'], true) && $calRule && $calDay && $calTime) {
+                $summary = ucfirst($calRule) . ' ' . ucfirst($calDay) . ' at ' . $calTime;
+                if ($calFrequency === 'quarterly') {
+                    $summary .= ' (Quarterly)';
+                }
+            }
+        @endphp
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="small text-muted">Frequency</div>
+                <div class="fw-semibold">{{ $label($calFrequency) }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Default Schedule</div>
+                <div class="fw-semibold">{{ $summary }}</div>
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Timezone</div>
+                <div class="fw-semibold">{{ $calTimezone ?: '—' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card mt-3">
     <div class="card-header fw-semibold">Peers</div>
     <div class="card-body">

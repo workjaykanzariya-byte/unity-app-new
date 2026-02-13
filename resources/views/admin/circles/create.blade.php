@@ -33,6 +33,13 @@
     if (is_array($meetingRepeatValue)) {
         $meetingRepeatValue = json_encode($meetingRepeatValue, JSON_PRETTY_PRINT);
     }
+
+    $calendar = old('calendar', []);
+    $calendarFrequency = data_get($calendar, 'frequency', '');
+    $calendarDay = data_get($calendar, 'default_meet_day', '');
+    $calendarTime = data_get($calendar, 'default_meet_time', '');
+    $calendarMonthlyRule = data_get($calendar, 'monthly_rule', '');
+    $calendarTimezone = data_get($calendar, 'timezone', 'Asia/Kolkata');
 @endphp
 
 <form action="{{ route('admin.circles.store') }}" method="POST">
@@ -173,6 +180,48 @@
 
         <div class="col-12">
             <div class="card">
+                <div class="card-header fw-semibold">Meeting Schedule (Calendar)</div>
+                <div class="card-body row g-3" id="calendarScheduleSection">
+                    <div class="col-md-3">
+                        <label class="form-label">Frequency</label>
+                        <select name="calendar[frequency]" id="calendarFrequency" class="form-select">
+                            <option value="">Select frequency</option>
+                            <option value="weekly" @selected($calendarFrequency === 'weekly')>Weekly</option>
+                            <option value="monthly" @selected($calendarFrequency === 'monthly')>Monthly</option>
+                            <option value="quarterly" @selected($calendarFrequency === 'quarterly')>Quarterly</option>
+                        </select>
+                        <div class="form-text">Weekly: choose day + time.</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Default Meet Time</label>
+                        <input type="time" name="calendar[default_meet_time]" id="calendarMeetTime" class="form-control" value="{{ $calendarTime }}">
+                    </div>
+                    <div class="col-md-3" id="calendarDayWrap">
+                        <label class="form-label">Day of Week</label>
+                        <select name="calendar[default_meet_day]" id="calendarMeetDay" class="form-select">
+                            <option value="">Select day</option>
+                            @foreach (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
+                                <option value="{{ $day }}" @selected($calendarDay === $day)>{{ ucfirst($day) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="calendarMonthlyRuleWrap">
+                        <label class="form-label">Week of Month</label>
+                        <select name="calendar[monthly_rule]" id="calendarMonthlyRule" class="form-select">
+                            <option value="">Select week rule</option>
+                            @foreach (['first','second','third','fourth','last'] as $rule)
+                                <option value="{{ $rule }}" @selected($calendarMonthlyRule === $rule)>{{ ucfirst($rule) }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">Monthly/Quarterly: choose week rule + day + time (e.g. first monday).</div>
+                    </div>
+                    <input type="hidden" name="calendar[timezone]" id="calendarTimezone" value="{{ $calendarTimezone ?: 'Asia/Kolkata' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
                 <div class="card-header fw-semibold">Location</div>
                 <div class="card-body row g-3">
                     <div class="col-md-4">
@@ -257,6 +306,30 @@
             statusEl.textContent = 'Upload failed. Please try again.';
         }
     });
+
+
+    const calendarFrequency = document.getElementById('calendarFrequency');
+    const calendarDayWrap = document.getElementById('calendarDayWrap');
+    const calendarMonthlyRuleWrap = document.getElementById('calendarMonthlyRuleWrap');
+    const calendarTimezone = document.getElementById('calendarTimezone');
+
+    const toggleCalendarFields = () => {
+        const frequency = (calendarFrequency?.value || '').toLowerCase();
+
+        if (calendarTimezone && !calendarTimezone.value) {
+            calendarTimezone.value = 'Asia/Kolkata';
+        }
+
+        if (!calendarDayWrap || !calendarMonthlyRuleWrap) {
+            return;
+        }
+
+        calendarDayWrap.classList.toggle('d-none', frequency === '');
+        calendarMonthlyRuleWrap.classList.toggle('d-none', !['monthly', 'quarterly'].includes(frequency));
+    };
+
+    calendarFrequency?.addEventListener('change', toggleCalendarFields);
+    toggleCalendarFields();
 
     (() => {
         const input = document.getElementById('founderSearch');
