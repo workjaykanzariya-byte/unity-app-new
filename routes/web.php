@@ -94,6 +94,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/circles/{circle}', [CircleController::class, 'show'])->name('circles.show');
         Route::get('/circles/{circle}/edit', [CircleController::class, 'edit'])->name('circles.edit');
         Route::put('/circles/{circle}', [CircleController::class, 'update'])->name('circles.update');
+        Route::post('/circles/{circle}/image', [CircleController::class, 'updateImage'])->name('circles.image.update');
         Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('circles.members.store');
         Route::put('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'update'])->name('circles.members.update');
         Route::delete('/circles/{circle}/members/{circleMember}', [CircleMemberController::class, 'destroy'])->name('circles.members.destroy');

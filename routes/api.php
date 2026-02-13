@@ -43,6 +43,9 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
+use App\Http\Controllers\Api\V1\Circles\CircleController as V1CircleController;
+use App\Http\Controllers\Api\V1\Circles\CircleMembersController;
+use App\Http\Controllers\Api\V1\Circles\CircleMetaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -61,6 +64,10 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
+
+    Route::get('/circles', [V1CircleController::class, 'index']);
+    Route::get('/circles/meta', [CircleMetaController::class, 'show']);
+    Route::get('/circles/{circle}/members', [CircleMembersController::class, 'index'])->whereUuid('circle');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -88,14 +95,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/connection-requests', [MemberController::class, 'myConnectionRequests']);
 
         // Circles
-        Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
         Route::post('/circles', [CircleController::class, 'store']);
         Route::put('/circles/{id}', [CircleController::class, 'update']);
         Route::patch('/circles/{id}', [CircleController::class, 'update']);
         Route::post('/circles/{id}/join', [CircleController::class, 'join']);
         Route::get('/my/circles', [CircleController::class, 'myCircles']);
-        Route::get('/circles/{id}/members', [CircleController::class, 'members']);
         Route::put('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
         Route::patch('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
 
@@ -259,7 +264,7 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/membership-plans', [MembershipPlanController::class, 'index']);
     Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle']);
-    Route::get('/files/{id}', [FileController::class, 'show']);
+    Route::get('/files/{id}', [FileController::class, 'show'])->name('api.v1.files.show');
     Route::get('/event-galleries', [EventGalleryApiController::class, 'index']);
     Route::get('/event-galleries/{id}', [EventGalleryApiController::class, 'show']);
 

@@ -16,6 +16,18 @@ class Circle extends Model
 
     public const STATUS_OPTIONS = ['pending', 'active', 'archived'];
     public const TYPE_OPTIONS = ['public', 'private'];
+    public const STAGE_OPTIONS = ['conceptualized', 'foundation', 'pre_launch', 'launched', 'growth', 'high_impact'];
+    public const MEETING_MODE_OPTIONS = ['online', 'offline', 'hybrid'];
+    public const MEETING_FREQUENCY_OPTIONS = ['monthly', 'quarterly'];
+
+    public const STAGE_LABELS = [
+        'conceptualized' => 'Conceptualized Circle',
+        'foundation' => 'Foundation Circle',
+        'pre_launch' => 'Pre-Launch Circle',
+        'launched' => 'Launched Circle',
+        'growth' => 'Growth Circle',
+        'high_impact' => 'High-Impact Circle',
+    ];
 
     protected $keyType = 'string';
     public $incrementing = false;
@@ -35,11 +47,23 @@ class Circle extends Model
         'referral_score',
         'visitor_count',
         'type',
+        'stage',
+        'meeting_mode',
+        'meeting_frequency',
+        'meeting_repeat',
+        'launch_date',
+        'annual_fee',
+        'director_user_id',
+        'industry_director_user_id',
+        'ded_user_id',
+        'active_members_count',
+        'image_file_id',
     ];
 
     protected $casts = [
         'calendar' => 'array',
         'industry_tags' => 'array',
+        'launch_date' => 'date',
     ];
 
     protected static function booted()
@@ -78,6 +102,26 @@ class Circle extends Model
     public function founderUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'founder_user_id');
+    }
+
+    public function directorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'director_user_id');
+    }
+
+    public function industryDirectorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'industry_director_user_id');
+    }
+
+    public function dedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'ded_user_id');
+    }
+
+    public function imageFile(): BelongsTo
+    {
+        return $this->belongsTo(File::class, 'image_file_id');
     }
 
     public function template(): BelongsTo

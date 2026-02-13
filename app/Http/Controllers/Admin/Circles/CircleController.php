@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Admin\Circles;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Circles\StoreCircleRequest;
-use App\Http\Requests\Admin\Circles\UpdateCircleRequest;
+use App\Http\Requests\Admin\Circles\AdminUpdateCircleImageRequest;
+use App\Http\Requests\Admin\Circles\AdminUpdateCircleRequest;
 use App\Models\Circle;
 use App\Models\CircleMember;
 use App\Models\City;
+use App\Models\FileModel;
 use App\Models\User;
+use App\Support\CircleRank;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CircleController extends Controller
@@ -97,6 +101,11 @@ class CircleController extends Controller
             'types' => Circle::TYPE_OPTIONS,
             'defaultFounder' => $defaultFounder,
             'defaultFounderLabel' => $this->founderLabel($defaultFounder),
+            'users' => User::query()->whereNull('deleted_at')->orderBy('display_name')->limit(2000)->get(['id', 'display_name', 'first_name', 'last_name', 'email']),
+            'stages' => Circle::STAGE_LABELS,
+            'meetingModes' => Circle::MEETING_MODE_OPTIONS,
+            'meetingFrequencies' => Circle::MEETING_FREQUENCY_OPTIONS,
+            'rank' => CircleRank::compute((int) $circle->active_members_count),
         ]);
     }
 
@@ -142,7 +151,7 @@ class CircleController extends Controller
 
     public function edit(Request $request, Circle $circle): View
     {
-        $circle->load('city');
+        $circle->load(['city', 'founder', 'directorUser', 'industryDirectorUser', 'dedUser']);
 
         $defaultFounder = $circle->founder ?? $this->defaultFounderUser();
         $countries = $this->countriesList();
@@ -162,10 +171,15 @@ class CircleController extends Controller
             'types' => Circle::TYPE_OPTIONS,
             'defaultFounder' => $defaultFounder,
             'defaultFounderLabel' => $this->founderLabel($defaultFounder),
+            'users' => User::query()->whereNull('deleted_at')->orderBy('display_name')->limit(2000)->get(['id', 'display_name', 'first_name', 'last_name', 'email']),
+            'stages' => Circle::STAGE_LABELS,
+            'meetingModes' => Circle::MEETING_MODE_OPTIONS,
+            'meetingFrequencies' => Circle::MEETING_FREQUENCY_OPTIONS,
+            'rank' => CircleRank::compute((int) $circle->active_members_count),
         ]);
     }
 
-    public function update(UpdateCircleRequest $request, Circle $circle): RedirectResponse
+    public function update(AdminUpdateCircleRequest $request, Circle $circle): RedirectResponse
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
@@ -183,6 +197,33 @@ class CircleController extends Controller
         return redirect()
             ->route('admin.circles.show', $circle)
             ->with('success', 'Circle updated successfully.');
+    }
+
+
+
+    public function updateImage(AdminUpdateCircleImageRequest $request, Circle $circle): RedirectResponse
+    {
+        $file = $request->file('image');
+
+        $disk = config('filesystems.default', 'public');
+        $folder = 'uploads/' . now()->format('Y/m/d');
+        $safeName = preg_replace('/[^A-Za-z0-9\.\-_]/', '_', $file->getClientOriginalName());
+        $name = (string) Str::uuid() . '_' . ($safeName ?: 'circle_image');
+        $path = $file->storeAs($folder, $name, $disk);
+
+        $storedFile = FileModel::create([
+            'uploader_user_id' => optional(Auth::guard('admin')->user())->id,
+            's3_key' => $path,
+            'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
+            'size_bytes' => $file->getSize(),
+        ]);
+
+        $circle->image_file_id = $storedFile->id;
+        $circle->save();
+
+        return redirect()
+            ->route('admin.circles.edit', $circle)
+            ->with('success', 'Circle image updated successfully.');
     }
 
     private function normalizeIndustryTags(null|string|array $tags): ?array
