@@ -4,12 +4,31 @@
 
 @section('content')
 <div class="card p-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
+            <select id="perPage" name="per_page" form="loginHistoryFiltersForm" class="form-select form-select-sm" style="width: 90px;">
+                @foreach ([10, 20, 50, 100] as $size)
+                    <option value="{{ $size }}" @selected((int) $filters['per_page'] === $size)>{{ $size }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="small text-muted">
+            @if($records->total() > 0)
+                Records {{ $records->firstItem() }} to {{ $records->lastItem() }} of {{ $records->total() }}
+            @else
+                No records found
+            @endif
+        </div>
+    </div>
+
+    <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}"></form>
+
     <div class="table-responsive">
         <table class="table align-middle">
             <thead class="table-light">
                 <tr>
                     <th>Peer Name</th>
-                    <th>Phone</th>
                     <th>City</th>
                     <th>Company</th>
                     <th>Circles</th>
@@ -17,27 +36,54 @@
                 </tr>
                 <tr class="bg-light align-middle">
                     <th>
-                        <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}" class="d-flex gap-2">
-                            <input
-                                type="text"
-                                name="q"
-                                class="form-control form-control-sm"
-                                placeholder="Name, email, or phone"
-                                value="{{ $filters['q'] }}"
-                            >
-                        </form>
+                        <input
+                            type="text"
+                            name="name"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm"
+                            placeholder="Name or email"
+                            value="{{ $filters['name'] }}"
+                        >
                     </th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
                     <th>
-                        <div class="d-flex gap-2">
+                        <input
+                            type="text"
+                            name="city"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm"
+                            placeholder="City"
+                            value="{{ $filters['city'] }}"
+                        >
+                    </th>
+                    <th>
+                        <input
+                            type="text"
+                            name="company"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm"
+                            placeholder="Company"
+                            value="{{ $filters['company'] }}"
+                        >
+                    </th>
+                    <th>
+                        <input
+                            type="text"
+                            name="circle"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm"
+                            placeholder="Circle name"
+                            value="{{ $filters['circle'] }}"
+                        >
+                    </th>
+                    <th>
+                        <div class="d-flex gap-2 justify-content-end">
                             <input
                                 type="datetime-local"
                                 name="from"
                                 form="loginHistoryFiltersForm"
                                 value="{{ $filters['from'] }}"
                                 class="form-control form-control-sm"
+                                style="min-width: 170px;"
                                 title="From Time"
                             >
                             <input
@@ -46,12 +92,9 @@
                                 form="loginHistoryFiltersForm"
                                 value="{{ $filters['to'] }}"
                                 class="form-control form-control-sm"
+                                style="min-width: 170px;"
                                 title="To Time"
                             >
-                        </div>
-                    </th>
-                    <th>
-                        <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>
                             <a href="{{ route('admin.login-history.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                         </div>
@@ -65,7 +108,6 @@
                             <div class="fw-semibold">{{ $record->display_name ?: '—' }}</div>
                             <small class="text-muted">{{ $record->email ?: '—' }}</small>
                         </td>
-                        <td>{{ $record->phone ?: '—' }}</td>
                         <td>{{ $record->city ?: '—' }}</td>
                         <td>{{ $record->company_name ?: '—' }}</td>
                         <td>
@@ -78,7 +120,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">No records found.</td>
+                        <td colspan="5" class="text-center text-muted py-4">No records found.</td>
                     </tr>
                 @endforelse
             </tbody>
