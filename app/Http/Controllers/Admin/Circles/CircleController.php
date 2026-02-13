@@ -107,7 +107,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendar($request->input('calendar'));
+        $data['calendar'] = $this->normalizeCalendarFromInputs($request);
 
         if (empty($data['status'])) {
             unset($data['status']);
@@ -170,7 +170,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendar($request->input('calendar'));
+        $data['calendar'] = $this->normalizeCalendarFromInputs($request);
 
         $originalName = $circle->name;
 
@@ -202,32 +202,27 @@ class CircleController extends Controller
     }
 
 
-    private function normalizeCalendar(null|array $calendar): ?array
+    private function normalizeCalendarFromInputs(Request $request): ?array
     {
-        if (! is_array($calendar)) {
-            return null;
-        }
-
-        $frequency = strtolower(trim((string) ($calendar['frequency'] ?? '')));
+        $frequency = strtolower(trim((string) $request->input('calendar_frequency', '')));
+        $day = strtolower(trim((string) $request->input('calendar_day', '')));
+        $time = trim((string) $request->input('calendar_time', ''));
+        $weekRule = strtolower(trim((string) $request->input('calendar_week_rule', '')));
+        $timezone = trim((string) $request->input('calendar_timezone', 'Asia/Kolkata'));
 
         if ($frequency === '') {
             return null;
         }
 
-        $day = strtolower(trim((string) ($calendar['default_meet_day'] ?? '')));
-        $time = trim((string) ($calendar['default_meet_time'] ?? ''));
-        $monthlyRule = strtolower(trim((string) ($calendar['monthly_rule'] ?? '')));
-        $timezone = trim((string) ($calendar['timezone'] ?? 'Asia/Kolkata'));
-
         $payload = [
             'frequency' => $frequency,
-            'default_meet_day' => $day !== '' ? $day : null,
-            'default_meet_time' => $time !== '' ? $time : null,
+            'default_meet_day' => $day,
+            'default_meet_time' => $time,
             'timezone' => $timezone !== '' ? $timezone : 'Asia/Kolkata',
         ];
 
         if (in_array($frequency, ['monthly', 'quarterly'], true)) {
-            $payload['monthly_rule'] = $monthlyRule !== '' ? $monthlyRule : null;
+            $payload['monthly_rule'] = $weekRule;
         }
 
         return $payload;

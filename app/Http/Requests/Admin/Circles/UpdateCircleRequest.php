@@ -36,12 +36,11 @@ class UpdateCircleRequest extends FormRequest
             'meeting_frequency' => ['nullable', Rule::in(Circle::MEETING_FREQUENCY_OPTIONS)],
             'launch_date' => ['nullable', 'date'],
             'meeting_repeat' => ['nullable', 'array'],
-            'calendar' => ['nullable', 'array'],
-            'calendar.frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'quarterly']), 'required_with:calendar.default_meet_day,calendar.default_meet_time,calendar.monthly_rule'],
-            'calendar.default_meet_day' => ['nullable', Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), 'required_with:calendar.frequency'],
-            'calendar.default_meet_time' => ['nullable', 'date_format:H:i', 'required_with:calendar.frequency'],
-            'calendar.monthly_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last']), 'required_if:calendar.frequency,monthly,quarterly'],
-            'calendar.timezone' => ['nullable', 'string', 'max:100'],
+            'calendar_frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'quarterly'])],
+            'calendar_day' => ['nullable', Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']), 'required_with:calendar_frequency'],
+            'calendar_time' => ['nullable', 'date_format:H:i', 'required_with:calendar_frequency'],
+            'calendar_week_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last']), 'required_if:calendar_frequency,monthly,quarterly'],
+            'calendar_timezone' => ['nullable', 'string', 'max:100'],
         ];
     }
 
