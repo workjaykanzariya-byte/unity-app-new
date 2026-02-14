@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\CoinClaimRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -271,6 +272,11 @@ class User extends Authenticatable
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function coinClaimRequests(): HasMany
+    {
+        return $this->hasMany(CoinClaimRequest::class, 'user_id');
     }
 
     public function roles(): BelongsToMany

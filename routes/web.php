@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\MembershipPlanController;
 use App\Http\Controllers\Admin\PostReportsController;
 use App\Http\Controllers\Admin\PostModerationController;
 use App\Http\Controllers\Admin\VisitorRegistrationsController;
+use App\Http\Controllers\Admin\CoinClaimsController;
 
 Route::get('/', function () {
     return view('landing');
@@ -112,11 +113,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/posts/{post}/deactivate', [PostModerationController::class, 'deactivate'])->name('posts.deactivate');
         Route::post('/posts/{post}/restore', [PostModerationController::class, 'restore'])->name('posts.restore');
         Route::get('/visitor-registrations', [VisitorRegistrationsController::class, 'index'])->name('visitor-registrations.index');
+        Route::get('/coin-claims', [CoinClaimsController::class, 'index'])->name('coin-claims.index');
         Route::post('/visitor-registrations/{id}/approve', [VisitorRegistrationsController::class, 'approve'])
             ->whereUuid('id')
             ->name('visitor-registrations.approve');
         Route::post('/visitor-registrations/{id}/reject', [VisitorRegistrationsController::class, 'reject'])
             ->whereUuid('id')
             ->name('visitor-registrations.reject');
+        Route::post('/coin-claims/{id}/approve', [CoinClaimsController::class, 'approve'])
+            ->whereUuid('id')
+            ->name('coin-claims.approve');
+        Route::post('/coin-claims/{id}/reject', [CoinClaimsController::class, 'reject'])
+            ->whereUuid('id')
+            ->name('coin-claims.reject');
     });
 });

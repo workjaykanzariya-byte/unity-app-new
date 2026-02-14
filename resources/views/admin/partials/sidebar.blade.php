@@ -13,7 +13,6 @@
         ? [
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
-            ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
@@ -21,7 +20,6 @@
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
-            ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
@@ -48,6 +46,13 @@
 
     $activityActive = request()->routeIs('admin.activities.*');
     $activityExpanded = $activityActive || ! $isGlobalAdmin;
+
+
+    $pendingMenu = ($isSuper || $isCircleScoped) ? [
+        ['label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
+        ['label' => 'Coin Claims', 'route' => 'admin.coin-claims.index'],
+    ] : [];
+    $pendingActive = request()->routeIs('admin.visitor-registrations.*') || request()->routeIs('admin.coin-claims.*');
 
     $postsMenu = $isGlobalAdmin ? [
         ['label' => 'All Posts', 'route' => 'admin.posts.index'],
@@ -95,6 +100,24 @@
                     </div>
                 </li>
             @endif
+            @if ($pendingMenu)
+                <li class="nav-item menu-parent {{ $pendingActive ? 'open' : '' }}">
+                    <a class="nav-link d-flex justify-content-between align-items-center {{ $pendingActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#pendingSubmenu" role="button" aria-expanded="{{ $pendingActive ? 'true' : 'false' }}" aria-controls="pendingSubmenu">
+                        <span><i class="bi bi-hourglass-split me-2"></i>Pending Requests</span>
+                        <i class="bi bi-chevron-right menu-arrow"></i>
+                    </a>
+                    <div class="collapse {{ $pendingActive ? 'show' : '' }}" id="pendingSubmenu">
+                        <ul class="nav flex-column ms-3">
+                            @foreach ($pendingMenu as $item)
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}" href="{{ route($item['route']) }}">{{ $item['label'] }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </li>
+            @endif
+
             @if ($postsMenu)
                 <li class="nav-item menu-parent {{ $postsActive ? 'open' : '' }}">
                     <a class="nav-link d-flex justify-content-between align-items-center {{ $postsActive ? 'active' : '' }}" data-bs-toggle="collapse" href="#postsSubmenu" role="button" aria-expanded="{{ $postsActive ? 'true' : 'false' }}" aria-controls="postsSubmenu">

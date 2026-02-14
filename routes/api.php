@@ -33,6 +33,9 @@ use App\Http\Controllers\Api\V1\PostReportController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
+use App\Http\Controllers\Api\V1\CoinClaimController;
+use App\Http\Controllers\Api\V1\Admin\CoinClaimAdminController;
+use App\Http\Controllers\Api\V1\Admin\PendingController;
 use App\Http\Controllers\Api\V1\Forms\LeaderInterestController;
 use App\Http\Controllers\Api\V1\Forms\PeerRecommendationController;
 use App\Http\Controllers\Api\V1\Forms\VisitorRegistrationController;
@@ -133,6 +136,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/coins/ledger', [CoinsController::class, 'ledger']);
         // If routes are cached, run `php artisan route:clear` and `php artisan optimize:clear` to load this route.
         Route::get('/coins/history', [CoinHistoryController::class, 'index']);
+        Route::get('/coin-claims/activities', [CoinClaimController::class, 'activities']);
+        Route::post('/coin-claims', [CoinClaimController::class, 'store']);
+        Route::get('/coin-claims/my', [CoinClaimController::class, 'my']);
 
         Route::prefix('activities')->group(function () {
             // P2P Meetings
@@ -167,6 +173,14 @@ Route::prefix('v1')->group(function () {
         Route::patch('/admin/activities/{id}', [AdminActivityController::class, 'updateStatus']);
         Route::patch('/admin/activities/{activity}/approve', [AdminActivityController::class, 'approve']);
         Route::patch('/admin/activities/{activity}/reject', [AdminActivityController::class, 'reject']);
+
+        Route::get('/admin/coin-claims', [CoinClaimAdminController::class, 'index']);
+        Route::get('/admin/coin-claims/{id}', [CoinClaimAdminController::class, 'show']);
+        Route::post('/admin/coin-claims/{id}/approve', [CoinClaimAdminController::class, 'approve']);
+        Route::post('/admin/coin-claims/{id}/reject', [CoinClaimAdminController::class, 'reject']);
+
+        Route::get('/admin/pending/summary', [PendingController::class, 'summary']);
+        Route::get('/admin/pending/items', [PendingController::class, 'items']);
 
         // Wallet
         Route::get('/wallet/transactions', [WalletController::class, 'myTransactions']);
