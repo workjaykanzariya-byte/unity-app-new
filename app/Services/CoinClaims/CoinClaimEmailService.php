@@ -16,7 +16,7 @@ class CoinClaimEmailService
 {
     public function sendSubmittedEmails(CoinClaimRequest $claim, ?User $user): void
     {
-        if (! config('coin_claims.email_enabled')) {
+        if (! config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true))) {
             return;
         }
 
@@ -28,7 +28,7 @@ class CoinClaimEmailService
             ]);
         }
 
-        $adminEmail = config('coin_claims.admin_email');
+        $adminEmail = env('COIN_CLAIM_ADMIN_EMAIL');
         if (! empty($adminEmail)) {
             $this->deliver((string) $adminEmail, new CoinClaimSubmittedMail($claim), [
                 'stage' => 'submitted_admin',
@@ -39,7 +39,7 @@ class CoinClaimEmailService
 
     public function sendApprovedEmail(CoinClaimRequest $claim, ?User $user, ?int $newBalance = null): void
     {
-        if (! config('coin_claims.email_enabled') || ! $user || empty($user->email)) {
+        if (! config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) || ! $user || empty($user->email)) {
             return;
         }
 
@@ -52,7 +52,7 @@ class CoinClaimEmailService
 
     public function sendRejectedEmail(CoinClaimRequest $claim, ?User $user): void
     {
-        if (! config('coin_claims.email_enabled') || ! $user || empty($user->email)) {
+        if (! config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) || ! $user || empty($user->email)) {
             return;
         }
 
@@ -66,13 +66,8 @@ class CoinClaimEmailService
     private function deliver(string $to, Mailable $mailable, array $context = []): void
     {
         try {
-            if ((string) config('queue.default', 'sync') !== 'sync') {
-                Mail::to($to)->queue($mailable);
-                Log::info('Coin claim email queued', array_merge($context, ['to' => $to]));
-            } else {
-                Mail::to($to)->send($mailable);
-                Log::info('Coin claim email sent', array_merge($context, ['to' => $to]));
-            }
+            Mail::to($to)->send($mailable);
+            Log::info('Coin claim email sent', array_merge($context, ['to' => $to]));
         } catch (Throwable $e) {
             Log::error('Failed to send coin claim email', array_merge($context, [
                 'to' => $to,

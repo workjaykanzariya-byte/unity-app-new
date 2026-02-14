@@ -4,17 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendPushNotificationJob;
+use App\Mail\CoinClaimApprovedMail;
+use App\Mail\CoinClaimRejectedMail;
 use App\Models\CoinClaimRequest;
 use App\Models\CoinsLedger;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\AdminCircleScope;
-use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -53,7 +55,7 @@ class CoinClaimsController extends Controller
         ]);
     }
 
-    public function approve(string $id, CoinClaimEmailService $emailService): RedirectResponse
+    public function approve(string $id): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
 
@@ -135,28 +137,33 @@ class CoinClaimsController extends Controller
 
             return [
                 'message' => 'Coin claim approved.',
-                'claim_id' => (string) $claim->id,
-                'user_id' => (string) $user->id,
+                'claim' => $claim->refresh(),
+                'user' => $user->refresh(),
                 'new_balance' => $newBalance,
             ];
         });
 
-        if (! empty($result['claim_id'])) {
-            $approvedClaim = CoinClaimRequest::query()->find($result['claim_id']);
-            $approvedUser = User::query()->find($result['user_id']);
-            if ($approvedClaim && $approvedUser) {
-                $emailService->sendApprovedEmail($approvedClaim, $approvedUser, (int) $result['new_balance']);
+        if (isset($result['claim'], $result['user']) && config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) && ! empty($result['user']->email)) {
+            try {
+                Mail::to($result['user']->email)->send(new CoinClaimApprovedMail($result['claim'], (int) $result['new_balance']));
+            } catch (\Throwable $e) {
+                Log::error('CoinClaim email failed', [
+                    'claim_id' => (string) $result['claim']->id,
+                    'user_id' => (string) $result['user']->id,
+                    'email' => (string) $result['user']->email,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
         return redirect()->back()->with('success', $result['message'] ?? 'Coin claim updated.');
     }
 
-    public function reject(Request $request, string $id, CoinClaimEmailService $emailService): RedirectResponse
+    public function reject(Request $request, string $id): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
 
-        $message = DB::transaction(function () use ($request, $id, $admin) {
+        $result = DB::transaction(function () use ($request, $id, $admin) {
             $claim = CoinClaimRequest::query()->where('id', $id)->lockForUpdate()->firstOrFail();
 
             if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -164,7 +171,7 @@ class CoinClaimsController extends Controller
             }
 
             if ($claim->status !== 'pending') {
-                return 'Only pending claims can be rejected.';
+                return ['message' => 'Only pending claims can be rejected.'];
             }
 
             $claim->update([
@@ -202,17 +209,26 @@ class CoinClaimsController extends Controller
                 ]);
             }
 
-            return 'Coin claim rejected.';
+            return [
+                'message' => 'Coin claim rejected.',
+                'claim' => $claim->refresh(),
+                'user' => $user,
+            ];
         });
 
-        if ($message === 'Coin claim rejected.') {
-            $rejectedClaim = CoinClaimRequest::query()->find($id);
-            $rejectedUser = $rejectedClaim ? User::query()->find($rejectedClaim->user_id) : null;
-            if ($rejectedClaim && $rejectedUser) {
-                $emailService->sendRejectedEmail($rejectedClaim, $rejectedUser);
+        if (isset($result['claim'], $result['user']) && $result['user'] && config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) && ! empty($result['user']->email)) {
+            try {
+                Mail::to($result['user']->email)->send(new CoinClaimRejectedMail($result['claim']));
+            } catch (\Throwable $e) {
+                Log::error('CoinClaim email failed', [
+                    'claim_id' => (string) $result['claim']->id,
+                    'user_id' => (string) $result['user']->id,
+                    'email' => (string) $result['user']->email,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
-        return redirect()->back()->with('success', $message);
+        return redirect()->back()->with('success', $result['message'] ?? 'Coin claim updated.');
     }
 }

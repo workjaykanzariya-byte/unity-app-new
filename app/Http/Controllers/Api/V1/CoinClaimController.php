@@ -6,13 +6,14 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\CoinClaims\StoreCoinClaimRequest;
 use App\Http\Resources\CoinClaimActivityResource;
 use App\Http\Resources\CoinClaimRequestResource;
+use App\Mail\CoinClaimSubmittedMail;
 use App\Models\CoinClaimRequest;
 use App\Models\FileModel;
 use App\Support\CoinClaims\CoinClaimActivityRegistry;
-use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CoinClaimController extends BaseApiController
@@ -24,7 +25,7 @@ class CoinClaimController extends BaseApiController
         ]);
     }
 
-    public function store(StoreCoinClaimRequest $request, CoinClaimEmailService $emailService)
+    public function store(StoreCoinClaimRequest $request)
     {
         $activityCode = (string) $request->validated('activity_code');
         $fields = $request->input('fields', []);
@@ -74,7 +75,33 @@ class CoinClaimController extends BaseApiController
         ]);
 
         $coinClaim->loadMissing('user');
-        $emailService->sendSubmittedEmails($coinClaim, $coinClaim->user);
+        $user = $coinClaim->user;
+
+        if (config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) && $user && ! empty($user->email)) {
+            try {
+                Mail::to($user->email)->send(new CoinClaimSubmittedMail($coinClaim));
+            } catch (\Throwable $e) {
+                Log::error('CoinClaim email failed', [
+                    'claim_id' => (string) $coinClaim->id,
+                    'user_id' => (string) $user->id,
+                    'email' => (string) $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            $adminEmail = env('COIN_CLAIM_ADMIN_EMAIL');
+            if ($adminEmail) {
+                try {
+                    Mail::to($adminEmail)->send(new CoinClaimSubmittedMail($coinClaim));
+                } catch (\Throwable $e) {
+                    Log::error('Admin coin claim email failed', [
+                        'claim_id' => (string) $coinClaim->id,
+                        'admin_email' => (string) $adminEmail,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
 
         Log::info('Coin claim submitted', [
             'coin_claim_request_id' => (string) $coinClaim->id,

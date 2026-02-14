@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Mail;
 use App\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UsersController;
@@ -26,6 +27,14 @@ use App\Http\Controllers\Admin\CoinClaimsController;
 
 Route::get('/', function () {
     return view('landing');
+});
+
+Route::get('/debug/test-mail', function () {
+    Mail::raw('Peers Unity test email', function ($message) {
+        $message->to(config('mail.from.address'))->subject('Mail Test');
+    });
+
+    return 'MAIL SENT';
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {

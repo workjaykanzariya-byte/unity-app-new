@@ -6,14 +6,17 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\CoinClaims\RejectCoinClaimRequest;
 use App\Http\Resources\CoinClaimRequestResource;
 use App\Jobs\SendPushNotificationJob;
+use App\Mail\CoinClaimApprovedMail;
+use App\Mail\CoinClaimRejectedMail;
 use App\Models\CoinClaimRequest;
 use App\Models\CoinsLedger;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\AdminCircleScope;
-use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CoinClaimAdminController extends BaseApiController
@@ -67,7 +70,7 @@ class CoinClaimAdminController extends BaseApiController
         return $this->success(new CoinClaimRequestResource($claim));
     }
 
-    public function approve(Request $request, string $id, CoinClaimEmailService $emailService)
+    public function approve(Request $request, string $id)
     {
         $admin = auth('admin')->user();
 
@@ -82,10 +85,7 @@ class CoinClaimAdminController extends BaseApiController
                 abort(422, 'Only pending requests can be approved.');
             }
 
-            $duplicate = CoinsLedger::query()
-                ->where('reference', 'claim_coin:'.$claim->id)
-                ->exists();
-
+            $duplicate = CoinsLedger::query()->where('reference', 'claim_coin:'.$claim->id)->exists();
             if ($duplicate) {
                 abort(422, 'Ledger already exists for this claim request.');
             }
@@ -150,12 +150,23 @@ class CoinClaimAdminController extends BaseApiController
             ];
         });
 
-        $emailService->sendApprovedEmail($result['claim'], $result['user'], (int) $result['new_balance']);
+        if (config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) && ! empty($result['user']->email)) {
+            try {
+                Mail::to($result['user']->email)->send(new CoinClaimApprovedMail($result['claim'], (int) $result['new_balance']));
+            } catch (\Throwable $e) {
+                Log::error('CoinClaim email failed', [
+                    'claim_id' => (string) $result['claim']->id,
+                    'user_id' => (string) $result['user']->id,
+                    'email' => (string) $result['user']->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return $this->success(new CoinClaimRequestResource($result['claim']), 'Coin claim approved successfully.');
     }
 
-    public function reject(RejectCoinClaimRequest $request, string $id, CoinClaimEmailService $emailService)
+    public function reject(RejectCoinClaimRequest $request, string $id)
     {
         $admin = auth('admin')->user();
         $data = $request->validated();
@@ -213,7 +224,18 @@ class CoinClaimAdminController extends BaseApiController
             ];
         });
 
-        $emailService->sendRejectedEmail($result['claim'], $result['user']);
+        if ($result['user'] && config('coin_claims.email_enabled', env('COIN_CLAIM_EMAIL_ENABLED', true)) && ! empty($result['user']->email)) {
+            try {
+                Mail::to($result['user']->email)->send(new CoinClaimRejectedMail($result['claim']));
+            } catch (\Throwable $e) {
+                Log::error('CoinClaim email failed', [
+                    'claim_id' => (string) $result['claim']->id,
+                    'user_id' => (string) $result['user']->id,
+                    'email' => (string) $result['user']->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return $this->success(new CoinClaimRequestResource($result['claim']), 'Coin claim rejected successfully.');
     }

@@ -14,6 +14,7 @@ class CoinClaimApprovedMail extends Mailable
 
     public function __construct(public CoinClaimRequest $claim, public ?int $newBalance = null)
     {
+        $this->claim->loadMissing('user');
     }
 
     public function build(): self
