@@ -8,6 +8,7 @@ use App\Mail\LoginOtpMail;
 use App\Mail\PasswordResetOtpMail;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Models\UserLoginHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -224,6 +225,13 @@ class AuthController extends BaseApiController
         $user->refresh();
 
         $token = $user->createToken('api')->plainTextToken;
+
+        UserLoginHistory::create([
+            'user_id' => $user->id,
+            'logged_in_at' => now(),
+            'ip' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ]);
 
         return $this->success([
             'user' => new UserResource($user->load('city')),
