@@ -19,7 +19,9 @@ class LoginHistoryController extends Controller
             'company' => ['nullable', 'string', 'max:255'],
             'circle' => ['nullable', 'string', 'max:255'],
             'joined' => ['nullable', 'in:all,joined,not_joined'],
-            'login_date' => ['nullable', 'date_format:Y-m-d'],
+            'from' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'to' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'last_login_date' => ['nullable', 'date_format:Y-m-d'],
             'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
         ]);
 
@@ -28,15 +30,23 @@ class LoginHistoryController extends Controller
         $company = trim((string) ($validated['company'] ?? ''));
         $circle = trim((string) ($validated['circle'] ?? ''));
         $joined = (string) ($validated['joined'] ?? 'all');
-        $loginDate = (string) ($validated['login_date'] ?? '');
+        $fromInput = (string) ($validated['from'] ?? '');
+        $toInput = (string) ($validated['to'] ?? '');
+        $lastLoginDate = (string) ($validated['last_login_date'] ?? '');
         $perPage = (int) ($validated['per_page'] ?? 20);
+
+        $from = $fromInput !== ''
+            ? Carbon::createFromFormat('Y-m-d H:i:s', str_replace('T', ' ', $fromInput) . ':00')
+            : null;
+        $to = $toInput !== ''
+            ? Carbon::createFromFormat('Y-m-d H:i:s', str_replace('T', ' ', $toInput) . ':00')
+            : null;
 
         $dayStart = null;
         $dayEnd = null;
-
-        if ($loginDate !== '') {
-            $dayStart = Carbon::createFromFormat('Y-m-d H:i:s', $loginDate . ' 00:00:00');
-            $dayEnd = Carbon::createFromFormat('Y-m-d H:i:s', $loginDate . ' 23:59:59');
+        if ($lastLoginDate !== '') {
+            $dayStart = Carbon::createFromFormat('Y-m-d H:i:s', $lastLoginDate . ' 00:00:00');
+            $dayEnd = Carbon::createFromFormat('Y-m-d H:i:s', $lastLoginDate . ' 23:59:59');
         }
 
         $hasUsersName = Schema::hasColumn('users', 'name');
@@ -52,6 +62,8 @@ class LoginHistoryController extends Controller
 
         $loginLastSubquery = DB::table('user_login_histories')
             ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
+            ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
+            ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
             ->when($dayStart && $dayEnd, fn ($query) => $query->whereBetween('logged_in_at', [
                 $dayStart->format('Y-m-d H:i:s'),
                 $dayEnd->format('Y-m-d H:i:s'),
@@ -126,7 +138,9 @@ class LoginHistoryController extends Controller
                 'company' => $company,
                 'circle' => $circle,
                 'joined' => in_array($joined, ['all', 'joined', 'not_joined'], true) ? $joined : 'all',
-                'login_date' => $loginDate,
+                'from' => $fromInput,
+                'to' => $toInput,
+                'last_login_date' => $lastLoginDate,
                 'per_page' => $perPage,
             ],
         ]);

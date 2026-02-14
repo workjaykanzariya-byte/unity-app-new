@@ -18,13 +18,22 @@
 
         <div class="d-flex gap-2 align-items-center">
             <input
-                type="date"
-                name="login_date"
+                type="datetime-local"
+                name="from"
                 form="loginHistoryFiltersForm"
-                value="{{ $filters['login_date'] ?? '' }}"
+                value="{{ $filters['from'] ?? '' }}"
                 class="form-control form-control-sm"
                 style="min-width: 180px;"
-                title="Last Login Date"
+                title="From Time"
+            >
+            <input
+                type="datetime-local"
+                name="to"
+                form="loginHistoryFiltersForm"
+                value="{{ $filters['to'] ?? '' }}"
+                class="form-control form-control-sm"
+                style="min-width: 180px;"
+                title="To Time"
             >
         </div>
 
@@ -94,6 +103,13 @@
                         </select>
                     </th>
                     <th>
+                        <input
+                            type="date"
+                            name="last_login_date"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm mb-2"
+                            value="{{ $filters['last_login_date'] ?? '' }}"
+                        >
                         <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>
                             <a href="{{ route('admin.login-history.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
