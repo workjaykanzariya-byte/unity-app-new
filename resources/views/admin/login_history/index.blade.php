@@ -3,10 +3,6 @@
 @section('title', 'Login History')
 
 @section('content')
-@php
-    $isCustomLastLogin = ($filters['last_login'] ?? 'all') === 'custom';
-@endphp
-
 <div class="card p-3">
     <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}"></form>
 
@@ -22,24 +18,13 @@
 
         <div class="d-flex gap-2 align-items-center">
             <input
-                type="datetime-local"
-                name="from"
+                type="date"
+                name="login_date"
                 form="loginHistoryFiltersForm"
-                value="{{ $filters['from'] ?? '' }}"
+                value="{{ $filters['login_date'] ?? '' }}"
                 class="form-control form-control-sm"
                 style="min-width: 180px;"
-                title="From Time"
-                @disabled(! $isCustomLastLogin)
-            >
-            <input
-                type="datetime-local"
-                name="to"
-                form="loginHistoryFiltersForm"
-                value="{{ $filters['to'] ?? '' }}"
-                class="form-control form-control-sm"
-                style="min-width: 180px;"
-                title="To Time"
-                @disabled(! $isCustomLastLogin)
+                title="Last Login Date"
             >
         </div>
 
@@ -109,13 +94,6 @@
                         </select>
                     </th>
                     <th>
-                        <select name="last_login" form="loginHistoryFiltersForm" class="form-select form-select-sm mb-2">
-                            <option value="all" @selected(($filters['last_login'] ?? 'all') === 'all')>All</option>
-                            <option value="today" @selected(($filters['last_login'] ?? 'all') === 'today')>Today</option>
-                            <option value="last_7_days" @selected(($filters['last_login'] ?? 'all') === 'last_7_days')>Last 7 Days</option>
-                            <option value="last_30_days" @selected(($filters['last_login'] ?? 'all') === 'last_30_days')>Last 30 Days</option>
-                            <option value="custom" @selected(($filters['last_login'] ?? 'all') === 'custom')>Custom</option>
-                        </select>
                         <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>
                             <a href="{{ route('admin.login-history.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
