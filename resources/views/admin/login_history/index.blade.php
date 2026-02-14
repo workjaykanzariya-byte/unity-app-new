@@ -3,6 +3,10 @@
 @section('title', 'Login History')
 
 @section('content')
+@php
+    $isCustomLastLogin = ($filters['last_login'] ?? 'all') === 'custom';
+@endphp
+
 <div class="card p-3">
     <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}"></form>
 
@@ -25,6 +29,7 @@
                 class="form-control form-control-sm"
                 style="min-width: 180px;"
                 title="From Time"
+                @disabled(! $isCustomLastLogin)
             >
             <input
                 type="datetime-local"
@@ -34,6 +39,7 @@
                 class="form-control form-control-sm"
                 style="min-width: 180px;"
                 title="To Time"
+                @disabled(! $isCustomLastLogin)
             >
         </div>
 
@@ -88,23 +94,28 @@
                         >
                     </th>
                     <th>
-                        <div class="d-flex gap-2 align-items-center">
-                            <input
-                                type="text"
-                                name="circle"
-                                form="loginHistoryFiltersForm"
-                                class="form-control form-control-sm"
-                                placeholder="Circle name"
-                                value="{{ $filters['circle'] ?? '' }}"
-                            >
-                            <select name="joined" form="loginHistoryFiltersForm" class="form-select form-select-sm" style="min-width: 180px;">
-                                <option value="all" @selected(($filters['joined'] ?? 'all') === 'all')>All</option>
-                                <option value="yes" @selected(($filters['joined'] ?? 'all') === 'yes')>Only Joined (Yes)</option>
-                                <option value="no" @selected(($filters['joined'] ?? 'all') === 'no')>Not Joined (No)</option>
-                            </select>
-                        </div>
+                        <input
+                            type="text"
+                            name="circle"
+                            form="loginHistoryFiltersForm"
+                            class="form-control form-control-sm"
+                            placeholder="Circle name"
+                            value="{{ $filters['circle'] ?? '' }}"
+                        >
+                        <select name="joined" form="loginHistoryFiltersForm" class="form-select form-select-sm mt-2">
+                            <option value="all" @selected(($filters['joined'] ?? 'all') === 'all')>All</option>
+                            <option value="joined" @selected(($filters['joined'] ?? 'all') === 'joined')>Joined</option>
+                            <option value="not_joined" @selected(($filters['joined'] ?? 'all') === 'not_joined')>Not Joined</option>
+                        </select>
                     </th>
                     <th>
+                        <select name="last_login" form="loginHistoryFiltersForm" class="form-select form-select-sm mb-2">
+                            <option value="all" @selected(($filters['last_login'] ?? 'all') === 'all')>All</option>
+                            <option value="today" @selected(($filters['last_login'] ?? 'all') === 'today')>Today</option>
+                            <option value="last_7_days" @selected(($filters['last_login'] ?? 'all') === 'last_7_days')>Last 7 Days</option>
+                            <option value="last_30_days" @selected(($filters['last_login'] ?? 'all') === 'last_30_days')>Last 30 Days</option>
+                            <option value="custom" @selected(($filters['last_login'] ?? 'all') === 'custom')>Custom</option>
+                        </select>
                         <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>
                             <a href="{{ route('admin.login-history.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>

@@ -20,7 +20,8 @@ class LoginHistoryController extends Controller
             'circle' => ['nullable', 'string', 'max:255'],
             'from' => ['nullable', 'date_format:Y-m-d\TH:i'],
             'to' => ['nullable', 'date_format:Y-m-d\TH:i'],
-            'joined' => ['nullable', 'in:all,yes,no'],
+            'joined' => ['nullable', 'in:all,joined,not_joined'],
+            'last_login' => ['nullable', 'in:all,today,last_7_days,last_30_days,custom'],
             'per_page' => ['nullable', 'integer', 'in:10,20,50,100'],
         ]);
 
@@ -29,6 +30,7 @@ class LoginHistoryController extends Controller
         $company = trim((string) ($validated['company'] ?? ''));
         $circle = trim((string) ($validated['circle'] ?? ''));
         $joined = (string) ($validated['joined'] ?? 'all');
+        $lastLogin = (string) ($validated['last_login'] ?? 'all');
         $perPage = (int) ($validated['per_page'] ?? 20);
 
         $fromInput = (string) ($validated['from'] ?? '');
@@ -54,8 +56,16 @@ class LoginHistoryController extends Controller
 
         $loginLastSubquery = DB::table('user_login_histories')
             ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
-            ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
-            ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
+            ->when($lastLogin === 'today', function ($query) {
+                $query->whereBetween('logged_in_at', [
+                    now()->startOfDay()->format('Y-m-d H:i:s'),
+                    now()->endOfDay()->format('Y-m-d H:i:s'),
+                ]);
+            })
+            ->when($lastLogin === 'last_7_days', fn ($query) => $query->where('logged_in_at', '>=', now()->subDays(7)->format('Y-m-d H:i:s')))
+            ->when($lastLogin === 'last_30_days', fn ($query) => $query->where('logged_in_at', '>=', now()->subDays(30)->format('Y-m-d H:i:s')))
+            ->when($lastLogin === 'custom' && $from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
+            ->when($lastLogin === 'custom' && $to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
             ->groupBy('user_id');
 
         $records = DB::query()
@@ -99,20 +109,8 @@ class LoginHistoryController extends Controller
                     }
                 });
             })
-            ->when($circle !== '', function ($query) use ($circle) {
-                $likeQuery = '%' . $circle . '%';
-
-                $query->whereExists(function ($existsQuery) use ($likeQuery) {
-                    $existsQuery->selectRaw('1')
-                        ->from('circle_members as circle_members_filter')
-                        ->join('circles as circles_filter', 'circles_filter.id', '=', 'circle_members_filter.circle_id')
-                        ->whereColumn('circle_members_filter.user_id', 'users.id')
-                        ->whereNull('circle_members_filter.deleted_at')
-                        ->where('circle_members_filter.status', '=', 'approved')
-                        ->where('circles_filter.name', 'ilike', $likeQuery);
-                });
-            })
-            ->selectRaw("\n                users.id,\n                {$peerNameExpression} as peer_name,\n                users.email,\n                COALESCE(NULLIF(users.city, ''), cities.name) as city,\n                {$companyExpression} as company,\n                login_last.last_login_at,\n                COUNT(DISTINCT circles.id) as circles_count,\n                COALESCE(STRING_AGG(DISTINCT circles.name, ', '), '') as circles_names,\n                CASE WHEN COUNT(DISTINCT circles.id) > 0 THEN true ELSE false END as has_circle\n            ")
+            ->when($circle !== '', fn ($query) => $query->where('circles.name', 'ilike', '%' . $circle . '%'))
+            ->selectRaw("\n                users.id,\n                {$peerNameExpression} as peer_name,\n                users.email,\n                COALESCE(NULLIF(users.city, ''), cities.name) as city,\n                {$companyExpression} as company,\n                login_last.last_login_at,\n                COUNT(DISTINCT circles.id) as circles_count,\n                COALESCE(STRING_AGG(DISTINCT circles.name, ', '), '') as circles_names\n            ")
             ->groupBy(
                 'users.id',
                 'users.display_name',
@@ -124,8 +122,8 @@ class LoginHistoryController extends Controller
                 ...($hasUsersName ? ['users.name'] : []),
                 ...($hasUsersCompany ? ['users.company'] : [])
             )
-            ->when($joined === 'yes', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) > 0'))
-            ->when($joined === 'no', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) = 0'))
+            ->when($joined === 'joined', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) > 0'))
+            ->when($joined === 'not_joined', fn ($query) => $query->havingRaw('COUNT(DISTINCT circles.id) = 0'))
             ->orderByDesc('login_last.last_login_at')
             ->paginate($perPage)
             ->withQueryString();
@@ -139,7 +137,8 @@ class LoginHistoryController extends Controller
                 'circle' => $circle,
                 'from' => $fromInput,
                 'to' => $toInput,
-                'joined' => in_array($joined, ['all', 'yes', 'no'], true) ? $joined : 'all',
+                'joined' => in_array($joined, ['all', 'joined', 'not_joined'], true) ? $joined : 'all',
+                'last_login' => in_array($lastLogin, ['all', 'today', 'last_7_days', 'last_30_days', 'custom'], true) ? $lastLogin : 'all',
                 'per_page' => $perPage,
             ],
         ]);
