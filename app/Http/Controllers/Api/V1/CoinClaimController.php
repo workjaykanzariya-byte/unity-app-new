@@ -9,6 +9,7 @@ use App\Http\Resources\CoinClaimRequestResource;
 use App\Models\CoinClaimRequest;
 use App\Models\FileModel;
 use App\Support\CoinClaims\CoinClaimActivityRegistry;
+use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class CoinClaimController extends BaseApiController
         ]);
     }
 
-    public function store(StoreCoinClaimRequest $request)
+    public function store(StoreCoinClaimRequest $request, CoinClaimEmailService $emailService)
     {
         $activityCode = (string) $request->validated('activity_code');
         $fields = $request->input('fields', []);
@@ -71,6 +72,9 @@ class CoinClaimController extends BaseApiController
             'status' => 'pending',
             'coins_awarded' => null,
         ]);
+
+        $coinClaim->loadMissing('user');
+        $emailService->sendSubmittedEmails($coinClaim, $coinClaim->user);
 
         Log::info('Coin claim submitted', [
             'coin_claim_request_id' => (string) $coinClaim->id,

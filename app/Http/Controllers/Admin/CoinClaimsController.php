@@ -9,6 +9,7 @@ use App\Models\CoinsLedger;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\AdminCircleScope;
+use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,11 +53,11 @@ class CoinClaimsController extends Controller
         ]);
     }
 
-    public function approve(string $id): RedirectResponse
+    public function approve(string $id, CoinClaimEmailService $emailService): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
 
-        $message = DB::transaction(function () use ($id, $admin) {
+        $result = DB::transaction(function () use ($id, $admin) {
             $claim = CoinClaimRequest::query()->where('id', $id)->lockForUpdate()->firstOrFail();
 
             if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -64,16 +65,16 @@ class CoinClaimsController extends Controller
             }
 
             if ($claim->status !== 'pending') {
-                return 'Only pending claims can be approved.';
+                return ['message' => 'Only pending claims can be approved.'];
             }
 
             if (CoinsLedger::query()->where('reference', 'claim_coin:'.$claim->id)->exists()) {
-                return 'This claim already has a ledger transaction.';
+                return ['message' => 'This claim already has a ledger transaction.'];
             }
 
             $coins = (int) config('coins.claim_coin.'.$claim->activity_code, 0);
             if ($coins <= 0) {
-                return 'Coin mapping is missing for this claim activity.';
+                return ['message' => 'Coin mapping is missing for this claim activity.'];
             }
 
             $user = User::query()->where('id', $claim->user_id)->lockForUpdate()->firstOrFail();
@@ -132,13 +133,26 @@ class CoinClaimsController extends Controller
                 'coins_awarded' => $coins,
             ]);
 
-            return 'Coin claim approved.';
+            return [
+                'message' => 'Coin claim approved.',
+                'claim_id' => (string) $claim->id,
+                'user_id' => (string) $user->id,
+                'new_balance' => $newBalance,
+            ];
         });
 
-        return redirect()->back()->with('success', $message);
+        if (! empty($result['claim_id'])) {
+            $approvedClaim = CoinClaimRequest::query()->find($result['claim_id']);
+            $approvedUser = User::query()->find($result['user_id']);
+            if ($approvedClaim && $approvedUser) {
+                $emailService->sendApprovedEmail($approvedClaim, $approvedUser, (int) $result['new_balance']);
+            }
+        }
+
+        return redirect()->back()->with('success', $result['message'] ?? 'Coin claim updated.');
     }
 
-    public function reject(Request $request, string $id): RedirectResponse
+    public function reject(Request $request, string $id, CoinClaimEmailService $emailService): RedirectResponse
     {
         $admin = Auth::guard('admin')->user();
 
@@ -190,6 +204,14 @@ class CoinClaimsController extends Controller
 
             return 'Coin claim rejected.';
         });
+
+        if ($message === 'Coin claim rejected.') {
+            $rejectedClaim = CoinClaimRequest::query()->find($id);
+            $rejectedUser = $rejectedClaim ? User::query()->find($rejectedClaim->user_id) : null;
+            if ($rejectedClaim && $rejectedUser) {
+                $emailService->sendRejectedEmail($rejectedClaim, $rejectedUser);
+            }
+        }
 
         return redirect()->back()->with('success', $message);
     }

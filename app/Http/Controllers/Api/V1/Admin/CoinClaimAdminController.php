@@ -11,6 +11,7 @@ use App\Models\CoinsLedger;
 use App\Models\Notification;
 use App\Models\User;
 use App\Support\AdminCircleScope;
+use App\Services\CoinClaims\CoinClaimEmailService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -66,11 +67,11 @@ class CoinClaimAdminController extends BaseApiController
         return $this->success(new CoinClaimRequestResource($claim));
     }
 
-    public function approve(Request $request, string $id)
+    public function approve(Request $request, string $id, CoinClaimEmailService $emailService)
     {
         $admin = auth('admin')->user();
 
-        $claim = DB::transaction(function () use ($id, $admin) {
+        $result = DB::transaction(function () use ($id, $admin) {
             $claim = CoinClaimRequest::query()->where('id', $id)->lockForUpdate()->firstOrFail();
 
             if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -142,18 +143,24 @@ class CoinClaimAdminController extends BaseApiController
                 'coins_awarded' => $coins,
             ]);
 
-            return $claim->refresh()->load('user:id,display_name,first_name,last_name,phone');
+            return [
+                'claim' => $claim->refresh()->load('user:id,display_name,first_name,last_name,phone'),
+                'user' => $user->refresh(),
+                'new_balance' => $newBalance,
+            ];
         });
 
-        return $this->success(new CoinClaimRequestResource($claim), 'Coin claim approved successfully.');
+        $emailService->sendApprovedEmail($result['claim'], $result['user'], (int) $result['new_balance']);
+
+        return $this->success(new CoinClaimRequestResource($result['claim']), 'Coin claim approved successfully.');
     }
 
-    public function reject(RejectCoinClaimRequest $request, string $id)
+    public function reject(RejectCoinClaimRequest $request, string $id, CoinClaimEmailService $emailService)
     {
         $admin = auth('admin')->user();
         $data = $request->validated();
 
-        $claim = DB::transaction(function () use ($id, $admin, $data) {
+        $result = DB::transaction(function () use ($id, $admin, $data) {
             $claim = CoinClaimRequest::query()->where('id', $id)->lockForUpdate()->firstOrFail();
 
             if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -200,9 +207,14 @@ class CoinClaimAdminController extends BaseApiController
                 ]);
             }
 
-            return $claim->refresh()->load('user:id,display_name,first_name,last_name,phone');
+            return [
+                'claim' => $claim->refresh()->load('user:id,display_name,first_name,last_name,phone'),
+                'user' => $user,
+            ];
         });
 
-        return $this->success(new CoinClaimRequestResource($claim), 'Coin claim rejected successfully.');
+        $emailService->sendRejectedEmail($result['claim'], $result['user']);
+
+        return $this->success(new CoinClaimRequestResource($result['claim']), 'Coin claim rejected successfully.');
     }
 }
