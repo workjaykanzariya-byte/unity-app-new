@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Circle;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class LoginHistoryController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'company' => ['nullable', 'string', 'max:255'],
-            'circle' => ['nullable', 'string', 'max:255'],
+            'circle_id' => ['nullable', 'string'],
             'joined' => ['nullable', 'in:all,joined,not_joined'],
             'from' => ['nullable', 'date_format:Y-m-d\TH:i'],
             'to' => ['nullable', 'date_format:Y-m-d\TH:i'],
@@ -28,7 +29,7 @@ class LoginHistoryController extends Controller
         $name = trim((string) ($validated['name'] ?? ''));
         $city = trim((string) ($validated['city'] ?? ''));
         $company = trim((string) ($validated['company'] ?? ''));
-        $circle = trim((string) ($validated['circle'] ?? ''));
+        $circleId = trim((string) ($validated['circle_id'] ?? ''));
         $joined = (string) ($validated['joined'] ?? 'all');
         $fromInput = (string) ($validated['from'] ?? '');
         $toInput = (string) ($validated['to'] ?? '');
@@ -60,18 +61,23 @@ class LoginHistoryController extends Controller
             ? "COALESCE(users.company_name, users.company, '')"
             : "COALESCE(users.company_name, '')";
 
-        $loginLastSubquery = DB::table('user_login_histories')
-            ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
-            ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
-            ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
-            ->when($dayStart && $dayEnd, fn ($query) => $query->whereBetween('logged_in_at', [
-                $dayStart->format('Y-m-d H:i:s'),
-                $dayEnd->format('Y-m-d H:i:s'),
-            ]))
-            ->groupBy('user_id');
+        $circleOptions = Circle::query()
+            ->orderBy('name')
+            ->pluck('name', 'id');
 
         $records = DB::query()
-            ->fromSub($loginLastSubquery, 'login_last')
+            ->fromSub(
+                DB::table('user_login_histories')
+                    ->select('user_id', DB::raw('MAX(logged_in_at) as last_login_at'))
+                    ->when($from, fn ($query) => $query->where('logged_in_at', '>=', $from->format('Y-m-d H:i:s')))
+                    ->when($to, fn ($query) => $query->where('logged_in_at', '<=', $to->format('Y-m-d H:i:s')))
+                    ->when($dayStart && $dayEnd, fn ($query) => $query->whereBetween('logged_in_at', [
+                        $dayStart->format('Y-m-d H:i:s'),
+                        $dayEnd->format('Y-m-d H:i:s'),
+                    ]))
+                    ->groupBy('user_id'),
+                'login_last'
+            )
             ->join('users', 'users.id', '=', 'login_last.user_id')
             ->leftJoin('cities', 'cities.id', '=', 'users.city_id')
             ->leftJoin('circle_members', function ($join) {
@@ -111,7 +117,7 @@ class LoginHistoryController extends Controller
                     }
                 });
             })
-            ->when($circle !== '', fn ($query) => $query->where('circles.name', 'ilike', '%' . $circle . '%'))
+            ->when($circleId !== '', fn ($query) => $query->where('circles.id', '=', $circleId))
             ->selectRaw("\n                users.id,\n                {$peerNameExpression} as peer_name,\n                users.email,\n                COALESCE(NULLIF(users.city, ''), cities.name) as city,\n                {$companyExpression} as company,\n                login_last.last_login_at,\n                COUNT(DISTINCT circles.id) as circles_count,\n                COALESCE(STRING_AGG(DISTINCT circles.name, ', '), '') as circles_names\n            ")
             ->groupBy(
                 'users.id',
@@ -132,11 +138,12 @@ class LoginHistoryController extends Controller
 
         return view('admin.login_history.index', [
             'records' => $records,
+            'circleOptions' => $circleOptions,
             'filters' => [
                 'name' => $name,
                 'city' => $city,
                 'company' => $company,
-                'circle' => $circle,
+                'circle_id' => $circleId,
                 'joined' => in_array($joined, ['all', 'joined', 'not_joined'], true) ? $joined : 'all',
                 'from' => $fromInput,
                 'to' => $toInput,

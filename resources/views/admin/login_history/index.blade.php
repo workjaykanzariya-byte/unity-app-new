@@ -88,14 +88,12 @@
                         >
                     </th>
                     <th>
-                        <input
-                            type="text"
-                            name="circle"
-                            form="loginHistoryFiltersForm"
-                            class="form-control form-control-sm"
-                            placeholder="Circle name"
-                            value="{{ $filters['circle'] ?? '' }}"
-                        >
+                        <select name="circle_id" form="loginHistoryFiltersForm" class="form-select form-select-sm">
+                            <option value="">All Circles</option>
+                            @foreach ($circleOptions as $id => $name)
+                                <option value="{{ $id }}" @selected(($filters['circle_id'] ?? '') == (string) $id)>{{ $name }}</option>
+                            @endforeach
+                        </select>
                         <select name="joined" form="loginHistoryFiltersForm" class="form-select form-select-sm mt-2">
                             <option value="all" @selected(($filters['joined'] ?? 'all') === 'all')>All</option>
                             <option value="joined" @selected(($filters['joined'] ?? 'all') === 'joined')>Joined</option>
