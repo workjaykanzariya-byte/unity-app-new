@@ -16,46 +16,55 @@ class Circle extends Model
 
     public const STATUS_OPTIONS = ['pending', 'active', 'archived'];
     public const TYPE_OPTIONS = ['public', 'private'];
+    public const MEETING_MODE_OPTIONS = ['online', 'offline', 'hybrid'];
+    public const MEETING_FREQUENCY_OPTIONS = ['monthly', 'quarterly'];
 
     protected $keyType = 'string';
     public $incrementing = false;
 
     protected $fillable = [
         'name',
-        // 'slug' removed from fillable — backend generates it
         'description',
         'purpose',
         'announcement',
         'founder_user_id',
+        'director_user_id',
+        'industry_director_user_id',
+        'ded_user_id',
         'template_id',
         'status',
         'calendar',
         'city_id',
         'industry_tags',
+        'meeting_mode',
+        'meeting_frequency',
+        'meeting_repeat',
+        'launch_date',
+        'cover_file_id',
         'referral_score',
         'visitor_count',
         'type',
+        'country',
     ];
 
     protected $casts = [
         'calendar' => 'array',
         'industry_tags' => 'array',
+        'meeting_repeat' => 'array',
+        'launch_date' => 'date',
     ];
+
+    protected $appends = ['cover_image_url'];
 
     protected static function booted()
     {
         static::creating(function (Circle $circle) {
-
-            /** Generate UUID */
             if (empty($circle->id)) {
                 $circle->id = Str::uuid()->toString();
             }
 
-            /** Auto-generate slug if not provided */
             if (empty($circle->slug)) {
-
                 $base = Str::slug($circle->name ?: 'circle');
-
                 if ($base === '') {
                     $base = 'circle';
                 }
@@ -63,7 +72,6 @@ class Circle extends Model
                 $circle->slug = static::generateUniqueSlug($base);
             }
 
-            /** Default status */
             if (empty($circle->status)) {
                 $circle->status = 'pending';
             }
@@ -80,6 +88,21 @@ class Circle extends Model
         return $this->belongsTo(User::class, 'founder_user_id');
     }
 
+    public function director(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'director_user_id');
+    }
+
+    public function industryDirector(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'industry_director_user_id');
+    }
+
+    public function ded(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'ded_user_id');
+    }
+
     public function template(): BelongsTo
     {
         return $this->belongsTo(CircleTemplate::class, 'template_id');
@@ -92,12 +115,21 @@ class Circle extends Model
 
     public function members(): HasMany
     {
-        return $this->hasMany(CircleMember::class);
+        return $this->hasMany(CircleMember::class, 'circle_id');
     }
 
     public function memberships(): HasMany
     {
         return $this->hasMany(CircleMember::class);
+    }
+
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        if (! $this->cover_file_id) {
+            return null;
+        }
+
+        return url("/api/v1/files/{$this->cover_file_id}");
     }
 
     public static function generateUniqueSlug(string $name, ?string $ignoreId = null): string

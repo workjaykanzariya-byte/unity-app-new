@@ -24,7 +24,7 @@ class CircleController extends Controller
         $type = $request->input('type');
         $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
 
-        $query = Circle::query()->with(['founder', 'city'])->withCount('members');
+        $query = Circle::query()->with(['founder', 'director', 'industryDirector', 'ded', 'city'])->withCount('members');
 
         if (is_array($allowedCircleIds)) {
             if ($allowedCircleIds === []) {
@@ -97,6 +97,9 @@ class CircleController extends Controller
             'types' => Circle::TYPE_OPTIONS,
             'defaultFounder' => $defaultFounder,
             'defaultFounderLabel' => $this->founderLabel($defaultFounder),
+            'meetingModes' => Circle::MEETING_MODE_OPTIONS,
+            'meetingFrequencies' => Circle::MEETING_FREQUENCY_OPTIONS,
+            'allUsers' => $this->allUsers(),
         ]);
     }
 
@@ -104,6 +107,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
+        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
 
         if (empty($data['status'])) {
             unset($data['status']);
@@ -125,17 +129,11 @@ class CircleController extends Controller
             abort(403);
         }
 
-        $circle->load(['city', 'founder', 'members.user', 'members.roleRef']);
-
-        $allUsers = User::query()
-            ->whereNull('deleted_at')
-            ->orderBy('display_name')
-            ->limit(2000)
-            ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
+        $circle->load(['city', 'founder', 'director', 'industryDirector', 'ded', 'members.user', 'members.roleRef']);
 
         return view('admin.circles.show', [
             'circle' => $circle,
-            'allUsers' => $allUsers,
+            'allUsers' => $this->allUsers(),
             'roles' => CircleMember::roleOptions(),
         ]);
     }
@@ -162,6 +160,9 @@ class CircleController extends Controller
             'types' => Circle::TYPE_OPTIONS,
             'defaultFounder' => $defaultFounder,
             'defaultFounderLabel' => $this->founderLabel($defaultFounder),
+            'meetingModes' => Circle::MEETING_MODE_OPTIONS,
+            'meetingFrequencies' => Circle::MEETING_FREQUENCY_OPTIONS,
+            'allUsers' => $this->allUsers(),
         ]);
     }
 
@@ -169,6 +170,7 @@ class CircleController extends Controller
     {
         $data = $request->validated();
         $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
+        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
 
         $originalName = $circle->name;
 
@@ -185,6 +187,15 @@ class CircleController extends Controller
             ->with('success', 'Circle updated successfully.');
     }
 
+    public function destroy(Circle $circle): RedirectResponse
+    {
+        $circle->delete();
+
+        return redirect()
+            ->route('admin.circles.index')
+            ->with('success', 'Circle deleted successfully.');
+    }
+
     private function normalizeIndustryTags(null|string|array $tags): ?array
     {
         if (is_array($tags)) {
@@ -197,6 +208,71 @@ class CircleController extends Controller
         }
 
         return null;
+    }
+
+
+    private function normalizeCalendarMeetings(mixed $meetings): ?array
+    {
+        if (! is_array($meetings)) {
+            return null;
+        }
+
+        $normalized = [];
+
+        foreach ($meetings as $meeting) {
+            if (! is_array($meeting)) {
+                continue;
+            }
+
+            $frequency = strtolower(trim((string) ($meeting['frequency'] ?? '')));
+            $day = strtolower(trim((string) ($meeting['default_meet_day'] ?? '')));
+            $time = trim((string) ($meeting['default_meet_time'] ?? ''));
+            $monthlyRule = strtolower(trim((string) ($meeting['monthly_rule'] ?? '')));
+
+            if ($frequency === '' && $day === '' && $time === '' && $monthlyRule === '') {
+                continue;
+            }
+
+            if (! in_array($frequency, ['weekly', 'monthly', 'quarterly'], true)) {
+                continue;
+            }
+
+            if ($day === '' || $time === '') {
+                continue;
+            }
+
+            $row = [
+                'frequency' => $frequency,
+                'default_meet_day' => $day,
+                'default_meet_time' => $time,
+            ];
+
+            if (in_array($frequency, ['monthly', 'quarterly'], true) && $monthlyRule !== '') {
+                $row['monthly_rule'] = $monthlyRule;
+            }
+
+            $normalized[] = $row;
+        }
+
+        if ($normalized === []) {
+            return null;
+        }
+
+        $payload = [
+            'timezone' => 'Asia/Kolkata',
+            'meetings' => array_values($normalized),
+        ];
+
+        $first = $payload['meetings'][0];
+        $payload['frequency'] = $first['frequency'];
+        $payload['default_meet_day'] = $first['default_meet_day'];
+        $payload['default_meet_time'] = $first['default_meet_time'];
+
+        if (isset($first['monthly_rule'])) {
+            $payload['monthly_rule'] = $first['monthly_rule'];
+        }
+
+        return $payload;
     }
 
     private function countriesList()
@@ -224,6 +300,15 @@ class CircleController extends Controller
         }
 
         return User::query()->where('email', $admin->email)->first();
+    }
+
+    private function allUsers()
+    {
+        return User::query()
+            ->whereNull('deleted_at')
+            ->orderBy('display_name')
+            ->limit(2000)
+            ->get(['id', 'display_name', 'first_name', 'last_name', 'email']);
     }
 
     private function founderLabel(?User $user): string

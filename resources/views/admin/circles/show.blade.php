@@ -10,6 +10,11 @@
     </div>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.circles.edit', $circle) }}" class="btn btn-outline-primary btn-sm">Edit Circle</a>
+        <form action="{{ route('admin.circles.destroy', $circle) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this circle? This is a soft delete and can be restored by admin.');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+        </form>
         <a href="{{ route('admin.circles.index') }}" class="btn btn-outline-secondary btn-sm">Back to Circles</a>
     </div>
 </div>
@@ -67,6 +72,160 @@
                 <p class="text-muted mb-0"><strong>Industry Tags:</strong> {{ $circle->industry_tags ? implode(', ', $circle->industry_tags) : '—' }}</p>
             </div>
         </div>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header fw-semibold">Circle Settings</div>
+    <div class="card-body">
+        @php
+            $displayValue = static function ($value) {
+                if (is_string($value)) {
+                    $value = trim($value);
+                }
+
+                return filled($value)
+                    ? '<span class="fw-semibold text-dark">' . e($value) . '</span>'
+                    : '<span class="text-muted">—</span>';
+            };
+
+            $formatUser = static function ($user) {
+                if (! $user) {
+                    return null;
+                }
+
+                $name = $user->name
+                    ?? $user->display_name
+                    ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+                $name = trim((string) $name);
+                $email = trim((string) ($user->email ?? ''));
+
+                if ($name !== '' && $email !== '') {
+                    return $name . ' (' . $email . ')';
+                }
+
+                return $name !== '' ? $name : ($email !== '' ? $email : null);
+            };
+
+            $meetingMode = $circle->meeting_mode ? ucfirst(strtolower($circle->meeting_mode)) : null;
+            $meetingFrequency = $circle->meeting_frequency ? ucfirst(strtolower($circle->meeting_frequency)) : null;
+            $launchDate = optional($circle->launch_date)->format('d M Y');
+            $meetingRepeat = is_array($circle->meeting_repeat) ? $circle->meeting_repeat : null;
+        @endphp
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="small text-muted">Meeting Mode</div>
+                {!! $displayValue($meetingMode) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Meeting Frequency</div>
+                {!! $displayValue($meetingFrequency) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Launch Date</div>
+                {!! $displayValue($launchDate) !!}
+            </div>
+
+            <div class="col-md-4">
+                <div class="small text-muted">Director</div>
+                {!! $displayValue($formatUser($circle->director)) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Industry Director</div>
+                {!! $displayValue($formatUser($circle->industryDirector)) !!}
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">DED</div>
+                {!! $displayValue($formatUser($circle->ded)) !!}
+            </div>
+
+            <div class="col-md-8">
+                <div class="small text-muted">Meeting Repeat</div>
+                @if ($meetingRepeat)
+                    <div class="small bg-light border rounded p-2">
+                        @foreach ($meetingRepeat as $key => $value)
+                            <div><span class="text-muted">{{ ucwords(str_replace('_', ' ', (string) $key)) }}:</span> <span class="fw-semibold">{{ is_scalar($value) ? $value : json_encode($value) }}</span></div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-muted">—</div>
+                @endif
+            </div>
+
+            <div class="col-md-4">
+                <div class="small text-muted">Cover</div>
+                @if ($circle->cover_file_id)
+                    <div class="d-flex flex-column gap-2">
+                        <img src="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" alt="Circle Cover" class="rounded border" style="max-height: 120px; width: auto; object-fit: cover;">
+                        <div>
+                            <a href="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        </div>
+                    </div>
+                @else
+                    <div class="text-muted">—</div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card mt-3">
+    <div class="card-header fw-semibold">Meeting Schedule</div>
+    <div class="card-body">
+        @php
+            $calendar = is_array($circle->calendar) ? $circle->calendar : null;
+            $meetings = is_array(data_get($calendar, 'meetings')) && data_get($calendar, 'meetings') !== []
+                ? array_values(data_get($calendar, 'meetings'))
+                : (filled(data_get($calendar, 'frequency'))
+                    ? [[
+                        'frequency' => data_get($calendar, 'frequency'),
+                        'default_meet_day' => data_get($calendar, 'default_meet_day'),
+                        'default_meet_time' => data_get($calendar, 'default_meet_time'),
+                        'monthly_rule' => data_get($calendar, 'monthly_rule'),
+                    ]]
+                    : []);
+            $timezone = data_get($calendar, 'timezone', 'Asia/Kolkata');
+
+            $formatMeeting = static function (array $meeting): string {
+                $frequency = strtolower((string) ($meeting['frequency'] ?? ''));
+                $day = ucfirst((string) ($meeting['default_meet_day'] ?? ''));
+                $time = (string) ($meeting['default_meet_time'] ?? '');
+                $rule = ucfirst((string) ($meeting['monthly_rule'] ?? ''));
+
+                if ($frequency === 'weekly' && $day !== '' && $time !== '') {
+                    return "Every {$day} at {$time}";
+                }
+
+                if (in_array($frequency, ['monthly', 'quarterly'], true) && $rule !== '' && $day !== '' && $time !== '') {
+                    $summary = "{$rule} {$day} at {$time}";
+                    if ($frequency === 'quarterly') {
+                        $summary .= ' (Quarterly)';
+                    } else {
+                        $summary .= ' (Monthly)';
+                    }
+
+                    return $summary;
+                }
+
+                return '—';
+            };
+        @endphp
+
+        @if ($meetings === [])
+            <div class="text-muted">—</div>
+        @else
+            <ul class="list-group list-group-flush">
+                @foreach ($meetings as $index => $meeting)
+                    <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                        <span><strong>Meeting #{{ $index + 1 }}:</strong> {{ $formatMeeting($meeting) }}</span>
+                    </li>
+                @endforeach
+            </ul>
+            <div class="small text-muted mt-2">Timezone: {{ $timezone ?: 'Asia/Kolkata' }}</div>
+        @endif
     </div>
 </div>
 

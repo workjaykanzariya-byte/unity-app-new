@@ -24,14 +24,45 @@ class UpdateCircleRequest extends FormRequest
             'announcement' => ['nullable', 'string'],
             'city_id' => ['required', 'uuid', 'exists:cities,id'],
             'founder_user_id' => ['required', 'uuid', 'exists:users,id'],
+            'director_user_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'industry_director_user_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'ded_user_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'cover_file_id' => ['nullable', 'uuid'],
             'type' => ['required', Rule::in(Circle::TYPE_OPTIONS)],
             'status' => ['required', Rule::in(Circle::STATUS_OPTIONS)],
-            'industry_tags' => ['nullable'],
+            'industry_tags' => ['nullable', 'array'],
+            'industry_tags.*' => ['string', 'max:50'],
+            'meeting_mode' => ['nullable', Rule::in(Circle::MEETING_MODE_OPTIONS)],
+            'meeting_frequency' => ['nullable', Rule::in(Circle::MEETING_FREQUENCY_OPTIONS)],
+            'launch_date' => ['nullable', 'date'],
+            'meeting_repeat' => ['nullable', 'array'],
+            'calendar_meetings' => ['nullable', 'array'],
+            'calendar_meetings.*.frequency' => ['nullable', Rule::in(['weekly', 'monthly', 'quarterly'])],
+            'calendar_meetings.*.default_meet_day' => ['nullable', Rule::in(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])],
+            'calendar_meetings.*.default_meet_time' => ['nullable', 'date_format:H:i'],
+            'calendar_meetings.*.monthly_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last'])],
         ];
     }
 
     protected function prepareForValidation(): void
     {
+        $payload = [];
+
+        if ($this->filled('industry_tags') && is_string($this->input('industry_tags'))) {
+            $payload['industry_tags'] = array_values(array_filter(array_map('trim', explode(',', $this->input('industry_tags')))));
+        }
+
+        if ($this->filled('meeting_repeat') && is_string($this->input('meeting_repeat'))) {
+            $decoded = json_decode($this->input('meeting_repeat'), true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $payload['meeting_repeat'] = $decoded;
+            }
+        }
+
+        if ($payload !== []) {
+            $this->merge($payload);
+        }
+
         if ($this->filled('founder_user_id')) {
             return;
         }

@@ -66,6 +66,13 @@
                     <th>Country</th>
                     <th>Type</th>
                     <th>Industry Tags</th>
+                    <th>Meeting Mode</th>
+                    <th>Meeting Frequency</th>
+                    <th>Launch Date</th>
+                    <th>Cover</th>
+                    <th>Director</th>
+                    <th>Industry Director</th>
+                    <th>DED</th>
                     <th>Peers</th>
                     <th>Status</th>
                     <th>Created</th>
@@ -81,15 +88,29 @@
                         <td>{{ $circle->city?->country ?? '—' }}</td>
                         <td><span class="badge bg-light text-dark text-uppercase">{{ $circle->type ?? '—' }}</span></td>
                         <td>{{ $circle->industry_tags ? implode(', ', $circle->industry_tags) : '—' }}</td>
+                        <td>{{ $circle->meeting_mode ?? '—' }}</td>
+                        <td>{{ $circle->meeting_frequency ?? '—' }}</td>
+                        <td>{{ optional($circle->launch_date)->format('Y-m-d') ?? '—' }}</td>
+                        <td>@if($circle->cover_file_id)<img src="{{ url('/api/v1/files/' . $circle->cover_file_id) }}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;">@else — @endif</td>
+                        <td>{{ $circle->director?->display_name ?? '—' }}</td>
+                        <td>{{ $circle->industryDirector?->display_name ?? '—' }}</td>
+                        <td>{{ $circle->ded?->display_name ?? '—' }}</td>
                         <td>{{ $circle->members_count ?? 0 }}</td>
                         <td><span class="badge badge-soft-secondary text-uppercase">{{ $circle->status ?? 'pending' }}</span></td>
                         <td>{{ optional($circle->created_at)->format('Y-m-d') }}</td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-light" href="{{ route('admin.circles.show', $circle) }}">View</a>
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-light" href="{{ route('admin.circles.show', $circle) }}">View</a>
+                                <form action="{{ route('admin.circles.destroy', $circle) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this circle? This is a soft delete and can be restored by admin.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="text-center text-muted py-4">No circles found.</td></tr>
+                    <tr><td colspan="18" class="text-center text-muted py-4">No circles found.</td></tr>
                 @endforelse
             </tbody>
         </table>

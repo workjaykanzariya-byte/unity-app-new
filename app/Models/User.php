@@ -153,6 +153,11 @@ class User extends Authenticatable
         return $this->belongsTo(City::class, 'city_id');
     }
 
+    public function cityRelation(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
     public function introducedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'introduced_by');
