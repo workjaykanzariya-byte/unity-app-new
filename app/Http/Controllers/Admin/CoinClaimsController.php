@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -86,7 +87,7 @@ class CoinClaimsController extends Controller
                 'amount' => $coins,
                 'balance_after' => $newBalance,
                 'reference' => 'claim_coin:'.$claim->id,
-                'created_by' => $admin?->id,
+                'created_by' => $claim->user_id,
                 'created_at' => now(),
             ]);
 
@@ -121,6 +122,13 @@ class CoinClaimsController extends Controller
                 'notification_id' => (string) $notification->id,
                 'coin_claim_request_id' => (string) $claim->id,
                 'activity_code' => $claim->activity_code,
+                'coins_awarded' => $coins,
+            ]);
+
+            Log::info('Coin claim approved', [
+                'coin_claim_request_id' => (string) $claim->id,
+                'user_id' => (string) $claim->user_id,
+                'admin_user_id' => (string) ($admin?->id ?? ''),
                 'coins_awarded' => $coins,
             ]);
 

@@ -11,7 +11,7 @@ use App\Models\FileModel;
 use App\Support\CoinClaims\CoinClaimActivityRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CoinClaimController extends BaseApiController
@@ -25,14 +25,37 @@ class CoinClaimController extends BaseApiController
 
     public function store(StoreCoinClaimRequest $request)
     {
-        $payload = $request->validated('fields', []);
+        $activityCode = (string) $request->validated('activity_code');
+        $fields = $request->input('fields', []);
+        $files = $request->file('files', []);
 
-        foreach ((CoinClaimActivityRegistry::byCode($request->validated('activity_code'))['fields'] ?? []) as $field) {
-            if ($field['type'] !== 'file') {
+        if ($request->hasFile('payment_proof_file')) {
+            $files['payment_proof_file'] = $request->file('payment_proof_file');
+        }
+        if ($request->hasFile('event_confirmation_file')) {
+            $files['event_confirmation_file'] = $request->file('event_confirmation_file');
+        }
+        if ($request->hasFile('membership_confirmation_file')) {
+            $files['membership_confirmation_file'] = $request->file('membership_confirmation_file');
+        }
+        if ($request->hasFile('fields.payment_proof_file')) {
+            $files['payment_proof_file'] = $request->file('fields.payment_proof_file');
+        }
+        if ($request->hasFile('fields.event_confirmation_file')) {
+            $files['event_confirmation_file'] = $request->file('fields.event_confirmation_file');
+        }
+        if ($request->hasFile('fields.membership_confirmation_file')) {
+            $files['membership_confirmation_file'] = $request->file('fields.membership_confirmation_file');
+        }
+
+        $payload = is_array($fields) ? $fields : [];
+
+        foreach ((CoinClaimActivityRegistry::byCode($activityCode)['fields'] ?? []) as $field) {
+            if (($field['type'] ?? null) !== 'file') {
                 continue;
             }
 
-            $file = $request->file('files.'.$field['key']);
+            $file = $files[$field['key']] ?? null;
             if (! $file instanceof UploadedFile) {
                 continue;
             }
@@ -43,10 +66,17 @@ class CoinClaimController extends BaseApiController
 
         $coinClaim = CoinClaimRequest::create([
             'user_id' => $request->user()->id,
-            'activity_code' => $request->validated('activity_code'),
+            'activity_code' => $activityCode,
             'payload' => $payload,
             'status' => 'pending',
             'coins_awarded' => null,
+        ]);
+
+        Log::info('Coin claim submitted', [
+            'coin_claim_request_id' => (string) $coinClaim->id,
+            'user_id' => (string) $request->user()->id,
+            'activity_code' => $activityCode,
+            'has_payment_proof_file_id' => isset($payload['payment_proof_file_id']),
         ]);
 
         return $this->success(new CoinClaimRequestResource($coinClaim), 'Coin claim submitted successfully.', 201);

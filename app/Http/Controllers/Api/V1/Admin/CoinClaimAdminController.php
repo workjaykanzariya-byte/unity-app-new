@@ -104,7 +104,7 @@ class CoinClaimAdminController extends BaseApiController
                 'amount' => $coins,
                 'balance_after' => $newBalance,
                 'reference' => 'claim_coin:'.$claim->id,
-                'created_by' => $admin?->id,
+                'created_by' => $claim->user_id,
                 'created_at' => now(),
             ]);
 
