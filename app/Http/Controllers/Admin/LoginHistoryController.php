@@ -35,10 +35,10 @@ class LoginHistoryController extends Controller
         $toInput = (string) ($validated['to'] ?? '');
 
         $from = $fromInput !== ''
-            ? Carbon::createFromFormat('Y-m-d\TH:i:s', str_replace('T', ' ', $fromInput) . ':00')
+            ? Carbon::createFromFormat('Y-m-d H:i:s', str_replace('T', ' ', $fromInput) . ':00')
             : null;
         $to = $toInput !== ''
-            ? Carbon::createFromFormat('Y-m-d\TH:i:s', str_replace('T', ' ', $toInput) . ':00')
+            ? Carbon::createFromFormat('Y-m-d H:i:s', str_replace('T', ' ', $toInput) . ':00')
             : null;
 
         $hasUsersName = Schema::hasColumn('users', 'name');

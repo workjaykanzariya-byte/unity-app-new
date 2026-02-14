@@ -4,6 +4,8 @@
 
 @section('content')
 <div class="card p-3">
+    <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}"></form>
+
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2">
             <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
@@ -13,6 +15,28 @@
                 @endforeach
             </select>
         </div>
+
+        <div class="d-flex gap-2 align-items-center">
+            <input
+                type="datetime-local"
+                name="from"
+                form="loginHistoryFiltersForm"
+                value="{{ $filters['from'] ?? '' }}"
+                class="form-control form-control-sm"
+                style="min-width: 180px;"
+                title="From Time"
+            >
+            <input
+                type="datetime-local"
+                name="to"
+                form="loginHistoryFiltersForm"
+                value="{{ $filters['to'] ?? '' }}"
+                class="form-control form-control-sm"
+                style="min-width: 180px;"
+                title="To Time"
+            >
+        </div>
+
         <div class="small text-muted">
             @if($records->total() > 0)
                 Records {{ $records->firstItem() }} to {{ $records->lastItem() }} of {{ $records->total() }}
@@ -21,8 +45,6 @@
             @endif
         </div>
     </div>
-
-    <form id="loginHistoryFiltersForm" method="GET" action="{{ route('admin.login-history.index') }}"></form>
 
     <div class="table-responsive">
         <table class="table align-middle">
@@ -83,25 +105,7 @@
                         </div>
                     </th>
                     <th>
-                        <div class="d-flex gap-2 align-items-center">
-                            <input
-                                type="datetime-local"
-                                name="from"
-                                form="loginHistoryFiltersForm"
-                                value="{{ $filters['from'] ?? '' }}"
-                                class="form-control form-control-sm"
-                                style="min-width: 180px;"
-                                title="From Time"
-                            >
-                            <input
-                                type="datetime-local"
-                                name="to"
-                                form="loginHistoryFiltersForm"
-                                value="{{ $filters['to'] ?? '' }}"
-                                class="form-control form-control-sm"
-                                style="min-width: 180px;"
-                                title="To Time"
-                            >
+                        <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" form="loginHistoryFiltersForm" class="btn btn-primary btn-sm">Apply</button>
                             <a href="{{ route('admin.login-history.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
                         </div>
