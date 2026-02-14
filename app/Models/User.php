@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
+use Throwable;
 
 class User extends Authenticatable
 {
@@ -325,5 +326,39 @@ class User extends Authenticatable
         }
 
         return url('/api/v1/files/' . $this->profile_photo_file_id);
+    }
+
+    public function publicProfileArray(): array
+    {
+        $name = (string) ($this->getAttribute('name')
+            ?? $this->display_name
+            ?? trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? '')));
+
+        $companyName = (string) ($this->getAttribute('company_name') ?? '');
+        $city = (string) ($this->getAttribute('city') ?? '');
+        $industry = (string) ($this->getAttribute('industry') ?? '');
+
+        if ((blank($companyName) || blank($city) || blank($industry)) && method_exists($this, 'profile')) {
+            try {
+                $profile = $this->relationLoaded('profile')
+                    ? $this->getRelation('profile')
+                    : $this->profile()->first();
+
+                $companyName = blank($companyName) ? (string) ($profile->company_name ?? '') : $companyName;
+                $city = blank($city) ? (string) ($profile->city ?? '') : $city;
+                $industry = blank($industry) ? (string) ($profile->industry ?? '') : $industry;
+            } catch (Throwable) {
+                // Relation is optional in this project scope.
+            }
+        }
+
+        return [
+            'id' => (string) $this->id,
+            'name' => $name,
+            'company_name' => $companyName,
+            'email' => (string) ($this->email ?? ''),
+            'city' => $city,
+            'industry' => $industry,
+        ];
     }
 }

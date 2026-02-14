@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\P2PMeetingRequestController;
 use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
@@ -199,6 +200,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/chats/{chat}/typing/stop', [ChatTypingController::class, 'stop']);
         Route::post('/chats/{id}/mark-read', [ChatController::class, 'markRead']);
         Route::post('/chats/{id}/typing', [ChatController::class, 'typing']);
+
+
+        Route::post('/p2p-meeting-requests', [P2PMeetingRequestController::class, 'store']);
+        Route::get('/p2p-meeting-requests/inbox', [P2PMeetingRequestController::class, 'inbox']);
+        Route::get('/p2p-meeting-requests/sent', [P2PMeetingRequestController::class, 'sent']);
+        Route::get('/p2p-meeting-requests/{id}', [P2PMeetingRequestController::class, 'show']);
+        Route::post('/p2p-meeting-requests/{id}/accept', [P2PMeetingRequestController::class, 'accept']);
+        Route::post('/p2p-meeting-requests/{id}/reject', [P2PMeetingRequestController::class, 'reject']);
+        Route::post('/p2p-meeting-requests/{id}/cancel', [P2PMeetingRequestController::class, 'cancel']);
 
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
