@@ -44,6 +44,9 @@ use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
+use App\Http\Controllers\Api\V1\CollaborationTypeController;
+use App\Http\Controllers\Api\V1\CollaborationPostController;
+use App\Http\Controllers\Api\V1\IndustryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -62,6 +65,9 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
+
+    Route::get('/industries/tree', [IndustryController::class, 'tree']);
+    Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -88,6 +94,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/connections', [MemberController::class, 'myConnections']);
         Route::get('/me/connection-requests', [MemberController::class, 'myConnectionRequests']);
 
+
+        // Collaborations
+        Route::post('/collaborations', [CollaborationPostController::class, 'store']);
         // Circles
         Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
