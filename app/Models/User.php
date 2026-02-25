@@ -326,4 +326,11 @@ class User extends Authenticatable
 
         return url('/api/v1/files/' . $this->profile_photo_file_id);
     }
+
+    public function isPaidMember(): bool
+    {
+        return ! in_array((string) $this->membership_status, ['visitor', 'free_peer', 'suspended'], true)
+            && ($this->membership_expiry === null || $this->membership_expiry->isFuture());
+    }
+
 }
