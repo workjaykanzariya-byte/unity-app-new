@@ -25,7 +25,7 @@ class CollaborationPost extends Model
     protected $fillable = [
         'id',
         'user_id',
-        'collaboration_type',
+        'collaboration_type_id',
         'title',
         'description',
         'scope',
@@ -35,17 +35,15 @@ class CollaborationPost extends Model
         'business_stage',
         'years_in_operation',
         'urgency',
+        'status',
         'posted_at',
         'expires_at',
-        'renewed_at',
-        'status',
     ];
 
     protected $casts = [
         'countries_of_interest' => 'array',
         'posted_at' => 'datetime',
         'expires_at' => 'datetime',
-        'renewed_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -54,10 +52,6 @@ class CollaborationPost extends Model
             if (blank($post->id)) {
                 $post->id = (string) Str::uuid();
             }
-
-            $post->posted_at ??= now();
-            $post->expires_at ??= $post->posted_at->copy()->addDays(60);
-            $post->status ??= self::STATUS_ACTIVE;
         });
     }
 
@@ -69,6 +63,11 @@ class CollaborationPost extends Model
     public function industry(): BelongsTo
     {
         return $this->belongsTo(Industry::class);
+    }
+
+    public function collaborationType(): BelongsTo
+    {
+        return $this->belongsTo(CollaborationType::class, 'collaboration_type_id');
     }
 
     public function interests(): HasMany

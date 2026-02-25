@@ -4,14 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Industry extends Model
+class CollaborationType extends Model
 {
     use HasFactory;
 
-    protected $table = 'industries';
+    protected $table = 'collaboration_types';
 
     protected $keyType = 'string';
 
@@ -19,8 +18,8 @@ class Industry extends Model
 
     protected $fillable = [
         'id',
-        'parent_id',
         'name',
+        'slug',
         'sort_order',
         'is_active',
     ];
@@ -34,13 +33,8 @@ class Industry extends Model
         return $query->where('is_active', true);
     }
 
-    public function parent(): BelongsTo
+    public function posts(): HasMany
     {
-        return $this->belongsTo(self::class, 'parent_id');
-    }
-
-    public function children(): HasMany
-    {
-        return $this->hasMany(self::class, 'parent_id');
+        return $this->hasMany(CollaborationPost::class, 'collaboration_type_id');
     }
 }

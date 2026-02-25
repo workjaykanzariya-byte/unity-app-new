@@ -44,8 +44,8 @@ use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
-use App\Http\Controllers\Api\V1\CollaborationController;
-use App\Http\Controllers\Api\V1\CollaborationMeetingRequestController;
+use App\Http\Controllers\Api\V1\CollaborationTypeController;
+use App\Http\Controllers\Api\V1\CollaborationPostController;
 use App\Http\Controllers\Api\V1\IndustryController;
 use Illuminate\Support\Facades\Route;
 
@@ -66,9 +66,8 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
 
-    Route::get('/industries', [IndustryController::class, 'index']);
-    Route::get('/collaborations', [CollaborationController::class, 'index']);
-    Route::get('/collaborations/{id}', [CollaborationController::class, 'show']);
+    Route::get('/industries/tree', [IndustryController::class, 'tree']);
+    Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -97,17 +96,7 @@ Route::prefix('v1')->group(function () {
 
 
         // Collaborations
-        Route::post('/collaborations', [CollaborationController::class, 'store']);
-        Route::patch('/collaborations/{id}', [CollaborationController::class, 'update']);
-        Route::delete('/collaborations/{id}', [CollaborationController::class, 'destroy']);
-        Route::post('/collaborations/{id}/renew', [CollaborationController::class, 'renew']);
-        Route::get('/me/collaborations', [CollaborationController::class, 'myPosts']);
-        Route::post('/collaborations/{post}/interest', [CollaborationController::class, 'interest']);
-        Route::delete('/collaborations/{post}/interest', [CollaborationController::class, 'removeInterest']);
-        Route::post('/collaborations/{post}/meeting-requests', [CollaborationController::class, 'storeMeetingRequest']);
-        Route::get('/collaboration-meeting-requests', [CollaborationMeetingRequestController::class, 'index']);
-        Route::patch('/collaboration-meeting-requests/{id}', [CollaborationMeetingRequestController::class, 'updateStatus']);
-
+        Route::post('/collaborations', [CollaborationPostController::class, 'store']);
         // Circles
         Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
