@@ -32,23 +32,18 @@
             <thead class="table-light">
                 <tr>
                     <th>Peer Name</th>
-                    <th>Phone</th>
-                    <th>Company</th>
                     <th>Collaboration Type</th>
-                    <th>City</th>
+                    <th>Title</th>
+                    <th>Scope</th>
+                    <th>Preferred Mode</th>
+                    <th>Business Stage</th>
+                    <th>Year in Operation</th>
                     <th>Status</th>
-                    <th>Created</th>
                     <th class="text-end">Actions</th>
                 </tr>
                 <tr class="bg-light align-middle">
                     <th>
-                        <input type="text" name="q" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Name, email, company, or city" value="{{ $filters['q'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="phone" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="company" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Company" value="{{ $filters['company'] }}">
+                        <input type="text" name="q" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Search peer, title, scope…" value="{{ $filters['q'] }}">
                     </th>
                     <th>
                         <select name="collaboration_type" form="collaborationFiltersForm" class="form-select form-select-sm">
@@ -59,7 +54,19 @@
                         </select>
                     </th>
                     <th>
-                        <input type="text" name="city" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="City" value="{{ $filters['city'] }}">
+                        <input type="text" name="title" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Title" value="{{ $filters['title'] }}">
+                    </th>
+                    <th>
+                        <input type="text" name="scope" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Scope" value="{{ $filters['scope'] }}">
+                    </th>
+                    <th>
+                        <input type="text" name="preferred_mode" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Preferred Mode" value="{{ $filters['preferred_mode'] }}">
+                    </th>
+                    <th>
+                        <input type="text" name="business_stage" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Business Stage" value="{{ $filters['business_stage'] }}">
+                    </th>
+                    <th>
+                        <input type="text" name="year_in_operation" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Year in Operation" value="{{ $filters['year_in_operation'] }}">
                     </th>
                     <th>
                         <select name="status" form="collaborationFiltersForm" class="form-select form-select-sm">
@@ -68,12 +75,6 @@
                                 <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ ucfirst($status) }}</option>
                             @endforeach
                         </select>
-                    </th>
-                    <th>
-                        <div class="d-flex gap-1">
-                            <input type="date" name="created_from" form="collaborationFiltersForm" class="form-control form-control-sm" value="{{ $filters['created_from'] }}" title="From">
-                            <input type="date" name="created_to" form="collaborationFiltersForm" class="form-control form-control-sm" value="{{ $filters['created_to'] }}" title="To">
-                        </div>
                     </th>
                     <th class="text-end">
                         <form id="collaborationFiltersForm" method="GET" class="d-flex gap-2 justify-content-end">
@@ -87,50 +88,46 @@
                 @forelse ($posts as $post)
                     @php
                         $user = $post->user;
-                        $name = $user?->name ?: $user?->display_name ?: trim(($user?->first_name ?? '') . ' ' . ($user?->last_name ?? ''));
-                        $name = $name !== '' ? $name : 'Unnamed Peer';
-                        $userCompany = $user?->company_name ?? $user?->company ?? $user?->business_name ?? null;
-                        $userCity = $user?->city ?? $user?->current_city ?? null;
-                        $postCity = $post->city ?? null;
-                        $displayCity = $postCity ?: $userCity;
-                        $phone = $user?->phone ?? '—';
+                        $peerName = $user?->name ?? '—';
+                        $company = $user?->company_name ?? $user?->company ?? $user?->business_name ?? '—';
+                        $city = $user?->city ?? $user?->current_city ?? $user?->location_city ?? '—';
                         $typeName = $post->collaborationType?->name ?? $post->collaboration_type ?? '—';
+                        $title = $post->title ?? $post->collaboration_title ?? $post->subject ?? '—';
+                        $scope = $post->scope ?? $post->collaboration_scope ?? $post->scope_text ?? '—';
+                        $preferredMode = $post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode ?? '—';
+                        $businessStage = $post->business_stage ?? $post->stage ?? $post->business_stage_text ?? '—';
+                        $yearInOperation = $post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years ?? '—';
                         $status = $post->status ?? '—';
                     @endphp
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" style="width: 36px; height: 36px; overflow: hidden;">
-                                    <span class="text-muted">{{ strtoupper(substr($name, 0, 1)) }}</span>
+                                    <span class="text-muted">{{ strtoupper(substr((string) $peerName, 0, 1)) }}</span>
                                 </div>
                                 <div>
-                                    <div class="fw-semibold">{{ $name }}</div>
-                                    <div class="text-muted small">{{ $user?->email ?? '—' }}</div>
-                                    <div class="text-muted small">
-                                        @if($userCompany || $displayCity)
-                                            {{ $userCompany ?? '' }}@if($userCompany && $displayCity) • @endif{{ $displayCity ?? '' }}
-                                        @else
-                                            —
-                                        @endif
-                                    </div>
+                                    <div class="fw-semibold">{{ $peerName ?: '—' }}</div>
+                                    <div class="text-muted small">{{ $company ?: '—' }}</div>
+                                    <div class="text-muted small">{{ $city ?: '—' }}</div>
                                 </div>
                             </div>
                         </td>
-                        <td>{{ $phone }}</td>
-                        <td>{{ $userCompany ?? '—' }}</td>
                         <td><span class="badge bg-primary-subtle text-primary">{{ $typeName }}</span></td>
-                        <td>{{ $displayCity ?? '—' }}</td>
+                        <td>{{ $title }}</td>
+                        <td>{{ $scope }}</td>
+                        <td>{{ $preferredMode }}</td>
+                        <td>{{ $businessStage }}</td>
+                        <td>{{ $yearInOperation }}</td>
                         <td>
                             <span class="badge {{ strtolower((string) $status) === 'active' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ ucfirst((string) $status) }}</span>
                         </td>
-                        <td>{{ optional($post->created_at)->format('Y-m-d H:i') ?? '—' }}</td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.collaborations.show', ['id' => $post->id] + request()->query()) }}">Details</a>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">No collaboration posts found.</td>
+                        <td colspan="9" class="text-center text-muted py-4">No collaboration posts found.</td>
                     </tr>
                 @endforelse
             </tbody>

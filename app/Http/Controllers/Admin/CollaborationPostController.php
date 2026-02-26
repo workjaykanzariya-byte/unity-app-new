@@ -23,17 +23,19 @@ class CollaborationPostController extends Controller
 
         $filters = [
             'q' => trim((string) $request->query('q', '')),
-            'phone' => trim((string) $request->query('phone', '')),
-            'company' => trim((string) $request->query('company', '')),
             'collaboration_type' => (string) $request->query('collaboration_type', 'all'),
-            'city' => trim((string) $request->query('city', '')),
+            'title' => trim((string) $request->query('title', '')),
+            'scope' => trim((string) $request->query('scope', '')),
+            'preferred_mode' => trim((string) $request->query('preferred_mode', '')),
+            'business_stage' => trim((string) $request->query('business_stage', '')),
+            'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
             'status' => (string) $request->query('status', 'all'),
-            'created_from' => (string) $request->query('created_from', ''),
-            'created_to' => (string) $request->query('created_to', ''),
             'per_page' => $rowsPerPage,
         ];
 
-        $query = CollaborationPost::query()->with(['user', 'collaborationType'])->latest('created_at');
+        $query = CollaborationPost::query()
+            ->with(['user', 'collaborationType'])
+            ->latest('created_at');
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'collaboration_posts.user_id', null);
 
@@ -84,74 +86,55 @@ class CollaborationPostController extends Controller
 
     private function applyFilters(Builder $query, array $filters): void
     {
-        $hasPostCity = Schema::hasColumn('collaboration_posts', 'city');
-        $userColumns = [
-            'name' => Schema::hasColumn('users', 'name'),
-            'display_name' => Schema::hasColumn('users', 'display_name'),
-            'first_name' => Schema::hasColumn('users', 'first_name'),
-            'last_name' => Schema::hasColumn('users', 'last_name'),
-            'email' => Schema::hasColumn('users', 'email'),
-            'phone' => Schema::hasColumn('users', 'phone'),
-            'company_name' => Schema::hasColumn('users', 'company_name'),
-            'company' => Schema::hasColumn('users', 'company'),
-            'business_name' => Schema::hasColumn('users', 'business_name'),
-            'city' => Schema::hasColumn('users', 'city'),
-            'current_city' => Schema::hasColumn('users', 'current_city'),
-        ];
+        $userColumns = $this->existingUserColumns([
+            'name',
+            'company_name',
+            'company',
+            'business_name',
+            'city',
+            'current_city',
+            'location_city',
+        ]);
+
+        $titleColumns = $this->existingPostColumns(['title', 'collaboration_title', 'subject']);
+        $scopeColumns = $this->existingPostColumns(['scope', 'collaboration_scope', 'scope_text']);
+        $preferredModeColumns = $this->existingPostColumns(['preferred_mode', 'preferred_model', 'meeting_mode', 'mode']);
+        $businessStageColumns = $this->existingPostColumns(['business_stage', 'stage', 'business_stage_text']);
+        $yearOperationColumns = $this->existingPostColumns(['year_in_operation', 'years_in_operation', 'operating_years', 'years']);
 
         if ($filters['q'] !== '') {
-            $q = $filters['q'];
+            $value = $filters['q'];
 
-            $query->where(function (Builder $inner) use ($q, $hasPostCity, $userColumns) {
-                $inner->whereHas('user', function (Builder $userQuery) use ($q, $userColumns) {
-                    $userQuery->where(function (Builder $u) use ($q, $userColumns) {
-                        $applied = false;
-                        foreach (['name', 'display_name', 'first_name', 'last_name', 'email', 'company_name', 'company', 'business_name', 'city', 'current_city'] as $column) {
-                            if (! $userColumns[$column]) {
-                                continue;
-                            }
-
-                            $method = $applied ? 'orWhere' : 'where';
-                            $u->{$method}($column, 'like', "%{$q}%");
-                            $applied = true;
-                        }
-
-                        if (! $applied) {
-                            $u->whereRaw('1 = 0');
-                        }
+            $query->where(function (Builder $inner) use ($value, $userColumns, $titleColumns, $scopeColumns) {
+                if ($userColumns !== []) {
+                    $inner->whereHas('user', function (Builder $userQuery) use ($value, $userColumns) {
+                        $this->applyLikeAny($userQuery, $userColumns, $value);
                     });
-                })->orWhere('title', 'like', "%{$q}%");
-
-                if ($hasPostCity) {
-                    $inner->orWhere('city', 'like', "%{$q}%");
                 }
+
+                $this->applyLikeAny($inner, $titleColumns, $value, $userColumns !== []);
+                $this->applyLikeAny($inner, $scopeColumns, $value, ($userColumns !== [] || $titleColumns !== []));
             });
         }
 
-        if ($filters['phone'] !== '') {
-            if ($userColumns['phone']) {
-                $query->whereHas('user', fn (Builder $u) => $u->where('phone', 'like', "%{$filters['phone']}%"));
-            }
+        if ($filters['title'] !== '') {
+            $this->applyLikeFilter($query, $titleColumns, $filters['title']);
         }
 
-        if ($filters['company'] !== '') {
-            $company = $filters['company'];
-            $query->whereHas('user', function (Builder $u) use ($company, $userColumns) {
-                $applied = false;
-                foreach (['company_name', 'company', 'business_name'] as $column) {
-                    if (! $userColumns[$column]) {
-                        continue;
-                    }
+        if ($filters['scope'] !== '') {
+            $this->applyLikeFilter($query, $scopeColumns, $filters['scope']);
+        }
 
-                    $method = $applied ? 'orWhere' : 'where';
-                    $u->{$method}($column, 'like', "%{$company}%");
-                    $applied = true;
-                }
+        if ($filters['preferred_mode'] !== '') {
+            $this->applyLikeFilter($query, $preferredModeColumns, $filters['preferred_mode']);
+        }
 
-                if (! $applied) {
-                    $u->whereRaw('1 = 0');
-                }
-            });
+        if ($filters['business_stage'] !== '') {
+            $this->applyLikeFilter($query, $businessStageColumns, $filters['business_stage']);
+        }
+
+        if ($filters['year_in_operation'] !== '') {
+            $this->applyLikeFilter($query, $yearOperationColumns, $filters['year_in_operation'], true);
         }
 
         if ($filters['collaboration_type'] !== 'all' && $filters['collaboration_type'] !== '') {
@@ -166,42 +149,51 @@ class CollaborationPostController extends Controller
             });
         }
 
-        if ($filters['city'] !== '') {
-            $city = $filters['city'];
-            $query->where(function (Builder $inner) use ($city, $hasPostCity, $userColumns) {
-                if ($hasPostCity) {
-                    $inner->where('city', 'like', "%{$city}%");
-                }
-
-                $inner->orWhereHas('user', function (Builder $u) use ($city, $userColumns) {
-                    $applied = false;
-                    foreach (['city', 'current_city'] as $column) {
-                        if (! $userColumns[$column]) {
-                            continue;
-                        }
-
-                        $method = $applied ? 'orWhere' : 'where';
-                        $u->{$method}($column, 'like', "%{$city}%");
-                        $applied = true;
-                    }
-
-                    if (! $applied) {
-                        $u->whereRaw('1 = 0');
-                    }
-                });
-            });
-        }
-
         if ($filters['status'] !== 'all' && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
         }
+    }
 
-        if ($filters['created_from'] !== '') {
-            $query->whereDate('created_at', '>=', $filters['created_from']);
+    private function applyLikeFilter(Builder $query, array $columns, string $value, bool $castAsText = false): void
+    {
+        if ($columns === []) {
+            return;
         }
 
-        if ($filters['created_to'] !== '') {
-            $query->whereDate('created_at', '<=', $filters['created_to']);
+        $query->where(function (Builder $inner) use ($columns, $value, $castAsText) {
+            $this->applyLikeAny($inner, $columns, $value, false, $castAsText);
+        });
+    }
+
+    private function applyLikeAny(Builder $query, array $columns, string $value, bool $useOr = false, bool $castAsText = false): void
+    {
+        if ($columns === []) {
+            return;
         }
+
+        foreach (array_values($columns) as $index => $column) {
+            $method = $this->pickMethod($useOr, $index);
+            if ($castAsText) {
+                $query->{$method . 'Raw'}("CAST({$column} AS TEXT) LIKE ?", ["%{$value}%"]);
+                continue;
+            }
+
+            $query->{$method}($column, 'like', "%{$value}%");
+        }
+    }
+
+    private function pickMethod(bool $useOr, int $index): string
+    {
+        return $index === 0 ? ($useOr ? 'orWhere' : 'where') : 'orWhere';
+    }
+
+    private function existingPostColumns(array $columns): array
+    {
+        return array_values(array_filter($columns, fn (string $column) => Schema::hasColumn('collaboration_posts', $column)));
+    }
+
+    private function existingUserColumns(array $columns): array
+    {
+        return array_values(array_filter($columns, fn (string $column) => Schema::hasColumn('users', $column)));
     }
 }
