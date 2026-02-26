@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class CollaborationPostController extends Controller
@@ -138,15 +139,29 @@ class CollaborationPostController extends Controller
         }
 
         if ($filters['collaboration_type'] !== 'all' && $filters['collaboration_type'] !== '') {
-            $type = $filters['collaboration_type'];
-            $query->where(function (Builder $inner) use ($type) {
-                $inner->where('collaboration_type_id', $type)
-                    ->orWhere('collaboration_type', $type)
-                    ->orWhereHas('collaborationType', function (Builder $typeQuery) use ($type) {
-                        $typeQuery->where('id', $type)
-                            ->orWhere('slug', $type);
-                    });
-            });
+            $typeInput = $filters['collaboration_type'];
+            $slug = $typeInput;
+
+            if (Str::isUuid($typeInput) && class_exists(CollaborationType::class)) {
+                $type = CollaborationType::query()->find($typeInput);
+                if ($type) {
+                    $slug = (string) ($type->slug ?? '');
+                } else {
+                    $query->whereRaw('1 = 0');
+                    return;
+                }
+            }
+
+            if ($slug === '') {
+                $query->whereRaw('1 = 0');
+                return;
+            }
+
+            if (Schema::hasColumn('collaboration_posts', 'collaboration_type')) {
+                $query->where('collaboration_type', $slug);
+            } elseif (Schema::hasColumn('collaboration_posts', 'collaboration_type_id')) {
+                $query->where('collaboration_type_id', $slug);
+            }
         }
 
         if ($filters['status'] !== 'all' && $filters['status'] !== '') {

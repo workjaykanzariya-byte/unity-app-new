@@ -49,7 +49,7 @@
                         <select name="collaboration_type" form="collaborationFiltersForm" class="form-select form-select-sm">
                             <option value="all">All</option>
                             @foreach ($types as $type)
-                                <option value="{{ $type->id }}" @selected($filters['collaboration_type'] === (string) $type->id || $filters['collaboration_type'] === (string) $type->slug)>{{ $type->name }}</option>
+                                <option value="{{ $type->slug }}" @selected($filters['collaboration_type'] === (string) $type->slug)>{{ $type->name }}</option>
                             @endforeach
                         </select>
                     </th>
