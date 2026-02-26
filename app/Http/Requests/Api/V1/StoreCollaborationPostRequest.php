@@ -34,7 +34,7 @@ class StoreCollaborationPostRequest extends FormRequest
                 Rule::exists('collaboration_types', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
             'title' => ['required', 'string', 'max:80'],
-            'description' => ['required', 'string', 'min:500'],
+            'description' => ['nullable', 'string', 'max:500'],
             'scope' => ['required', Rule::in(self::SCOPES)],
             'countries_of_interest' => ['nullable', 'array', 'required_if:scope,international', 'min:1'],
             'countries_of_interest.*' => ['string', 'size:2', 'regex:/^[A-Z]{2}$/'],

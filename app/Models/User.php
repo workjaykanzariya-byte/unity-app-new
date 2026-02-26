@@ -329,7 +329,7 @@ class User extends Authenticatable
 
     public function isFreeMember(): bool
     {
-        return (string) $this->membership_status === 'free_peer';
+        return false;
     }
 
     public function isPaidMember(): bool
