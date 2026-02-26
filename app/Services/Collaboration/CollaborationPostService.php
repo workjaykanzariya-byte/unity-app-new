@@ -13,16 +13,19 @@ class CollaborationPostService
 {
     public function createForUser(User $user, array $data): CollaborationPost
     {
-        if ($user->isFreeMember()) {
+        $limit = config('collaborations.free_active_limit');
+
+        if (! is_null($limit) && (int) $limit > 0 && $user->isFreeMember()) {
             $activePostCount = CollaborationPost::query()
                 ->where('user_id', $user->id)
                 ->where('status', CollaborationPost::STATUS_ACTIVE)
-                ->where('expires_at', '>=', now())
                 ->count();
 
-            if ($activePostCount >= 2) {
+            if ($activePostCount >= (int) $limit) {
+                $message = "Free members can have maximum {$limit} active collaboration posts. Please upgrade to post more.";
+
                 throw ValidationException::withMessages([
-                    'collaborations' => ['Free members can have maximum 2 active collaboration posts. Please upgrade to post more.'],
+                    'collaborations' => [$message],
                 ]);
             }
         }
