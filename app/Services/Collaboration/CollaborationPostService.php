@@ -43,7 +43,7 @@ class CollaborationPostService
         return CollaborationPost::query()->create([
             'user_id' => $user->id,
             'collaboration_type_id' => $type->id,
-            'collaboration_type' => $type->slug,
+            'collaboration_type' => $type->slug ?? $type->name,
             'title' => $data['title'],
             'description' => $data['description'],
             'scope' => $data['scope'],
