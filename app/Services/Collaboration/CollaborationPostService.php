@@ -3,6 +3,7 @@
 namespace App\Services\Collaboration;
 
 use App\Models\CollaborationPost;
+use App\Models\CollaborationType;
 use App\Models\Industry;
 use App\Models\User;
 use Illuminate\Support\Arr;
@@ -35,9 +36,14 @@ class CollaborationPostService
             ]);
         }
 
+        $type = CollaborationType::query()
+            ->where('id', $data['collaboration_type_id'])
+            ->firstOrFail();
+
         return CollaborationPost::query()->create([
             'user_id' => $user->id,
-            'collaboration_type_id' => $data['collaboration_type_id'],
+            'collaboration_type_id' => $type->id,
+            'collaboration_type' => $type->slug ?? $type->name,
             'title' => $data['title'],
             'description' => $data['description'],
             'scope' => $data['scope'],

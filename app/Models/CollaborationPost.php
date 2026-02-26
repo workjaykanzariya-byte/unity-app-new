@@ -26,6 +26,7 @@ class CollaborationPost extends Model
         'id',
         'user_id',
         'collaboration_type_id',
+        'collaboration_type',
         'title',
         'description',
         'scope',
