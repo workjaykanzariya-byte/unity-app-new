@@ -44,10 +44,11 @@
         ['label' => 'Business Deals', 'route' => 'admin.activities.business-deals.index'],
         ['label' => 'Become A Leader', 'route' => 'admin.activities.become-a-leader.index'],
         ['label' => 'Recommend A Peer', 'route' => 'admin.activities.recommend-peer.index'],
+        ['label' => 'Find & Build Collaborations', 'route' => 'admin.collaborations.index'],
         ['label' => 'Register A Visitor', 'route' => 'admin.activities.register-visitor.index'],
     ] : [];
 
-    $activityActive = request()->routeIs('admin.activities.*');
+    $activityActive = request()->routeIs('admin.activities.*') || request()->routeIs('admin.collaborations.*');
     $activityExpanded = $activityActive || ! $isGlobalAdmin;
 
     $postsMenu = $isGlobalAdmin ? [
