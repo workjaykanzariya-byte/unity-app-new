@@ -87,10 +87,27 @@
             <tbody>
                 @forelse ($posts as $post)
                     @php
-                        $user = $post->user;
-                        $peerName = $user?->name ?? '—';
-                        $company = $user?->company_name ?? $user?->company ?? $user?->business_name ?? '—';
-                        $city = $user?->city ?? $user?->current_city ?? $user?->location_city ?? '—';
+                        $u = $post->user;
+
+                        $peerName = $u?->name
+                            ?? $u?->display_name
+                            ?? $post->peer_name
+                            ?? $post->person_name
+                            ?? $post->name
+                            ?? '—';
+
+                        $company = ($u?->company_name ?? $u?->company ?? $u?->business_name ?? null)
+                            ?? $post->company
+                            ?? $post->company_name
+                            ?? $post->business_name
+                            ?? '—';
+
+                        $city = ($u?->city ?? $u?->current_city ?? $u?->location_city ?? null)
+                            ?? $post->city
+                            ?? $post->user_city
+                            ?? '—';
+
+                        $initial = mb_strtoupper(mb_substr($peerName !== '—' ? $peerName : 'U', 0, 1));
                         $typeName = $post->collaborationType?->name ?? $post->collaboration_type ?? '—';
                         $title = $post->title ?? $post->collaboration_title ?? $post->subject ?? '—';
                         $scope = $post->scope ?? $post->collaboration_scope ?? $post->scope_text ?? '—';
@@ -101,14 +118,15 @@
                     @endphp
                     <tr>
                         <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center border" style="width: 36px; height: 36px; overflow: hidden;">
-                                    <span class="text-muted">{{ strtoupper(substr((string) $peerName, 0, 1)) }}</span>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar avatar-sm rounded-circle border d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                    <span class="fw-semibold">{{ $initial }}</span>
                                 </div>
-                                <div>
-                                    <div class="fw-semibold">{{ $peerName ?: '—' }}</div>
-                                    <div class="text-muted small">{{ $company ?: '—' }}</div>
-                                    <div class="text-muted small">{{ $city ?: '—' }}</div>
+
+                                <div class="min-w-0">
+                                    <div class="fw-semibold text-truncate">{{ $peerName }}</div>
+                                    <div class="text-muted small text-truncate">{{ $company }}</div>
+                                    <div class="text-muted small text-truncate">{{ $city }}</div>
                                 </div>
                             </div>
                         </td>
