@@ -28,25 +28,27 @@ use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
-use App\Http\Controllers\Api\V1\Connections\MyConnectionsController;
-use App\Http\Controllers\Api\V1\PostReportController;
-use App\Http\Controllers\Api\WalletController;
-use App\Http\Controllers\Api\V1\CoinsController;
-use App\Http\Controllers\Api\V1\CoinHistoryController;
-use App\Http\Controllers\Api\V1\CoinClaimController;
 use App\Http\Controllers\Api\V1\Admin\CoinClaimAdminController;
 use App\Http\Controllers\Api\V1\Admin\PendingController;
+use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
+use App\Http\Controllers\Api\V1\CoinClaimController;
+use App\Http\Controllers\Api\V1\CoinHistoryController;
+use App\Http\Controllers\Api\V1\CoinsController;
+use App\Http\Controllers\Api\V1\CollaborationPostController;
+use App\Http\Controllers\Api\V1\CollaborationTypeController;
+use App\Http\Controllers\Api\V1\Connections\MyConnectionsController;
+use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\Forms\LeaderInterestController;
 use App\Http\Controllers\Api\V1\Forms\PeerRecommendationController;
 use App\Http\Controllers\Api\V1\Forms\VisitorRegistrationController;
-use App\Http\Controllers\Api\V1\Profile\MyPostsController;
-use App\Http\Controllers\Api\V1\EventGalleryApiController;
+use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
-use App\Http\Controllers\Api\V1\PushTokenController;
+use App\Http\Controllers\Api\V1\PostReportController;
 use App\Http\Controllers\Api\V1\PostReportReasonsController;
+use App\Http\Controllers\Api\V1\Profile\MyPostsController;
+use App\Http\Controllers\Api\V1\PushTokenController;
 use App\Http\Controllers\Api\V1\RazorpayWebhookController;
-use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -65,6 +67,8 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
+    Route::get('/industries/tree', [IndustryController::class, 'tree']);
+    Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -90,6 +94,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/me/connections', [MemberController::class, 'myConnections']);
         Route::get('/me/connection-requests', [MemberController::class, 'myConnectionRequests']);
+
+        // Collaborations
+        Route::post('/collaborations', [CollaborationPostController::class, 'store']);
 
         // Circles
         Route::get('/circles', [CircleController::class, 'index']);
