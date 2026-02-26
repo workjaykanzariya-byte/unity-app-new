@@ -13,23 +13,6 @@ class CollaborationPostService
 {
     public function createForUser(User $user, array $data): CollaborationPost
     {
-        $limit = config('collaborations.free_active_limit');
-
-        if (! is_null($limit) && (int) $limit > 0 && $user->isFreeMember()) {
-            $activePostCount = CollaborationPost::query()
-                ->where('user_id', $user->id)
-                ->where('status', CollaborationPost::STATUS_ACTIVE)
-                ->count();
-
-            if ($activePostCount >= (int) $limit) {
-                $message = "Free members can have maximum {$limit} active collaboration posts. Please upgrade to post more.";
-
-                throw ValidationException::withMessages([
-                    'collaborations' => [$message],
-                ]);
-            }
-        }
-
         $industryId = (string) Arr::get($data, 'industry_id');
         $hasChildren = Industry::query()->active()->where('parent_id', $industryId)->exists();
 

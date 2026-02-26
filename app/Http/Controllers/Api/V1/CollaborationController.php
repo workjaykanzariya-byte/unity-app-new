@@ -93,25 +93,6 @@ class CollaborationController extends Controller
     {
         $user = $request->user();
 
-        $limit = config('collaborations.free_active_limit');
-
-        if (! is_null($limit) && (int) $limit > 0 && ! $user->isPaidMember()) {
-            $activeCount = CollaborationPost::query()
-                ->where('user_id', $user->id)
-                ->where('status', CollaborationPost::STATUS_ACTIVE)
-                ->count();
-
-            if ($activeCount >= (int) $limit) {
-                $message = "Free members can have maximum {$limit} active collaboration posts. Please upgrade to post more.";
-
-                return response()->json([
-                    'status' => false,
-                    'message' => $message,
-                    'data' => null,
-                ], 422);
-            }
-        }
-
         $post = CollaborationPost::query()->create([
             ...$request->validated(),
             'user_id' => $user->id,
