@@ -163,26 +163,28 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const submenu = document.getElementById('activitiesSubmenu');
-            if (!submenu) {
-                return;
-            }
+            ['activitiesSubmenu', 'pendingSubmenu', 'postsSubmenu'].forEach((submenuId) => {
+                const submenu = document.getElementById(submenuId);
+                if (!submenu) {
+                    return;
+                }
 
-            const parentItem = submenu.closest('.menu-parent');
-            if (!parentItem) {
-                return;
-            }
+                const parentItem = submenu.closest('.menu-parent');
+                if (!parentItem) {
+                    return;
+                }
 
-            if (submenu.classList.contains('show')) {
-                parentItem.classList.add('open');
-            }
+                if (submenu.classList.contains('show')) {
+                    parentItem.classList.add('open');
+                }
 
-            submenu.addEventListener('show.bs.collapse', () => {
-                parentItem.classList.add('open');
-            });
+                submenu.addEventListener('show.bs.collapse', () => {
+                    parentItem.classList.add('open');
+                });
 
-            submenu.addEventListener('hide.bs.collapse', () => {
-                parentItem.classList.remove('open');
+                submenu.addEventListener('hide.bs.collapse', () => {
+                    parentItem.classList.remove('open');
+                });
             });
         });
     </script>
