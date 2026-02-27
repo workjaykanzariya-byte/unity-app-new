@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Requirements\CloseRequirementRequest;
-use App\Http\Requests\Requirements\StoreRequirementRequest;
 use App\Http\Resources\Requirement\RequirementDetailResource;
 use App\Models\Requirement;
 use App\Services\Requirements\RequirementNotificationService;
@@ -19,45 +18,55 @@ class RequirementController extends Controller
     {
     }
 
-    public function store(StoreRequirementRequest $request): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $payload = $request->validated();
-
-        $media = collect($payload['media'] ?? [])->map(function ($item) {
-            return [
-                'type' => data_get($item, 'type', 'image'),
-                'file_id' => data_get($item, 'file_id'),
-            ];
-        })->values()->all();
-
-        $requirement = Requirement::create([
-            'user_id' => $user->id,
-            'subject' => $payload['subject'],
-            'description' => $payload['description'] ?? null,
-            'media' => $media,
-            'region_filter' => $payload['region_filter'] ?? [],
-            'category_filter' => $payload['category_filter'] ?? [],
-            'status' => 'open',
+        $validated = $request->validate([
+            'subject' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'media' => ['nullable', 'array'],
+            'region_filter' => ['nullable', 'array'],
+            'category_filter' => ['nullable', 'array'],
         ]);
 
-        $requirement->load('user');
-
         try {
-            $this->requirementNotificationService->notifyRequirementCreated($requirement);
-        } catch (Throwable $exception) {
-            Log::warning('Requirement created but notifications failed.', [
-                'requirement_id' => (string) $requirement->id,
-                'error' => $exception->getMessage(),
+            $requirement = Requirement::create([
+                'user_id' => $request->user()->id,
+                'subject' => $validated['subject'],
+                'description' => $validated['description'] ?? null,
+                'media' => $validated['media'] ?? [],
+                'region_filter' => $validated['region_filter'] ?? [],
+                'category_filter' => $validated['category_filter'] ?? [],
+                'status' => 'open',
             ]);
-        }
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Requirement created successfully.',
-            'data' => new RequirementDetailResource($requirement),
-            'meta' => null,
-        ], 201);
+            try {
+                $this->requirementNotificationService->notifyRequirementCreated($requirement->load('user'));
+            } catch (Throwable $exception) {
+                Log::warning('Requirement created but notification failed.', [
+                    'requirement_id' => (string) $requirement->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Requirement created',
+                'data' => $requirement,
+                'meta' => null,
+            ], 201);
+        } catch (Throwable $e) {
+            Log::error('Requirement create failed.', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Server error',
+                'data' => null,
+                'meta' => null,
+            ], 500);
+        }
     }
 
     public function myIndex(Request $request): JsonResponse
