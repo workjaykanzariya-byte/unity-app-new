@@ -56,12 +56,16 @@ class RequirementController extends Controller
                 'status' => 'open',
             ]);
 
+            $requirement->load('user');
+
+            $notifiedCount = 0;
             try {
-                $this->requirementNotificationService->notifyRequirementCreated($requirement->load('user'));
+                $notifiedCount = $this->requirementNotificationService->notifyRequirementCreated($requirement);
             } catch (Throwable $exception) {
-                Log::warning('Requirement created but notification failed.', [
+                Log::error('Requirement notification failed', [
                     'requirement_id' => (string) $requirement->id,
                     'error' => $exception->getMessage(),
+                    'trace' => $exception->getTraceAsString(),
                 ]);
             }
 
@@ -69,7 +73,9 @@ class RequirementController extends Controller
                 'status' => true,
                 'message' => 'Requirement created',
                 'data' => $requirement,
-                'meta' => null,
+                'meta' => [
+                    'notified_count' => $notifiedCount,
+                ],
             ], 201);
         } catch (Throwable $e) {
             Log::error('Requirement create failed', [
