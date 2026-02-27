@@ -8,8 +8,12 @@
         <div class="d-flex align-items-center gap-2">
             <h2 class="h5 mb-0">Find &amp; Build Collaborations</h2>
         </div>
-        <div class="d-flex align-items-center gap-3 ms-auto">
-            <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
+            <input type="date" name="created_from" form="collaborationFiltersForm" class="form-control form-control-sm" style="width: 150px;" value="{{ $filters['created_from'] }}" title="Created from">
+            <input type="date" name="created_to" form="collaborationFiltersForm" class="form-control form-control-sm" style="width: 150px;" value="{{ $filters['created_to'] }}" title="Created to">
+            <span class="small text-muted" id="selectedCount">(Selected: 0)</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
+            <div class="d-flex align-items-center gap-2 ms-2">
                 <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
                 <select id="perPage" name="per_page" class="form-select form-select-sm" style="width: 90px;">
                     @foreach ([10, 20, 50, 100] as $size)
@@ -31,6 +35,7 @@
         <table class="table align-middle">
             <thead class="table-light">
                 <tr>
+                    <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAll"></th>
                     <th>Peer Name</th>
                     <th>Collaboration Type</th>
                     <th>Title</th>
@@ -42,6 +47,7 @@
                     <th class="text-end">Actions</th>
                 </tr>
                 <tr class="bg-light align-middle">
+                    <th></th>
                     <th>
                         <input type="text" name="q" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Search peer, title, scope…" value="{{ $filters['q'] }}">
                     </th>
@@ -117,6 +123,7 @@
                         $status = $post->status ?? '—';
                     @endphp
                     <tr>
+                        <td><input type="checkbox" class="form-check-input row-checkbox" value="{{ $post->id }}"></td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <div class="avatar avatar-sm rounded-circle border d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
@@ -145,7 +152,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">No collaboration posts found.</td>
+                        <td colspan="10" class="text-center text-muted py-4">No collaboration posts found.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -170,6 +177,35 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const perPage = document.getElementById('perPage');
+        const exportBtn = document.getElementById('exportCsvBtn');
+        const selectAll = document.getElementById('selectAll');
+        const rowCheckboxes = () => Array.from(document.querySelectorAll('.row-checkbox'));
+        const selectedCount = document.getElementById('selectedCount');
+        const exportRoute = @json(route('admin.collaborations.export'));
+
+        const updateSelectedCount = () => {
+            const selected = rowCheckboxes().filter(cb => cb.checked).length;
+            if (selectedCount) {
+                selectedCount.textContent = `(Selected: ${selected})`;
+            }
+        };
+
+        selectAll?.addEventListener('change', () => {
+            rowCheckboxes().forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateSelectedCount();
+        });
+
+        rowCheckboxes().forEach(cb => {
+            cb.addEventListener('change', () => {
+                const all = rowCheckboxes();
+                if (selectAll) {
+                    selectAll.checked = all.length > 0 && all.every(item => item.checked);
+                }
+                updateSelectedCount();
+            });
+        });
 
         if (perPage) {
             perPage.addEventListener('change', () => {
@@ -179,6 +215,16 @@
                 window.location = `${window.location.pathname}?${params.toString()}`;
             });
         }
+
+        exportBtn?.addEventListener('click', () => {
+            const params = new URLSearchParams(window.location.search);
+            rowCheckboxes().filter(cb => cb.checked).forEach(cb => {
+                params.append('selected_ids[]', cb.value);
+            });
+            window.location.href = `${exportRoute}?${params.toString()}`;
+        });
+
+        updateSelectedCount();
     });
 </script>
 @endpush

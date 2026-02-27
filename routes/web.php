@@ -62,6 +62,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/activities/recommend-peer', [ActivitiesPeerRecommendationController::class, 'index'])->name('activities.recommend-peer.index');
         Route::get('/activities/register-visitor', [ActivitiesVisitorRegistrationController::class, 'index'])->name('activities.register-visitor.index');
         Route::get('/collaborations', [CollaborationPostController::class, 'index'])->name('collaborations.index');
+        Route::get('/collaborations/export', [CollaborationPostController::class, 'export'])->name('collaborations.export');
         Route::get('/collaborations/{id}', [CollaborationPostController::class, 'show'])->name('collaborations.show');
         Route::get('/activities/{peer}/become-a-leader', [ActivitiesLeaderInterestController::class, 'show'])
             ->whereUuid('peer')

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CollaborationPost;
 use App\Models\CollaborationType;
 use App\Support\AdminCircleScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,17 +23,7 @@ class CollaborationPostController extends Controller
             $rowsPerPage = 20;
         }
 
-        $filters = [
-            'q' => trim((string) $request->query('q', '')),
-            'collaboration_type' => (string) $request->query('collaboration_type', 'all'),
-            'title' => trim((string) $request->query('title', '')),
-            'scope' => trim((string) $request->query('scope', '')),
-            'preferred_mode' => trim((string) $request->query('preferred_mode', '')),
-            'business_stage' => trim((string) $request->query('business_stage', '')),
-            'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
-            'status' => (string) $request->query('status', 'all'),
-            'per_page' => $rowsPerPage,
-        ];
+        $filters = $this->collectFilters($request, $rowsPerPage);
 
         $query = CollaborationPost::query()
             ->with(['user', 'collaborationType'])
@@ -40,7 +31,7 @@ class CollaborationPostController extends Controller
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'collaboration_posts.user_id', null);
 
-        $this->applyFilters($query, $filters);
+        $this->applyFilters($request, $query);
 
         $posts = $query->paginate($rowsPerPage)->withQueryString();
 
@@ -54,7 +45,7 @@ class CollaborationPostController extends Controller
             ->values();
 
         $types = class_exists(CollaborationType::class)
-            ? CollaborationType::query()->orderBy('name')->get(['id', 'name', 'slug'])
+            ? CollaborationType::query()->select('id', 'slug', 'name')->orderBy('name')->get()
             : collect();
 
         return view('admin.collaborations.index', [
@@ -66,6 +57,86 @@ class CollaborationPostController extends Controller
             'total' => $posts->total(),
             'from' => $posts->firstItem(),
             'to' => $posts->lastItem(),
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $query = CollaborationPost::query()
+            ->with(['user', 'collaborationType'])
+            ->latest('created_at');
+
+        AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'collaboration_posts.user_id', null);
+
+        $this->applyFilters($request, $query);
+
+        $selectedIds = collect((array) $request->input('selected_ids', []))
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->values()
+            ->all();
+
+        if ($selectedIds !== []) {
+            $query->whereIn('id', $selectedIds);
+        }
+
+        $filename = 'collaborations_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, [
+                'post_id',
+                'peer_name',
+                'peer_company',
+                'peer_city',
+                'collaboration_type',
+                'title',
+                'scope',
+                'preferred_mode',
+                'business_stage',
+                'years_in_operation',
+                'status',
+                'created_at',
+            ]);
+
+            $query->chunk(500, function ($rows) use ($out) {
+                foreach ($rows as $post) {
+                    $user = $post->user;
+                    $peerName = $user?->name
+                        ?? $user?->display_name
+                        ?? $post->peer_name
+                        ?? $post->person_name
+                        ?? $post->name
+                        ?? '—';
+                    $company = ($user?->company_name ?? $user?->company ?? $user?->business_name ?? null)
+                        ?? $post->company
+                        ?? $post->company_name
+                        ?? $post->business_name
+                        ?? '—';
+                    $city = ($user?->city ?? $user?->current_city ?? $user?->location_city ?? null)
+                        ?? $post->city
+                        ?? $post->user_city
+                        ?? '—';
+
+                    fputcsv($out, [
+                        $post->id,
+                        $peerName,
+                        $company,
+                        $city,
+                        $post->collaborationType?->name ?? $post->collaboration_type ?? '—',
+                        $post->title ?? $post->collaboration_title ?? $post->subject ?? '—',
+                        $post->scope ?? $post->collaboration_scope ?? $post->scope_text ?? '—',
+                        $post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode ?? '—',
+                        $post->business_stage ?? $post->stage ?? $post->business_stage_text ?? '—',
+                        $post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years ?? '—',
+                        $post->status ?? '—',
+                        optional($post->created_at)->format('Y-m-d H:i:s') ?? '—',
+                    ]);
+                }
+            });
+
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
         ]);
     }
 
@@ -85,8 +156,27 @@ class CollaborationPostController extends Controller
         ]);
     }
 
-    private function applyFilters(Builder $query, array $filters): void
+    private function collectFilters(Request $request, int $rowsPerPage): array
     {
+        return [
+            'q' => trim((string) $request->query('q', '')),
+            'collaboration_type' => (string) $request->query('collaboration_type', 'all'),
+            'title' => trim((string) $request->query('title', '')),
+            'scope' => trim((string) $request->query('scope', '')),
+            'preferred_mode' => trim((string) $request->query('preferred_mode', '')),
+            'business_stage' => trim((string) $request->query('business_stage', '')),
+            'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
+            'status' => (string) $request->query('status', 'all'),
+            'created_from' => (string) $request->query('created_from', ''),
+            'created_to' => (string) $request->query('created_to', ''),
+            'per_page' => $rowsPerPage,
+        ];
+    }
+
+    private function applyFilters(Request $request, Builder $query): void
+    {
+        $filters = $this->collectFilters($request, (int) $request->query('per_page', 20));
+
         $userColumns = $this->existingUserColumns([
             'name',
             'company_name',
@@ -166,6 +256,14 @@ class CollaborationPostController extends Controller
 
         if ($filters['status'] !== 'all' && $filters['status'] !== '') {
             $query->where('status', $filters['status']);
+        }
+
+        if ($filters['created_from'] !== '') {
+            $query->where('created_at', '>=', Carbon::parse($filters['created_from'])->startOfDay());
+        }
+
+        if ($filters['created_to'] !== '') {
+            $query->where('created_at', '<=', Carbon::parse($filters['created_to'])->endOfDay());
         }
     }
 
