@@ -32,9 +32,11 @@ class CollaborationPostController extends Controller
             }
 
             if (isset($errors['collaborations'])) {
+                $message = $errors['collaborations'][0] ?? 'You have reached the active collaboration post limit.';
+
                 return response()->json([
                     'status' => false,
-                    'message' => 'Free members can have maximum 2 active collaboration posts. Please upgrade to post more.',
+                    'message' => $message,
                     'data' => null,
                     'errors' => $errors,
                 ], 422);

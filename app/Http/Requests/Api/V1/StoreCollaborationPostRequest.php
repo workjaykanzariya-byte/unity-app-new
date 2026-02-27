@@ -29,10 +29,12 @@ class StoreCollaborationPostRequest extends FormRequest
     {
         return [
             'collaboration_type_id' => [
-                'required',
+                'nullable',
                 'uuid',
+                'required_without:collaboration_type',
                 Rule::exists('collaboration_types', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
+            'collaboration_type' => ['nullable', 'string', 'required_without:collaboration_type_id'],
             'title' => ['required', 'string', 'max:80'],
             'description' => ['required', 'string', 'min:500'],
             'scope' => ['required', Rule::in(self::SCOPES)],

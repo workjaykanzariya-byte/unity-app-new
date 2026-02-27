@@ -7,26 +7,13 @@ use App\Models\CollaborationType;
 use App\Models\Industry;
 use App\Models\User;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class CollaborationPostService
 {
     public function createForUser(User $user, array $data): CollaborationPost
     {
-        if ($user->isFreeMember()) {
-            $activePostCount = CollaborationPost::query()
-                ->where('user_id', $user->id)
-                ->where('status', CollaborationPost::STATUS_ACTIVE)
-                ->where('expires_at', '>=', now())
-                ->count();
-
-            if ($activePostCount >= 2) {
-                throw ValidationException::withMessages([
-                    'collaborations' => ['Free members can have maximum 2 active collaboration posts. Please upgrade to post more.'],
-                ]);
-            }
-        }
-
         $industryId = (string) Arr::get($data, 'industry_id');
         $hasChildren = Industry::query()->active()->where('parent_id', $industryId)->exists();
 
@@ -36,14 +23,32 @@ class CollaborationPostService
             ]);
         }
 
-        $type = CollaborationType::query()
-            ->where('id', $data['collaboration_type_id'])
-            ->firstOrFail();
+        $hasTypeIdColumn = Schema::hasColumn('collaboration_posts', 'collaboration_type_id');
+        $hasTypeSlugColumn = Schema::hasColumn('collaboration_posts', 'collaboration_type');
 
-        return CollaborationPost::query()->create([
+        $typeId = Arr::get($data, 'collaboration_type_id');
+        $typeSlug = Arr::get($data, 'collaboration_type');
+
+        if (class_exists(CollaborationType::class) && Schema::hasTable('collaboration_types')) {
+            if ($typeId) {
+                $type = CollaborationType::query()->findOrFail($typeId);
+                $typeId = $type->id;
+                $typeSlug = $type->slug ?? $type->name ?? $typeSlug;
+            } elseif ($typeSlug) {
+                $type = CollaborationType::query()
+                    ->where('slug', $typeSlug)
+                    ->orWhere('name', $typeSlug)
+                    ->first();
+
+                if ($type) {
+                    $typeId = $type->id;
+                    $typeSlug = $type->slug ?? $type->name ?? $typeSlug;
+                }
+            }
+        }
+
+        $payload = [
             'user_id' => $user->id,
-            'collaboration_type_id' => $type->id,
-            'collaboration_type' => $type->slug ?? $type->name,
             'title' => $data['title'],
             'description' => $data['description'],
             'scope' => $data['scope'],
@@ -56,6 +61,16 @@ class CollaborationPostService
             'status' => CollaborationPost::STATUS_ACTIVE,
             'posted_at' => now(),
             'expires_at' => now()->addDays(60),
-        ]);
+        ];
+
+        if ($hasTypeIdColumn && $typeId) {
+            $payload['collaboration_type_id'] = $typeId;
+        }
+
+        if ($hasTypeSlugColumn && $typeSlug) {
+            $payload['collaboration_type'] = $typeSlug;
+        }
+
+        return CollaborationPost::query()->create($payload);
     }
 }
