@@ -13,30 +13,47 @@ class RequirementTimelineResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'user_name' => $creator?->display_name ?: trim(($creator?->first_name ?? '') . ' ' . ($creator?->last_name ?? '')),
-            'company' => $creator?->company_name,
-            'city' => $creator?->city,
-            'category' => data_get($this->category_filter, 'category') ?? data_get($this->category_filter, '0'),
-            'profile_photo_url' => $creator?->profile_photo_url,
+            'user_name' => data_get($creator, 'name')
+                ?: data_get($creator, 'full_name')
+                ?: data_get($creator, 'display_name')
+                ?: trim((string) data_get($creator, 'first_name', '') . ' ' . (string) data_get($creator, 'last_name', '')),
+            'company' => data_get($creator, 'company') ?: data_get($creator, 'company_name', ''),
+            'city' => data_get($creator, 'city', ''),
+            'profile_photo_url' => $this->resolveProfilePhotoUrl($creator),
             'subject' => $this->subject,
             'description' => $this->description,
             'media' => collect($this->media ?? [])->map(function ($item) {
                 if (is_string($item)) {
-                    return ['id' => null, 'type' => 'unknown', 'url' => $item];
+                    return ['type' => 'unknown', 'file_id' => null, 'url' => $item];
                 }
 
-                $id = data_get($item, 'id');
+                $fileId = data_get($item, 'file_id') ?: data_get($item, 'id');
 
                 return [
-                    'id' => $id,
                     'type' => data_get($item, 'type', 'image'),
-                    'url' => data_get($item, 'url') ?: ($id ? url('/api/v1/files/' . $id) : null),
+                    'file_id' => $fileId,
+                    'url' => data_get($item, 'url') ?: ($fileId ? url('/api/v1/files/' . $fileId) : null),
                 ];
             })->values()->all(),
-            'region_filter' => $this->region_filter,
-            'category_filter' => $this->category_filter,
+            'region_filter' => $this->region_filter ?? [],
+            'category_filter' => $this->category_filter ?? [],
             'status' => $this->status,
             'created_at' => optional($this->created_at)?->toISOString(),
         ];
+    }
+
+    private function resolveProfilePhotoUrl(mixed $creator): ?string
+    {
+        if (! $creator) {
+            return null;
+        }
+
+        $profilePhotoId = data_get($creator, 'profile_photo_id') ?: data_get($creator, 'profile_photo_file_id');
+
+        if ($profilePhotoId) {
+            return url('/api/v1/files/' . $profilePhotoId);
+        }
+
+        return data_get($creator, 'profile_photo_url');
     }
 }

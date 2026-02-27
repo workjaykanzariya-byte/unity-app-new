@@ -10,10 +10,10 @@ class RequirementDetailResource extends RequirementTimelineResource
     {
         $data = parent::toArray($request);
 
-        $data['interested_peers_count'] = (int) ($this->interests_count ?? $this->interests?->count() ?? 0);
+        $data['interested_count'] = (int) ($this->interests_count ?? $this->interests?->count() ?? 0);
 
         if ($request->user() && (string) $request->user()->id === (string) $this->user_id) {
-            $data['interested_peers'] = RequirementInterestUserResource::collection($this->whenLoaded('interests'));
+            $data['interested_peers'] = RequirementInterestResource::collection($this->whenLoaded('interests'));
         }
 
         return $data;

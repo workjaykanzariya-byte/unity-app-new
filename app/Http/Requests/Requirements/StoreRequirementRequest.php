@@ -14,14 +14,11 @@ class StoreRequirementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => ['nullable', 'uuid'],
-            'category' => ['nullable', 'string', 'max:100'],
             'subject' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string'],
             'media' => ['nullable', 'array'],
-            'media.*.id' => ['nullable', 'uuid'],
-            'media.*.url' => ['nullable', 'string'],
             'media.*.type' => ['nullable', 'string', 'max:50'],
+            'media.*.file_id' => ['nullable', 'uuid'],
             'region_filter' => ['nullable', 'array'],
             'region_filter.*' => ['string', 'max:100'],
             'category_filter' => ['nullable', 'array'],

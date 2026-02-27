@@ -14,7 +14,7 @@ class CloseRequirementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'close_type' => ['required', 'in:closed,completed'],
+            'status' => ['required', 'in:closed,completed'],
         ];
     }
 }

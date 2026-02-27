@@ -14,7 +14,7 @@ class InterestRequirementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'source' => ['nullable', 'in:timeline_comment,timeline_tag,interest_button'],
+            'source' => ['required', 'in:timeline_comment,timeline_tag,interest_button'],
             'comment' => ['nullable', 'string', 'max:500'],
         ];
     }

@@ -8,6 +8,8 @@ use App\Models\Requirement;
 use App\Models\RequirementInterest;
 use App\Services\Requirements\RequirementNotificationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RequirementInterestController extends Controller
 {
@@ -38,7 +40,20 @@ class RequirementInterestController extends Controller
         );
 
         $requirement->loadMissing('user');
-        $this->requirementNotificationService->notifyRequirementInterest($requirement, $request->user(), $interest->comment);
+
+        try {
+            $this->requirementNotificationService->notifyRequirementInterest(
+                $requirement,
+                $request->user(),
+                $interest->comment
+            );
+        } catch (Throwable $exception) {
+            Log::warning('Interest saved but creator notification failed.', [
+                'requirement_id' => (string) $requirement->id,
+                'user_id' => (string) $request->user()->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status' => true,

@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Events\ActivityCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Requirements\CloseRequirementRequest;
 use App\Http\Requests\Requirements\StoreRequirementRequest;
 use App\Http\Resources\Requirement\RequirementDetailResource;
-use App\Models\Post;
 use App\Models\Requirement;
 use App\Services\Requirements\RequirementNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RequirementController extends Controller
 {
@@ -22,46 +22,35 @@ class RequirementController extends Controller
     public function store(StoreRequirementRequest $request): JsonResponse
     {
         $user = $request->user();
+        $payload = $request->validated();
+
+        $media = collect($payload['media'] ?? [])->map(function ($item) {
+            return [
+                'type' => data_get($item, 'type', 'image'),
+                'file_id' => data_get($item, 'file_id'),
+            ];
+        })->values()->all();
 
         $requirement = Requirement::create([
             'user_id' => $user->id,
-            'subject' => $request->input('subject'),
-            'description' => $request->input('description'),
-            'media' => $request->input('media', []),
-            'region_filter' => $request->input('region_filter', []),
-            'category_filter' => $request->input('category_filter', []),
+            'subject' => $payload['subject'],
+            'description' => $payload['description'] ?? null,
+            'media' => $media,
+            'region_filter' => $payload['region_filter'] ?? [],
+            'category_filter' => $payload['category_filter'] ?? [],
             'status' => 'open',
         ]);
 
-        $timelinePost = Post::create([
-            'user_id' => $user->id,
-            'circle_id' => null,
-            'content_text' => trim($requirement->subject . ' ' . ($requirement->description ?? '')),
-            'media' => collect($requirement->media ?? [])->map(function ($item) {
-                if (is_string($item)) {
-                    return ['id' => null, 'type' => 'unknown', 'url' => $item];
-                }
-
-                $id = data_get($item, 'id');
-
-                return [
-                    'id' => $id,
-                    'type' => data_get($item, 'type', 'image'),
-                    'url' => data_get($item, 'url') ?: ($id ? url('/api/v1/files/' . $id) : null),
-                ];
-            })->values()->all(),
-            'tags' => [],
-            'visibility' => 'public',
-            'moderation_status' => 'pending',
-            'sponsored' => false,
-            'is_deleted' => false,
-        ]);
-
-        $requirement->update(['timeline_post_id' => $timelinePost->id]);
         $requirement->load('user');
 
-        event(new ActivityCreated('Requirement', $requirement, (string) $user->id, null));
-        $this->requirementNotificationService->notifyRequirementCreated($requirement);
+        try {
+            $this->requirementNotificationService->notifyRequirementCreated($requirement);
+        } catch (Throwable $exception) {
+            Log::warning('Requirement created but notifications failed.', [
+                'requirement_id' => (string) $requirement->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'status' => true,
@@ -76,7 +65,7 @@ class RequirementController extends Controller
         $perPage = max(1, min((int) $request->query('per_page', 20), 100));
 
         $paginated = Requirement::query()
-            ->with('user:id,first_name,last_name,display_name,company_name,city,profile_photo_file_id')
+            ->with('user')
             ->withCount('interests')
             ->where('user_id', $request->user()->id)
             ->whereNull('deleted_at')
@@ -100,7 +89,7 @@ class RequirementController extends Controller
     {
         $user = $request->user();
 
-        if ((string) $requirement->user_id !== (string) $user->id && $requirement->status !== 'open') {
+        if ((string) $requirement->user_id !== (string) $user->id && (string) $requirement->status !== 'open') {
             return response()->json([
                 'status' => false,
                 'message' => 'Requirement not found.',
@@ -109,10 +98,7 @@ class RequirementController extends Controller
             ], 404);
         }
 
-        $requirement->load([
-            'user:id,first_name,last_name,display_name,company_name,city,profile_photo_file_id',
-            'interests.user:id,first_name,last_name,display_name,company_name,city,profile_photo_file_id',
-        ])->loadCount('interests');
+        $requirement->load(['user', 'interests.user'])->loadCount('interests');
 
         return response()->json([
             'status' => true,
@@ -127,29 +113,21 @@ class RequirementController extends Controller
         if ((string) $request->user()->id !== (string) $requirement->user_id) {
             return response()->json([
                 'status' => false,
-                'message' => 'Only creator can close this requirement.',
+                'message' => 'Only creator can close/complete this requirement.',
                 'data' => null,
                 'meta' => null,
             ], 403);
         }
 
-        $closeType = $request->input('close_type');
-
         $requirement->update([
-            'status' => $closeType,
-            'closed_at' => $closeType === 'closed' ? now() : $requirement->closed_at,
-            'completed_at' => $closeType === 'completed' ? now() : $requirement->completed_at,
+            'status' => $request->string('status')->toString(),
         ]);
-
-        if ($requirement->timeline_post_id) {
-            Post::query()->where('id', $requirement->timeline_post_id)->update(['is_deleted' => true]);
-        }
 
         $requirement->loadCount('interests');
 
         return response()->json([
             'status' => true,
-            'message' => 'Requirement ' . $closeType . ' successfully.',
+            'message' => 'Requirement updated successfully.',
             'data' => new RequirementDetailResource($requirement),
             'meta' => null,
         ]);
