@@ -3,6 +3,7 @@
 @section('title', 'Collaboration Details')
 
 @section('content')
+@php use App\Support\CollaborationFormatter; @endphp
 @php
     $user = $post->user;
     $name = $user?->name ?: $user?->display_name ?: trim(($user?->first_name ?? '') . ' ' . ($user?->last_name ?? ''));
@@ -50,15 +51,23 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-sm-4">Type</dt>
-                    <dd class="col-sm-8">{{ $post->collaborationType?->name ?? $post->collaboration_type ?? '—' }}</dd>
+                    <dd class="col-sm-8">{{ $post->collaborationType?->name ?? CollaborationFormatter::humanize($post->collaboration_type) }}</dd>
                     <dt class="col-sm-4">Title</dt>
                     <dd class="col-sm-8">{{ $post->title ?? '—' }}</dd>
                     <dt class="col-sm-4">Description</dt>
                     <dd class="col-sm-8">{{ $post->description ?? '—' }}</dd>
+                    <dt class="col-sm-4">Scope</dt>
+                    <dd class="col-sm-8">{{ CollaborationFormatter::humanize($post->scope ?? $post->collaboration_scope ?? $post->scope_text) }}</dd>
+                    <dt class="col-sm-4">Preferred Mode</dt>
+                    <dd class="col-sm-8">{{ CollaborationFormatter::humanize($post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode) }}</dd>
+                    <dt class="col-sm-4">Business Stage</dt>
+                    <dd class="col-sm-8">{{ CollaborationFormatter::humanize($post->business_stage ?? $post->stage ?? $post->business_stage_text) }}</dd>
+                    <dt class="col-sm-4">Year in Operation</dt>
+                    <dd class="col-sm-8">{{ CollaborationFormatter::humanize($post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years) }}</dd>
                     <dt class="col-sm-4">City</dt>
                     <dd class="col-sm-8">{{ $displayCity ?? '—' }}</dd>
                     <dt class="col-sm-4">Status</dt>
-                    <dd class="col-sm-8">{{ ucfirst((string) ($post->status ?? '—')) }}</dd>
+                    <dd class="col-sm-8">{{ CollaborationFormatter::humanize((string) ($post->status ?? '—')) }}</dd>
                     <dt class="col-sm-4">Created At</dt>
                     <dd class="col-sm-8">{{ $post->created_at?->format('Y-m-d H:i') ?? '—' }}</dd>
                 </dl>

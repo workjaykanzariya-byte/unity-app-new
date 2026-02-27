@@ -3,6 +3,7 @@
 @section('title', 'Find & Build Collaborations')
 
 @section('content')
+@php use App\Support\CollaborationFormatter; @endphp
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2">
@@ -114,12 +115,12 @@
                             ?? '—';
 
                         $initial = mb_strtoupper(mb_substr($peerName !== '—' ? $peerName : 'U', 0, 1));
-                        $typeName = $post->collaborationType?->name ?? $post->collaboration_type ?? '—';
+                        $typeName = $post->collaborationType?->name ?? CollaborationFormatter::humanize($post->collaboration_type);
                         $title = $post->title ?? $post->collaboration_title ?? $post->subject ?? '—';
-                        $scope = $post->scope ?? $post->collaboration_scope ?? $post->scope_text ?? '—';
-                        $preferredMode = $post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode ?? '—';
-                        $businessStage = $post->business_stage ?? $post->stage ?? $post->business_stage_text ?? '—';
-                        $yearInOperation = $post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years ?? '—';
+                        $scope = CollaborationFormatter::humanize($post->scope ?? $post->collaboration_scope ?? $post->scope_text);
+                        $preferredMode = CollaborationFormatter::humanize($post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode);
+                        $businessStage = CollaborationFormatter::humanize($post->business_stage ?? $post->stage ?? $post->business_stage_text);
+                        $yearInOperation = CollaborationFormatter::humanize($post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years);
                         $status = $post->status ?? '—';
                     @endphp
                     <tr>
@@ -144,7 +145,7 @@
                         <td>{{ $businessStage }}</td>
                         <td>{{ $yearInOperation }}</td>
                         <td>
-                            <span class="badge {{ strtolower((string) $status) === 'active' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ ucfirst((string) $status) }}</span>
+                            <span class="badge {{ strtolower((string) $status) === 'active' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ CollaborationFormatter::humanize((string) $status) }}</span>
                         </td>
                         <td class="text-end">
                             <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.collaborations.show', ['id' => $post->id] + request()->query()) }}">Details</a>

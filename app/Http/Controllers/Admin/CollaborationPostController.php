@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CollaborationPost;
 use App\Models\CollaborationType;
 use App\Support\AdminCircleScope;
+use App\Support\CollaborationFormatter;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -117,18 +118,26 @@ class CollaborationPostController extends Controller
                         ?? $post->user_city
                         ?? '—';
 
+                    $typeLabel = $post->collaborationType?->name
+                        ?? CollaborationFormatter::humanize($post->collaboration_type);
+                    $scopeLabel = CollaborationFormatter::humanize($post->scope ?? $post->collaboration_scope ?? $post->scope_text);
+                    $preferredLabel = CollaborationFormatter::humanize($post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode);
+                    $businessStageLabel = CollaborationFormatter::humanize($post->business_stage ?? $post->stage ?? $post->business_stage_text);
+                    $yearsLabel = CollaborationFormatter::humanize($post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years);
+                    $statusLabel = CollaborationFormatter::humanize($post->status);
+
                     fputcsv($out, [
                         $post->id,
                         $peerName,
                         $company,
                         $city,
-                        $post->collaborationType?->name ?? $post->collaboration_type ?? '—',
+                        $typeLabel,
                         $post->title ?? $post->collaboration_title ?? $post->subject ?? '—',
-                        $post->scope ?? $post->collaboration_scope ?? $post->scope_text ?? '—',
-                        $post->preferred_mode ?? $post->preferred_model ?? $post->meeting_mode ?? $post->mode ?? '—',
-                        $post->business_stage ?? $post->stage ?? $post->business_stage_text ?? '—',
-                        $post->year_in_operation ?? $post->years_in_operation ?? $post->operating_years ?? $post->years ?? '—',
-                        $post->status ?? '—',
+                        $scopeLabel,
+                        $preferredLabel,
+                        $businessStageLabel,
+                        $yearsLabel,
+                        $statusLabel,
                         optional($post->created_at)->format('Y-m-d H:i:s') ?? '—',
                     ]);
                 }
