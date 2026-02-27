@@ -48,6 +48,7 @@ use App\Http\Controllers\Api\V1\CollaborationTypeController;
 use App\Http\Controllers\Api\V1\CollaborationPostController;
 use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\ZohoOAuthController;
+use App\Http\Controllers\Api\V1\ZohoDebugController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -68,6 +69,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
     Route::get('/zoho/auth', [ZohoOAuthController::class, 'redirect']);
     Route::get('/zoho/callback', [ZohoOAuthController::class, 'callback']);
+
+    if (app()->environment('local')) {
+        Route::get('/zoho/test-token', [ZohoDebugController::class, 'token']);
+    } else {
+        Route::middleware('auth:sanctum')->get('/zoho/test-token', [ZohoDebugController::class, 'token']);
+    }
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
     Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
