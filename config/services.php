@@ -42,6 +42,7 @@ return [
         'redirect_uri' => env('ZOHO_REDIRECT_URI', env('APP_URL').'/api/v1/zoho/callback'),
         'org_id' => env('ZOHO_BILLING_ORG_ID'),
         'dc' => env('ZOHO_REGION', 'in'),
+        'webhook_secret' => env('ZOHO_WEBHOOK_SECRET'),
     ],
 
 ];

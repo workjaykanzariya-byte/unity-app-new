@@ -15,12 +15,12 @@ class ZohoController extends Controller
      * Local test steps:
      * 1) php artisan serve --port=8000
      * 2) ngrok http 8000
-     * 3) Add ngrok + http://127.0.0.1:8000 callback URLs in Zoho app settings
+     * 3) Update Zoho redirect URLs with ngrok + localhost callback
      * 4) GET /api/v1/zoho/test-token
      * 5) GET /api/v1/zoho/plans
-     * 6) POST /api/v1/zoho/checkout {"plan_code":"01"}
-     * 7) Open hosted_page_url and verify no portal-access red error
-     * 8) Verify Razorpay options appear and proceed
+     * 6) POST /api/v1/zoho/customer/ensure
+     * 7) POST /api/v1/zoho/checkout {"plan_code":"01"}
+     * 8) Open payment_url and complete payment
      */
     public function testToken(ZohoBillingService $zoho): JsonResponse
     {
@@ -35,8 +35,6 @@ class ZohoController extends Controller
                 'region' => (string) config('services.zoho.dc', 'in'),
             ]);
         } catch (RuntimeException $e) {
-            Log::error('Zoho test-token failed', ['error' => $e->getMessage()]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to fetch Zoho token',
@@ -52,11 +50,6 @@ class ZohoController extends Controller
             $payload = $response->json();
 
             if (! $response->successful() || ! is_array($payload)) {
-                Log::error('Zoho plans failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
                 return response()->json([
                     'success' => false,
                     'message' => 'Zoho Billing API error',
@@ -65,15 +58,20 @@ class ZohoController extends Controller
                 ], 502);
             }
 
-            $plans = collect($payload['plans'] ?? [])->map(static function (array $p): array {
+            $plans = collect($payload['plans'] ?? [])->map(static function (array $plan): array {
+                $price = $plan['recurring_price'] ?? null;
+                if ($price === null && isset($plan['price_brackets'][0]['price'])) {
+                    $price = $plan['price_brackets'][0]['price'];
+                }
+
                 return [
-                    'plan_code' => $p['plan_code'] ?? null,
-                    'name' => $p['name'] ?? null,
-                    'price' => $p['recurring_price'] ?? ($p['price'] ?? null),
-                    'interval' => ($p['interval'] ?? null) !== null
-                        ? ($p['interval'].' '.($p['interval_unit'] ?? ''))
+                    'plan_code' => $plan['plan_code'] ?? null,
+                    'name' => $plan['name'] ?? null,
+                    'price' => $price,
+                    'interval' => ($plan['interval'] ?? null) !== null
+                        ? ($plan['interval'].' '.($plan['interval_unit'] ?? ''))
                         : null,
-                    'status' => $p['status'] ?? null,
+                    'status' => $plan['status'] ?? null,
                 ];
             })->values()->all();
 
@@ -82,11 +80,27 @@ class ZohoController extends Controller
                 'plans' => $plans,
             ]);
         } catch (RuntimeException $e) {
-            Log::error('Zoho plans exception', ['error' => $e->getMessage()]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Zoho Billing API error',
+                'details' => $this->decodeDetails($e->getMessage()),
+            ], 502);
+        }
+    }
+
+    public function ensureCustomer(Request $request, ZohoBillingService $zoho): JsonResponse
+    {
+        try {
+            $customerId = $zoho->ensureZohoCustomerForUser($request->user());
+
+            return response()->json([
+                'success' => true,
+                'zoho_customer_id' => $customerId,
+            ]);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Zoho error',
                 'details' => $this->decodeDetails($e->getMessage()),
             ], 502);
         }
@@ -98,11 +112,10 @@ class ZohoController extends Controller
             'plan_code' => ['required', 'string', 'max:120'],
         ]);
 
-        $user = $request->user();
         $planCode = (string) $validated['plan_code'];
 
         try {
-            $customerId = $zoho->ensureZohoCustomerForUser($user);
+            $customerId = $zoho->ensureZohoCustomerForUser($request->user());
             $plan = $zoho->getPlanByCode($planCode);
 
             if (! is_array($plan) || (string) ($plan['status'] ?? '') !== 'active') {
@@ -113,16 +126,26 @@ class ZohoController extends Controller
                 ], 422);
             }
 
-            $appUrl = rtrim((string) config('app.url', 'http://127.0.0.1:8000'), '/');
-            $hosted = $zoho->createSubscriptionHostedPage($customerId, $planCode, [
-                'redirect_url' => $appUrl.'/billing/success',
-                'cancel_url' => $appUrl.'/billing/cancel',
-            ]);
+            $invoice = $zoho->createInvoiceForPlan($customerId, $plan);
+            $paymentLink = $zoho->createInvoicePaymentLink((string) $invoice['invoice_id']);
+            $paymentUrl = (string) (
+                $paymentLink['payment_link_url']
+                ?? $paymentLink['url']
+                ?? $invoice['payment_url']
+                ?? $invoice['invoice_url']
+                ?? ''
+            );
+
+            if ($paymentUrl === '') {
+                throw new RuntimeException('Zoho invoice payment URL missing in response.');
+            }
 
             return response()->json([
                 'success' => true,
-                'hosted_page_url' => $hosted['url'] ?? $hosted['hostedpage_url'] ?? null,
-                'hostedpage_id' => $hosted['hostedpage_id'] ?? $hosted['hosted_page_id'] ?? null,
+                'payment_url' => $paymentUrl,
+                'invoice_id' => $invoice['invoice_id'] ?? null,
+                'plan_code' => $planCode,
+                'zoho_customer_id' => $customerId,
             ]);
         } catch (RuntimeException $e) {
             Log::error('Zoho checkout failed', ['error' => $e->getMessage()]);

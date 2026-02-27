@@ -46,8 +46,8 @@ class ZohoBillingService
             'organization_id' => (string) config('services.zoho.org_id'),
         ], $query);
 
-        $request = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken');
         $url = rtrim($this->billingBaseUrl(), '/').'/'.ltrim($path, '/');
+        $request = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken');
 
         if (strtoupper($method) === 'GET') {
             return $request->get($url, $query);
@@ -60,10 +60,7 @@ class ZohoBillingService
 
     public function findCustomerByEmail(string $email): ?array
     {
-        $response = $this->zohoRequest('GET', '/customers', [
-            'email_contains' => $email,
-        ]);
-
+        $response = $this->zohoRequest('GET', '/customers', ['email_contains' => $email]);
         $payload = $response->json();
 
         if (! $response->successful() || ! is_array($payload)) {
@@ -88,15 +85,16 @@ class ZohoBillingService
 
     public function createCustomerWithContactPerson(User $user): array
     {
-        $firstName = (string) ($user->first_name ?? '');
-        $lastName = (string) ($user->last_name ?? '');
         $email = (string) $user->email;
 
         if ($email === '') {
             throw new RuntimeException('User email is required to create Zoho customer.');
         }
 
+        $firstName = (string) ($user->first_name ?? '');
+        $lastName = (string) ($user->last_name ?? '');
         $displayName = trim((string) ($user->display_name ?? ''));
+
         if ($displayName === '') {
             $displayName = trim($firstName.' '.$lastName);
         }
@@ -105,33 +103,28 @@ class ZohoBillingService
         }
 
         $payload = [
-            'display_name' => $displayName,
             'customer_name' => $displayName,
+            'display_name' => $displayName,
             'email' => $email,
             'phone' => $user->phone ?: null,
             'billing_address' => array_filter([
                 'city' => $user->city ?: null,
+                'state' => $user->state ?? null,
                 'country' => 'IN',
-            ], static fn ($v): bool => $v !== null && $v !== ''),
+            ], static fn ($value): bool => $value !== null && $value !== ''),
             'contact_persons' => [[
                 'first_name' => $firstName !== '' ? $firstName : $displayName,
                 'last_name' => $lastName,
                 'email' => $email,
                 'is_primary_contact' => true,
-                'enable_portal' => true,
             ]],
         ];
 
-        return $this->createCustomer($payload);
-    }
-
-    public function createCustomer(array $payload): array
-    {
         $response = $this->zohoRequest('POST', '/customers', [], $payload);
         $body = $response->json();
 
         if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createCustomer failed', $response);
+            $this->logZohoError('createCustomerWithContactPerson failed', $response);
             throw new RuntimeException(json_encode($body));
         }
 
@@ -166,19 +159,18 @@ class ZohoBillingService
     public function createContactPerson(string $customerId, User $user): array
     {
         $email = (string) $user->email;
+
         if ($email === '') {
             throw new RuntimeException('User email is required to create contact person.');
         }
 
-        $payload = [
+        $response = $this->zohoRequest('POST', '/customers/'.$customerId.'/contactpersons', [], [
             'first_name' => (string) ($user->first_name ?? ''),
             'last_name' => (string) ($user->last_name ?? ''),
             'email' => $email,
             'is_primary_contact' => true,
-            'enable_portal' => true,
-        ];
+        ]);
 
-        $response = $this->zohoRequest('POST', '/customers/'.$customerId.'/contactpersons', [], $payload);
         $body = $response->json();
 
         if (! $response->successful() || ! is_array($body)) {
@@ -199,7 +191,6 @@ class ZohoBillingService
     {
         $response = $this->zohoRequest('PUT', '/customers/'.$customerId.'/contactpersons/'.$contactPersonId, [], [
             'is_primary_contact' => true,
-            'enable_portal' => true,
         ]);
 
         $body = $response->json();
@@ -214,10 +205,9 @@ class ZohoBillingService
 
     public function ensurePrimaryPortalContactPerson(string $customerId, User $user): array
     {
-        $email = strtolower((string) $user->email);
         $customer = $this->getCustomer($customerId);
+        $email = strtolower((string) $user->email);
         $contactPersons = $customer['contact_persons'] ?? [];
-
         $existing = null;
 
         if (is_array($contactPersons)) {
@@ -230,7 +220,25 @@ class ZohoBillingService
         }
 
         if (! is_array($existing)) {
-            $existing = $this->createContactPerson($customerId, $user);
+            try {
+                $existing = $this->createContactPerson($customerId, $user);
+            } catch (RuntimeException $e) {
+                $decoded = json_decode($e->getMessage(), true);
+                $duplicate = is_array($decoded)
+                    && str_contains(strtolower((string) ($decoded['message'] ?? '')), 'already exists');
+
+                if (! $duplicate) {
+                    throw $e;
+                }
+
+                $customer = $this->getCustomer($customerId);
+                foreach (($customer['contact_persons'] ?? []) as $contact) {
+                    if (is_array($contact) && strtolower((string) ($contact['email'] ?? '')) === $email) {
+                        $existing = $contact;
+                        break;
+                    }
+                }
+            }
         }
 
         $contactId = (string) ($existing['contact_person_id'] ?? '');
@@ -245,6 +253,15 @@ class ZohoBillingService
     public function ensureZohoCustomerForUser(User $user): string
     {
         $customerId = (string) ($user->zoho_customer_id ?? '');
+
+        if ($customerId !== '') {
+            try {
+                $existingCustomer = $this->getCustomer($customerId);
+                $customerId = (string) ($existingCustomer['customer_id'] ?? '');
+            } catch (RuntimeException) {
+                $customerId = '';
+            }
+        }
 
         if ($customerId === '') {
             $found = $this->findCustomerByEmail((string) $user->email);
@@ -281,13 +298,7 @@ class ZohoBillingService
             throw new RuntimeException(json_encode($payload));
         }
 
-        $plans = $payload['plans'] ?? [];
-
-        if (! is_array($plans)) {
-            return null;
-        }
-
-        foreach ($plans as $plan) {
+        foreach (($payload['plans'] ?? []) as $plan) {
             if (is_array($plan) && (string) ($plan['plan_code'] ?? '') === $planCode) {
                 return $plan;
             }
@@ -296,28 +307,86 @@ class ZohoBillingService
         return null;
     }
 
-    public function createSubscriptionHostedPage(string $customerId, string $planCode, array $extra = []): array
+    public function createInvoiceForPlan(string $customerId, array $plan): array
     {
-        $payload = array_merge([
-            'customer' => ['customer_id' => $customerId],
-            'plan' => ['plan_code' => $planCode],
-        ], $extra);
+        $rate = $plan['recurring_price'] ?? null;
 
-        $response = $this->zohoRequest('POST', '/hostedpages/newsubscription', [], $payload);
+        if ($rate === null && isset($plan['price_brackets'][0]['price'])) {
+            $rate = $plan['price_brackets'][0]['price'];
+        }
+
+        if ($rate === null) {
+            throw new RuntimeException('Plan price not available for invoice creation.');
+        }
+
+        $payload = [
+            'customer_id' => $customerId,
+            'reference_number' => $plan['plan_code'] ?? null,
+            'line_items' => [[
+                'name' => $plan['name'] ?? ($plan['plan_code'] ?? 'Plan'),
+                'description' => $plan['description'] ?? null,
+                'rate' => $rate,
+                'quantity' => 1,
+            ]],
+        ];
+
+        $response = $this->zohoRequest('POST', '/invoices', [], $payload);
         $body = $response->json();
 
         if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createSubscriptionHostedPage failed', $response);
+            $this->logZohoError('createInvoiceForPlan failed', $response);
             throw new RuntimeException(json_encode($body));
         }
 
-        $hostedPage = $body['hostedpage'] ?? $body['hosted_page'] ?? null;
+        $invoice = $body['invoice'] ?? null;
 
-        if (! is_array($hostedPage)) {
+        if (! is_array($invoice) || empty($invoice['invoice_id'])) {
             throw new RuntimeException(json_encode($body));
         }
 
-        return $hostedPage;
+        return $invoice;
+    }
+
+    public function createInvoicePaymentLink(string $invoiceId): array
+    {
+        $response = $this->zohoRequest('POST', '/invoices/'.$invoiceId.'/paymentlink');
+        $body = $response->json();
+
+        if (! $response->successful() || ! is_array($body)) {
+            $this->logZohoError('createInvoicePaymentLink failed', $response);
+            throw new RuntimeException(json_encode($body));
+        }
+
+        return $body['payment_link'] ?? $body;
+    }
+
+    public function findUserByZohoCustomerId(string $customerId): ?User
+    {
+        if (! Schema::hasColumn('users', 'zoho_customer_id')) {
+            return null;
+        }
+
+        return User::query()->where('zoho_customer_id', $customerId)->first();
+    }
+
+    public function computeMembershipEndAt(string $planCode): ?\Carbon\Carbon
+    {
+        $plan = $this->getPlanByCode($planCode);
+
+        if (! is_array($plan)) {
+            return null;
+        }
+
+        $interval = (int) ($plan['interval'] ?? 1);
+        $unit = strtolower((string) ($plan['interval_unit'] ?? 'years'));
+
+        $now = now();
+
+        return match ($unit) {
+            'day', 'days' => $now->copy()->addDays(max($interval, 1)),
+            'month', 'months' => $now->copy()->addMonths(max($interval, 1)),
+            default => $now->copy()->addYears(max($interval, 1)),
+        };
     }
 
     private function refreshAccessToken(): array

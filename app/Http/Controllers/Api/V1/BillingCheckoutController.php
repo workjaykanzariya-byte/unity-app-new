@@ -12,44 +12,10 @@ class BillingCheckoutController extends Controller
 {
     public function store(BillingCheckoutRequest $request, ZohoBillingService $zoho): JsonResponse
     {
-        $user = $request->user();
         $planCode = (string) $request->validated('plan_code');
 
         try {
-            $customerId = (string) ($user->zoho_customer_id ?? '');
-
-            if ($customerId === '') {
-                $existingCustomer = $zoho->findCustomerByEmail((string) $user->email);
-
-                if (is_array($existingCustomer) && ! empty($existingCustomer['customer_id'])) {
-                    $customerId = (string) $existingCustomer['customer_id'];
-                } else {
-                    $displayName = trim((string) ($user->display_name ?? ''));
-                    if ($displayName === '') {
-                        $displayName = trim(((string) ($user->first_name ?? '')).' '.((string) ($user->last_name ?? '')));
-                    }
-
-                    $customer = $zoho->createCustomer([
-                        'display_name' => $displayName !== '' ? $displayName : (string) $user->email,
-                        'email' => (string) $user->email,
-                        'phone' => $user->phone ?: null,
-                        'billing_address' => array_filter([
-                            'city' => $user->city ?: null,
-                            'country' => 'IN',
-                        ], static fn ($value): bool => $value !== null && $value !== ''),
-                    ]);
-
-                    $customerId = (string) ($customer['customer_id'] ?? '');
-                }
-
-                if ($customerId === '') {
-                    throw new RuntimeException('Unable to resolve Zoho customer_id.');
-                }
-
-                $user->zoho_customer_id = $customerId;
-                $user->save();
-            }
-
+            $customerId = $zoho->ensureZohoCustomerForUser($request->user());
             $plan = $zoho->getPlanByCode($planCode);
 
             if (! is_array($plan) || ($plan['status'] ?? null) !== 'active') {
@@ -59,21 +25,24 @@ class BillingCheckoutController extends Controller
                 ], 422);
             }
 
-            $hostedPage = $zoho->createSubscriptionHostedPage($customerId, $planCode);
-            $checkoutUrl = (string) (
-                $hostedPage['url']
-                ?? $hostedPage['hostedpage_url']
-                ?? $hostedPage['hosted_page_url']
+            $invoice = $zoho->createInvoiceForPlan($customerId, $plan);
+            $paymentLink = $zoho->createInvoicePaymentLink((string) $invoice['invoice_id']);
+            $paymentUrl = (string) (
+                $paymentLink['payment_link_url']
+                ?? $paymentLink['url']
+                ?? $invoice['payment_url']
+                ?? $invoice['invoice_url']
                 ?? ''
             );
 
-            if ($checkoutUrl === '') {
-                throw new RuntimeException('Zoho hosted checkout URL missing in response.');
+            if ($paymentUrl === '') {
+                throw new RuntimeException('Zoho invoice payment URL missing in response.');
             }
 
             return response()->json([
                 'success' => true,
-                'checkout_url' => $checkoutUrl,
+                'checkout_url' => $paymentUrl,
+                'invoice_id' => $invoice['invoice_id'] ?? null,
                 'zoho_customer_id' => $customerId,
                 'plan_code' => $planCode,
             ]);

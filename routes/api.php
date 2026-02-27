@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\V1\ZohoOAuthController;
 use App\Http\Controllers\Api\V1\ZohoBillingDebugController;
 use App\Http\Controllers\Api\V1\BillingCheckoutController;
 use App\Http\Controllers\Api\V1\Zoho\ZohoController;
+use App\Http\Controllers\Api\V1\Zoho\ZohoWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -274,6 +275,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('zoho')->group(function () {
             Route::get('/test-token', [ZohoController::class, 'testToken']);
             Route::get('/plans', [ZohoController::class, 'plans']);
+            Route::post('/customer/ensure', [ZohoController::class, 'ensureCustomer']);
             Route::post('/checkout', [ZohoController::class, 'checkout']);
         });
 
@@ -289,6 +291,7 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/membership-plans', [MembershipPlanController::class, 'index']);
     Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle']);
+    Route::post('/webhooks/zoho-billing', [ZohoWebhookController::class, 'handle']);
     Route::get('/files/{id}', [FileController::class, 'show']);
     Route::get('/event-galleries', [EventGalleryApiController::class, 'index']);
     Route::get('/event-galleries/{id}', [EventGalleryApiController::class, 'show']);
