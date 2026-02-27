@@ -68,16 +68,35 @@ class ZohoBillingDebugController extends Controller
             }
 
             $payload = $response->json();
-            $plans = collect($payload['plans'] ?? [])->map(function (array $plan): array {
-                return [
-                    'plan_code' => $plan['plan_code'] ?? null,
-                    'name' => $plan['name'] ?? null,
-                    'price' => $plan['price'] ?? null,
-                    'interval' => $plan['interval'] ?? null,
-                    'status' => $plan['status'] ?? null,
-                    'description' => $plan['description'] ?? null,
-                ];
-            })->values()->all();
+            $plans = collect($payload['plans'] ?? [])
+                ->filter(fn (array $plan): bool => ($plan['status'] ?? null) === 'active')
+                ->map(function (array $plan): array {
+                    $recurringPrice = $plan['recurring_price'] ?? null;
+                    $priceBrackets = $plan['price_brackets'] ?? [];
+                    $priceFromBracket = is_array($priceBrackets) && isset($priceBrackets[0]) && is_array($priceBrackets[0])
+                        ? ($priceBrackets[0]['price'] ?? null)
+                        : null;
+
+                    $interval = $plan['interval'] ?? null;
+                    $intervalUnit = (string) ($plan['interval_unit'] ?? '');
+                    $normalizedUnit = $intervalUnit;
+
+                    if ($interval === 1 && $intervalUnit !== '' && str_ends_with($intervalUnit, 's')) {
+                        $normalizedUnit = substr($intervalUnit, 0, -1);
+                    }
+
+                    return [
+                        'plan_code' => $plan['plan_code'] ?? null,
+                        'name' => $plan['name'] ?? null,
+                        'price' => $recurringPrice ?? $priceFromBracket,
+                        'currency_code' => $plan['currency_code'] ?? null,
+                        'interval' => ($interval !== null && $normalizedUnit !== '') ? $interval.' '.$normalizedUnit : null,
+                        'status' => $plan['status'] ?? null,
+                        'description' => $plan['description'] ?? null,
+                    ];
+                })
+                ->values()
+                ->all();
 
             return response()->json([
                 'success' => true,
@@ -97,7 +116,7 @@ class ZohoBillingDebugController extends Controller
             'success' => false,
             'message' => 'Zoho Billing API error',
             'zoho_status' => $response->status(),
-            'zoho_body' => $response->json() ?? $response->body(),
+            'zoho_body' => $response->body(),
         ], 502);
     }
 }
