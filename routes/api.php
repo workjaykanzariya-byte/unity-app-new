@@ -24,7 +24,6 @@ use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostSaveController;
 use App\Http\Controllers\Api\ReferralController;
-use App\Http\Controllers\Api\RequirementController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
@@ -47,6 +46,9 @@ use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMember
 use App\Http\Controllers\Api\V1\CollaborationTypeController;
 use App\Http\Controllers\Api\V1\CollaborationPostController;
 use App\Http\Controllers\Api\V1\IndustryController;
+use App\Http\Controllers\Api\V1\RequirementController as V1RequirementController;
+use App\Http\Controllers\Api\V1\RequirementInterestController;
+use App\Http\Controllers\Api\V1\TimelineRequirementController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -181,12 +183,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/wallet/transactions', [WalletController::class, 'myTransactions']);
         Route::post('/wallet/topup', [WalletController::class, 'topup']);
 
-        // Requirements
-        Route::post('/requirements', [RequirementController::class, 'store']);
-        Route::get('/requirements', [RequirementController::class, 'index']);
-        Route::get('/requirements/{id}', [RequirementController::class, 'show']);
-        Route::put('/requirements/{id}', [RequirementController::class, 'update']);
-        Route::patch('/requirements/{id}', [RequirementController::class, 'update']);
+        // Requirements (timeline + creator lifecycle)
+        Route::get('/timeline/requirements', [TimelineRequirementController::class, 'index']);
+        Route::post('/requirements', [V1RequirementController::class, 'store']);
+        Route::get('/requirements/{requirement}', [V1RequirementController::class, 'show']);
+        Route::patch('/requirements/{requirement}/close', [V1RequirementController::class, 'close']);
+        Route::post('/requirements/{requirement}/interest', [RequirementInterestController::class, 'store']);
+        Route::get('/my/requirements', [V1RequirementController::class, 'myIndex']);
 
         // Support - user-facing
         Route::post('/support', [SupportController::class, 'store']);
