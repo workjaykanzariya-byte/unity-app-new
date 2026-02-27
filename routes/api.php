@@ -50,6 +50,7 @@ use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\ZohoOAuthController;
 use App\Http\Controllers\Api\V1\ZohoDebugController;
 use App\Http\Controllers\Api\V1\ZohoBillingDebugController;
+use App\Http\Controllers\Api\V1\BillingCheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -273,6 +274,8 @@ Route::prefix('v1')->group(function () {
         // Membership payments
         Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);
         Route::post('/payments/verify', [PaymentController::class, 'verify']);
+
+        Route::post('/billing/checkout', [BillingCheckoutController::class, 'store']);
 
         // Forms
         Route::post('/forms/leader-interest', [LeaderInterestController::class, 'store']);

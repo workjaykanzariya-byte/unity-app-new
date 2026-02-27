@@ -38,6 +38,106 @@ class ZohoBillingService
         return $tokenData;
     }
 
+    public function findCustomerByEmail(string $email): ?array
+    {
+        $response = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken')
+            ->get($this->billingBaseUrl().'/customers', [
+                'organization_id' => (string) config('services.zoho.org_id'),
+                'email_contains' => $email,
+            ]);
+
+        $payload = $response->json();
+
+        if (! $response->successful() || ! is_array($payload)) {
+            throw new RuntimeException(json_encode($payload));
+        }
+
+        $customers = $payload['customers'] ?? [];
+        if (! is_array($customers) || $customers === []) {
+            return null;
+        }
+
+        foreach ($customers as $customer) {
+            if (is_array($customer) && strtolower((string) ($customer['email'] ?? '')) === strtolower($email)) {
+                return $customer;
+            }
+        }
+
+        return is_array($customers[0] ?? null) ? $customers[0] : null;
+    }
+
+    public function createCustomer(array $payload): array
+    {
+        $response = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken')
+            ->post($this->billingBaseUrl().'/customers?organization_id='.(string) config('services.zoho.org_id'), $payload);
+
+        $body = $response->json();
+
+        if (! $response->successful() || ! is_array($body)) {
+            throw new RuntimeException(json_encode($body));
+        }
+
+        $customer = $body['customer'] ?? null;
+        if (! is_array($customer) || empty($customer['customer_id'])) {
+            throw new RuntimeException(json_encode($body));
+        }
+
+        return $customer;
+    }
+
+    public function getPlanByCode(string $planCode): ?array
+    {
+        $response = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken')
+            ->get($this->billingBaseUrl().'/plans', [
+                'organization_id' => (string) config('services.zoho.org_id'),
+            ]);
+
+        $payload = $response->json();
+
+        if (! $response->successful() || ! is_array($payload)) {
+            throw new RuntimeException(json_encode($payload));
+        }
+
+        $plans = $payload['plans'] ?? [];
+        if (! is_array($plans)) {
+            return null;
+        }
+
+        foreach ($plans as $plan) {
+            if (is_array($plan) && (string) ($plan['plan_code'] ?? '') === $planCode) {
+                return $plan;
+            }
+        }
+
+        return null;
+    }
+
+    public function createSubscriptionHostedPage(string $customerId, string $planCode): array
+    {
+        $response = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken')
+            ->post($this->billingBaseUrl().'/hostedpages/newsubscription?organization_id='.(string) config('services.zoho.org_id'), [
+                'customer' => [
+                    'customer_id' => $customerId,
+                ],
+                'plan' => [
+                    'plan_code' => $planCode,
+                ],
+            ]);
+
+        $payload = $response->json();
+
+        if (! $response->successful() || ! is_array($payload)) {
+            throw new RuntimeException(json_encode($payload));
+        }
+
+        $hostedPage = $payload['hostedpage'] ?? null;
+        if (! is_array($hostedPage)) {
+            throw new RuntimeException(json_encode($payload));
+        }
+
+        return $hostedPage;
+    }
+
     private function refreshAccessToken(): array
     {
         $response = Http::asForm()->post(
