@@ -20,17 +20,33 @@ class RequirementController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        Log::info('Create requirement request received', [
+            'user_id' => auth()->id(),
+            'payload' => $request->all(),
+        ]);
+
+        if (! auth()->id()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated',
+                'data' => null,
+                'meta' => null,
+            ], 401);
+        }
+
         $validated = $request->validate([
             'subject' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'media' => ['nullable', 'array'],
+            'media.*.type' => ['nullable', 'string'],
+            'media.*.file_id' => ['nullable', 'string'],
             'region_filter' => ['nullable', 'array'],
             'category_filter' => ['nullable', 'array'],
         ]);
 
         try {
             $requirement = Requirement::create([
-                'user_id' => $request->user()->id,
+                'user_id' => auth()->id(),
                 'subject' => $validated['subject'],
                 'description' => $validated['description'] ?? null,
                 'media' => $validated['media'] ?? [],
@@ -55,9 +71,13 @@ class RequirementController extends Controller
                 'meta' => null,
             ], 201);
         } catch (Throwable $e) {
-            Log::error('Requirement create failed.', [
+            Log::error('Requirement create failed', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'payload' => $request->all(),
+                'user_id' => auth()->id(),
             ]);
 
             return response()->json([
