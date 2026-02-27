@@ -186,7 +186,7 @@ Route::prefix('v1')->group(function () {
         // Requirements (timeline + creator lifecycle)
         Route::get('/timeline/requirements', [TimelineRequirementController::class, 'index']);
         Route::post('/requirements', [V1RequirementController::class, 'store']);
-        Route::get('/requirements/{requirement}', [V1RequirementController::class, 'show']);
+        Route::get('/requirements/{id}', [V1RequirementController::class, 'show']);
         Route::patch('/requirements/{id}/close', [V1RequirementController::class, 'close']);
         Route::post('/requirements/{requirement}/interest', [RequirementInterestController::class, 'store']);
         Route::get('/my/requirements', [V1RequirementController::class, 'myIndex']);

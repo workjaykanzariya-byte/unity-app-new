@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Requirement\RequirementDetailResource;
 use App\Models\Requirement;
+use App\Models\RequirementInterest;
 use App\Services\Requirements\RequirementNotificationService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -114,27 +115,89 @@ class RequirementController extends Controller
         ]);
     }
 
-    public function show(Request $request, Requirement $requirement): JsonResponse
+    public function show(Request $request, $id): JsonResponse
     {
-        $user = $request->user();
+        try {
+            $requirement = Requirement::with('user')->findOrFail($id);
+            $authUserId = (string) $request->user()->id;
+            $isCreator = (string) $requirement->user_id === $authUserId;
 
-        if ((string) $requirement->user_id !== (string) $user->id && (string) $requirement->status !== 'open') {
+            if (! $isCreator && (string) $requirement->status !== 'open') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Requirement not found',
+                    'data' => null,
+                    'meta' => null,
+                ], 404);
+            }
+
+            $data = [
+                'id' => (string) $requirement->id,
+                'subject' => $requirement->subject,
+                'description' => $requirement->description,
+                'media' => $requirement->media ?? [],
+                'region_filter' => $requirement->region_filter ?? [],
+                'category_filter' => $requirement->category_filter ?? [],
+                'status' => $requirement->status,
+                'created_at' => optional($requirement->created_at)?->toISOString(),
+                'user' => [
+                    'id' => (string) $requirement->user?->id,
+                    'display_name' => $requirement->user?->display_name,
+                    'company_name' => $requirement->user?->company_name,
+                    'city' => $requirement->user?->city,
+                    'profile_photo_url' => $requirement->user?->profile_photo_url,
+                ],
+            ];
+
+            if ($isCreator) {
+                $interests = RequirementInterest::with('user')
+                    ->where('requirement_id', $requirement->id)
+                    ->orderByDesc('created_at')
+                    ->get();
+
+                $data['interested_peers'] = $interests->map(function (RequirementInterest $interest): array {
+                    return [
+                        'user_id' => (string) $interest->user_id,
+                        'name' => $interest->user?->display_name,
+                        'company' => $interest->user?->company_name,
+                        'city' => $interest->user?->city,
+                        'source' => $interest->source,
+                        'comment' => $interest->comment,
+                        'created_at' => optional($interest->created_at)?->toISOString(),
+                    ];
+                })->values()->all();
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Requirement fetched successfully',
+                'data' => $data,
+                'meta' => null,
+            ]);
+        } catch (ModelNotFoundException) {
             return response()->json([
                 'status' => false,
-                'message' => 'Requirement not found.',
+                'message' => 'Requirement not found',
                 'data' => null,
                 'meta' => null,
             ], 404);
+        } catch (Throwable $e) {
+            Log::error('Requirement show failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => (string) $request->user()->id,
+                'requirement_id' => (string) $id,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Server error',
+                'data' => null,
+                'meta' => null,
+            ], 500);
         }
-
-        $requirement->load(['user', 'interests.user'])->loadCount('interests');
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Requirement fetched successfully.',
-            'data' => new RequirementDetailResource($requirement),
-            'meta' => null,
-        ]);
     }
 
     public function close(Request $request, $id): JsonResponse
