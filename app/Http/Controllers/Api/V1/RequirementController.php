@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Requirements\CloseRequirementRequest;
 use App\Http\Resources\Requirement\RequirementDetailResource;
 use App\Models\Requirement;
 use App\Services\Requirements\RequirementNotificationService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -137,28 +137,69 @@ class RequirementController extends Controller
         ]);
     }
 
-    public function close(CloseRequirementRequest $request, Requirement $requirement): JsonResponse
+    public function close(Request $request, $id): JsonResponse
     {
-        if ((string) $request->user()->id !== (string) $requirement->user_id) {
+        $validated = $request->validate([
+            'status' => ['required', 'in:closed,completed'],
+        ]);
+
+        try {
+            $requirement = Requirement::query()->findOrFail($id);
+
+            if ((string) $requirement->user_id !== (string) auth()->id()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Forbidden',
+                    'data' => null,
+                    'meta' => null,
+                ], 403);
+            }
+
+            $requirement->status = $validated['status'];
+            $requirement->save();
+
+            try {
+                // Placeholder for future close notification/event hooks.
+            } catch (Throwable $notificationException) {
+                Log::warning('Requirement close notification failed.', [
+                    'requirement_id' => (string) $requirement->id,
+                    'error' => $notificationException->getMessage(),
+                ]);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Requirement updated successfully',
+                'data' => [
+                    'id' => (string) $requirement->id,
+                    'status' => $requirement->status,
+                ],
+                'meta' => null,
+            ], 200);
+        } catch (ModelNotFoundException) {
             return response()->json([
                 'status' => false,
-                'message' => 'Only creator can close/complete this requirement.',
+                'message' => 'Requirement not found',
                 'data' => null,
                 'meta' => null,
-            ], 403);
+            ], 404);
+        } catch (Throwable $e) {
+            Log::error('Requirement close failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all(),
+                'user_id' => auth()->id(),
+                'requirement_id' => (string) $id,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Server error',
+                'data' => null,
+                'meta' => null,
+            ], 500);
         }
-
-        $requirement->update([
-            'status' => $request->string('status')->toString(),
-        ]);
-
-        $requirement->loadCount('interests');
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Requirement updated successfully.',
-            'data' => new RequirementDetailResource($requirement),
-            'meta' => null,
-        ]);
     }
 }
