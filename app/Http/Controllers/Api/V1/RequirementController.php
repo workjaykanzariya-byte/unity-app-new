@@ -58,9 +58,10 @@ class RequirementController extends Controller
 
             $requirement->load('user');
 
-            $notifiedCount = 0;
+            $inAppNotifiedCount = 0;
             try {
-                $notifiedCount = $this->requirementNotificationService->notifyRequirementCreated($requirement);
+                // In-app notifications only (no email channel for requirement creation).
+                $inAppNotifiedCount = $this->requirementNotificationService->notifyRequirementCreated($requirement);
             } catch (Throwable $exception) {
                 Log::error('Requirement notification failed', [
                     'requirement_id' => (string) $requirement->id,
@@ -74,7 +75,7 @@ class RequirementController extends Controller
                 'message' => 'Requirement created',
                 'data' => $requirement,
                 'meta' => [
-                    'notified_count' => $notifiedCount,
+                    'in_app_notified_count' => $inAppNotifiedCount,
                 ],
             ], 201);
         } catch (Throwable $e) {
