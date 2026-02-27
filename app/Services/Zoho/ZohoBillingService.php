@@ -60,7 +60,7 @@ class ZohoBillingService
 
     public function findCustomerByEmail(string $email): ?array
     {
-        $response = $this->zohoRequest('GET', '/customers', ['email_contains' => $email]);
+        $response = $this->zohoRequest('GET', '/customers', ['email_contains' => trim($email)]);
         $payload = $response->json();
 
         if (! $response->successful() || ! is_array($payload)) {
@@ -74,8 +74,10 @@ class ZohoBillingService
             return null;
         }
 
+        $needle = $this->normalizeEmail($email);
+
         foreach ($customers as $customer) {
-            if (is_array($customer) && strtolower((string) ($customer['email'] ?? '')) === strtolower($email)) {
+            if (is_array($customer) && $this->normalizeEmail((string) ($customer['email'] ?? '')) === $needle) {
                 return $customer;
             }
         }
@@ -85,14 +87,14 @@ class ZohoBillingService
 
     public function createCustomerWithContactPerson(User $user): array
     {
-        $email = (string) $user->email;
+        $email = trim((string) $user->email);
 
         if ($email === '') {
             throw new RuntimeException('User email is required to create Zoho customer.');
         }
 
-        $firstName = (string) ($user->first_name ?? '');
-        $lastName = (string) ($user->last_name ?? '');
+        $firstName = trim((string) ($user->first_name ?? ''));
+        $lastName = trim((string) ($user->last_name ?? ''));
         $displayName = trim((string) ($user->display_name ?? ''));
 
         if ($displayName === '') {
@@ -158,15 +160,15 @@ class ZohoBillingService
 
     public function createContactPerson(string $customerId, User $user): array
     {
-        $email = (string) $user->email;
+        $email = trim((string) $user->email);
 
         if ($email === '') {
             throw new RuntimeException('User email is required to create contact person.');
         }
 
         $response = $this->zohoRequest('POST', '/customers/'.$customerId.'/contactpersons', [], [
-            'first_name' => (string) ($user->first_name ?? ''),
-            'last_name' => (string) ($user->last_name ?? ''),
+            'first_name' => trim((string) ($user->first_name ?? '')),
+            'last_name' => trim((string) ($user->last_name ?? '')),
             'email' => $email,
             'is_primary_contact' => true,
         ]);
@@ -205,39 +207,57 @@ class ZohoBillingService
 
     public function ensurePrimaryPortalContactPerson(string $customerId, User $user): array
     {
-        $customer = $this->getCustomer($customerId);
-        $email = strtolower((string) $user->email);
-        $contactPersons = $customer['contact_persons'] ?? [];
-        $existing = null;
+        $email = $this->normalizeEmail((string) $user->email);
 
-        if (is_array($contactPersons)) {
-            foreach ($contactPersons as $contact) {
-                if (is_array($contact) && strtolower((string) ($contact['email'] ?? '')) === $email) {
-                    $existing = $contact;
-                    break;
-                }
-            }
+        if ($email === '') {
+            throw new RuntimeException('User email is required to ensure contact person.');
         }
 
-        if (! is_array($existing)) {
+        $customer = $this->getCustomer($customerId);
+        $existing = $this->findContactPersonByEmail($customer, $email);
+
+        if (is_array($existing)) {
+            Log::info('Zoho contact person reused', [
+                'customer_id' => $customerId,
+                'email' => $email,
+                'action' => 'reused',
+            ]);
+        } else {
             try {
                 $existing = $this->createContactPerson($customerId, $user);
+
+                Log::info('Zoho contact person created', [
+                    'customer_id' => $customerId,
+                    'email' => $email,
+                    'action' => 'created',
+                ]);
             } catch (RuntimeException $e) {
                 $decoded = json_decode($e->getMessage(), true);
-                $duplicate = is_array($decoded)
-                    && str_contains(strtolower((string) ($decoded['message'] ?? '')), 'already exists');
+                $errorCode = is_array($decoded) ? (string) ($decoded['code'] ?? '') : '';
 
-                if (! $duplicate) {
+                Log::warning('Zoho contact person create failed', [
+                    'customer_id' => $customerId,
+                    'email' => $email,
+                    'zoho_error_code' => $errorCode,
+                ]);
+
+                if ($errorCode !== '31027') {
                     throw $e;
                 }
 
                 $customer = $this->getCustomer($customerId);
-                foreach (($customer['contact_persons'] ?? []) as $contact) {
-                    if (is_array($contact) && strtolower((string) ($contact['email'] ?? '')) === $email) {
-                        $existing = $contact;
-                        break;
-                    }
+                $existing = $this->findContactPersonByEmail($customer, $email);
+
+                if (! is_array($existing)) {
+                    throw $e;
                 }
+
+                Log::info('Zoho contact person duplicate resolved by reuse', [
+                    'customer_id' => $customerId,
+                    'email' => $email,
+                    'action' => 'reused_after_31027',
+                    'zoho_error_code' => $errorCode,
+                ]);
             }
         }
 
@@ -252,7 +272,7 @@ class ZohoBillingService
 
     public function ensureZohoCustomerForUser(User $user): string
     {
-        $customerId = (string) ($user->zoho_customer_id ?? '');
+        $customerId = trim((string) ($user->zoho_customer_id ?? ''));
 
         if ($customerId !== '') {
             try {
@@ -387,6 +407,28 @@ class ZohoBillingService
             'month', 'months' => $now->copy()->addMonths(max($interval, 1)),
             default => $now->copy()->addYears(max($interval, 1)),
         };
+    }
+
+    private function findContactPersonByEmail(array $customer, string $normalizedEmail): ?array
+    {
+        $contactPersons = $customer['contact_persons'] ?? [];
+
+        if (! is_array($contactPersons)) {
+            return null;
+        }
+
+        foreach ($contactPersons as $contact) {
+            if (is_array($contact) && $this->normalizeEmail((string) ($contact['email'] ?? '')) === $normalizedEmail) {
+                return $contact;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        return strtolower(trim($email));
     }
 
     private function refreshAccessToken(): array
