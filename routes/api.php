@@ -48,9 +48,9 @@ use App\Http\Controllers\Api\V1\CollaborationTypeController;
 use App\Http\Controllers\Api\V1\CollaborationPostController;
 use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\ZohoOAuthController;
-use App\Http\Controllers\Api\V1\ZohoDebugController;
 use App\Http\Controllers\Api\V1\ZohoBillingDebugController;
 use App\Http\Controllers\Api\V1\BillingCheckoutController;
+use App\Http\Controllers\Api\V1\Zoho\ZohoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -73,15 +73,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/zoho/callback', [ZohoOAuthController::class, 'callback']);
 
     if (app()->environment('local')) {
-        Route::get('/zoho/test-token', [ZohoDebugController::class, 'token']);
         Route::get('/zoho/org', [ZohoBillingDebugController::class, 'org']);
-        Route::get('/zoho/plans', [ZohoBillingDebugController::class, 'plans']);
     } else {
-        Route::middleware('auth:sanctum')->group(function () {
-            Route::get('/zoho/test-token', [ZohoDebugController::class, 'token']);
-            Route::get('/zoho/org', [ZohoBillingDebugController::class, 'org']);
-            Route::get('/zoho/plans', [ZohoBillingDebugController::class, 'plans']);
-        });
+        Route::middleware('auth:sanctum')->get('/zoho/org', [ZohoBillingDebugController::class, 'org']);
     }
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
@@ -276,6 +270,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/payments/verify', [PaymentController::class, 'verify']);
 
         Route::post('/billing/checkout', [BillingCheckoutController::class, 'store']);
+
+        Route::prefix('zoho')->group(function () {
+            Route::get('/test-token', [ZohoController::class, 'testToken']);
+            Route::get('/plans', [ZohoController::class, 'plans']);
+            Route::post('/checkout', [ZohoController::class, 'checkout']);
+        });
 
         // Forms
         Route::post('/forms/leader-interest', [LeaderInterestController::class, 'store']);
