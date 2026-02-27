@@ -5,7 +5,9 @@ namespace App\Services\Requirements;
 use App\Models\Requirement;
 use App\Models\User;
 use App\Services\Notifications\NotifyUserService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class RequirementNotificationService
@@ -27,37 +29,51 @@ class RequirementNotificationService
         User::query()
             ->where('id', '!=', $creator->id)
             ->whereNull('deleted_at')
+            ->when(Schema::hasColumn('users', 'status'), fn ($query) => $query->where('status', 'active'))
+            ->when(Schema::hasColumn('users', 'gdpr_deleted_at'), fn ($query) => $query->whereNull('gdpr_deleted_at'))
+            ->when(Schema::hasColumn('users', 'anonymized_at'), fn ($query) => $query->whereNull('anonymized_at'))
             ->orderBy('id')
             ->chunkById(500, function ($users) use ($creator, $requirement, &$notifiedCount): void {
-                foreach ($users as $user) {
-                    try {
-                        $notification = $this->notifyUserService->notifyUser(
-                            $user,
-                            $creator,
-                            'requirement_created',
-                            [
-                                'notification_type' => 'requirement_created',
-                                'requirement_id' => (string) $requirement->id,
-                                'from_user' => [
-                                    'id' => (string) $creator->id,
-                                    'name' => $this->resolveUserName($creator),
-                                    'company' => $this->resolveUserCompany($creator),
-                                    'city' => (string) ($creator->city ?? ''),
-                                ],
-                            ],
-                            $requirement
-                        );
+                $notificationPayload = [
+                    'notification_type' => 'requirement_created',
+                    'requirement_id' => (string) $requirement->id,
+                    'from_user' => [
+                        'id' => (string) $creator->id,
+                        'name' => $this->resolveUserName($creator),
+                        'company' => $this->resolveUserCompany($creator),
+                        'city' => (string) ($creator->city ?? ''),
+                    ],
+                ];
 
-                        if ($notification) {
-                            $notifiedCount++;
-                        }
-                    } catch (Throwable $exception) {
-                        Log::error('Requirement notification failed', [
-                            'requirement_id' => (string) $requirement->id,
-                            'to_user_id' => (string) $user->id,
-                            'error' => $exception->getMessage(),
-                        ]);
-                    }
+                $now = now();
+                $rows = [];
+
+                foreach ($users as $user) {
+                    $rows[] = [
+                        'user_id' => (string) $user->id,
+                        'type' => 'requirement_created',
+                        'payload' => json_encode($notificationPayload),
+                        'is_read' => false,
+                        'created_at' => $now,
+                        'read_at' => null,
+                    ];
+                }
+
+                if ($rows === []) {
+                    return;
+                }
+
+                try {
+                    DB::table('notifications')->insert($rows);
+                    $notifiedCount += count($rows);
+                } catch (Throwable $exception) {
+                    // Manual SQL when enum blocks inserts in some environments:
+                    // ALTER TYPE notification_type_enum ADD VALUE IF NOT EXISTS 'requirement_created';
+                    Log::error('Requirement notification bulk insert failed', [
+                        'requirement_id' => (string) $requirement->id,
+                        'error' => $exception->getMessage(),
+                        'trace' => $exception->getTraceAsString(),
+                    ]);
                 }
             }, 'id');
 
