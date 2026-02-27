@@ -47,6 +47,10 @@ use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMember
 use App\Http\Controllers\Api\V1\CollaborationTypeController;
 use App\Http\Controllers\Api\V1\CollaborationPostController;
 use App\Http\Controllers\Api\V1\IndustryController;
+use App\Http\Controllers\Api\V1\ZohoOAuthController;
+use App\Http\Controllers\Api\V1\ZohoDebugController;
+use App\Http\Controllers\Api\V1\ZohoBillingDebugController;
+use App\Http\Controllers\Api\V1\BillingCheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -65,6 +69,20 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
+    Route::get('/zoho/auth', [ZohoOAuthController::class, 'redirect']);
+    Route::get('/zoho/callback', [ZohoOAuthController::class, 'callback']);
+
+    if (app()->environment('local')) {
+        Route::get('/zoho/test-token', [ZohoDebugController::class, 'token']);
+        Route::get('/zoho/org', [ZohoBillingDebugController::class, 'org']);
+        Route::get('/zoho/plans', [ZohoBillingDebugController::class, 'plans']);
+    } else {
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/zoho/test-token', [ZohoDebugController::class, 'token']);
+            Route::get('/zoho/org', [ZohoBillingDebugController::class, 'org']);
+            Route::get('/zoho/plans', [ZohoBillingDebugController::class, 'plans']);
+        });
+    }
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
     Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
@@ -256,6 +274,8 @@ Route::prefix('v1')->group(function () {
         // Membership payments
         Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);
         Route::post('/payments/verify', [PaymentController::class, 'verify']);
+
+        Route::post('/billing/checkout', [BillingCheckoutController::class, 'store']);
 
         // Forms
         Route::post('/forms/leader-interest', [LeaderInterestController::class, 'store']);

@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'zoho' => [
+        'client_id' => env('ZOHO_CLIENT_ID'),
+        'client_secret' => env('ZOHO_CLIENT_SECRET'),
+        'refresh_token' => env('ZOHO_REFRESH_TOKEN'),
+        'redirect_uri' => env('ZOHO_REDIRECT_URI', env('APP_URL').'/api/v1/zoho/callback'),
+        'org_id' => env('ZOHO_BILLING_ORG_ID'),
+        'dc' => env('ZOHO_REGION', 'in'),
+    ],
+
 ];
