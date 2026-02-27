@@ -66,7 +66,8 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('/posts/report-reasons', [PostReportReasonsController::class, 'index']);
-    Route::get('/zoho/callback', [ZohoOAuthController::class, 'handleCallback']);
+    Route::get('/zoho/auth', [ZohoOAuthController::class, 'redirect']);
+    Route::get('/zoho/callback', [ZohoOAuthController::class, 'callback']);
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
     Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
