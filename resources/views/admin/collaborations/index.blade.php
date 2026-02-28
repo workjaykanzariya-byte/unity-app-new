@@ -13,10 +13,6 @@
             <h2 class="h5 mb-0">Find &amp; Build Collaborations</h2>
         </div>
         <div class="d-flex align-items-center gap-2 ms-auto flex-wrap justify-content-end">
-            <input type="date" name="created_from" form="collaborationFiltersForm" class="form-control form-control-sm" style="width: 150px;" value="{{ $filters['created_from'] }}" title="Created from">
-            <input type="date" name="created_to" form="collaborationFiltersForm" class="form-control form-control-sm" style="width: 150px;" value="{{ $filters['created_to'] }}" title="Created to">
-            <span class="small text-muted" id="selectedCount">(Selected: 0)</span>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="exportCsvBtn">Export CSV</button>
             <div class="d-flex align-items-center gap-2 ms-2">
                 <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
                 <select id="perPage" name="per_page" class="form-select form-select-sm" style="width: 90px;">
@@ -35,12 +31,20 @@
         </div>
     </div>
 
+    @include('admin.components.activity-filter-bar', [
+        'action' => route('admin.collaborations.index'),
+        'resetUrl' => route('admin.collaborations.index'),
+        'filters' => $filters,
+        'label' => 'Search',
+        'showExport' => true,
+        'exportUrl' => route('admin.collaborations.export', request()->query()),
+    ])
+
     <div class="table-responsive">
         <table class="table align-middle">
             <thead class="table-light">
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="selectAll"></th>
-                    <th>Peer Name</th>
+                                        <th>Peer Name</th>
                     <th>Collaboration Type</th>
                     <th>Title</th>
                     <th>Scope</th>
@@ -49,49 +53,6 @@
                     <th>Year in Operation</th>
                     <th>Status</th>
                     <th class="text-end">Actions</th>
-                </tr>
-                <tr class="bg-light align-middle">
-                    <th></th>
-                    <th>
-                        <input type="text" name="q" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Search peer, title, scope…" value="{{ $filters['q'] }}">
-                    </th>
-                    <th>
-                        <select name="collaboration_type" form="collaborationFiltersForm" class="form-select form-select-sm">
-                            <option value="all">All</option>
-                            @foreach ($types as $type)
-                                <option value="{{ $type->slug }}" @selected($filters['collaboration_type'] === (string) $type->slug)>{{ $type->name }}</option>
-                            @endforeach
-                        </select>
-                    </th>
-                    <th>
-                        <input type="text" name="title" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Title" value="{{ $filters['title'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="scope" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Scope" value="{{ $filters['scope'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="preferred_mode" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Preferred Mode" value="{{ $filters['preferred_mode'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="business_stage" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Business Stage" value="{{ $filters['business_stage'] }}">
-                    </th>
-                    <th>
-                        <input type="text" name="year_in_operation" form="collaborationFiltersForm" class="form-control form-control-sm" placeholder="Year in Operation" value="{{ $filters['year_in_operation'] }}">
-                    </th>
-                    <th>
-                        <select name="status" form="collaborationFiltersForm" class="form-select form-select-sm">
-                            <option value="all">All</option>
-                            @foreach ($statuses as $status)
-                                <option value="{{ $status }}" @selected($filters['status'] === $status)>{{ ucfirst($status) }}</option>
-                            @endforeach
-                        </select>
-                    </th>
-                    <th class="text-end">
-                        <form id="collaborationFiltersForm" method="GET" class="d-flex gap-2 justify-content-end">
-                            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-                            <a class="btn btn-sm btn-outline-secondary" href="{{ route('admin.collaborations.index') }}">Reset</a>
-                        </form>
-                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -123,7 +84,6 @@
                         $status = $post->status ?? '—';
                     @endphp
                     <tr>
-                        <td><input type="checkbox" class="form-check-input row-checkbox" value="{{ $post->id }}"></td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <div class="avatar avatar-sm rounded-circle border d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
@@ -154,7 +114,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">No collaboration posts found.</td>
+                        <td colspan="9" class="text-center text-muted py-4">No collaboration posts found.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -179,35 +139,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const perPage = document.getElementById('perPage');
-        const exportBtn = document.getElementById('exportCsvBtn');
-        const selectAll = document.getElementById('selectAll');
-        const rowCheckboxes = () => Array.from(document.querySelectorAll('.row-checkbox'));
-        const selectedCount = document.getElementById('selectedCount');
-        const exportRoute = @json(route('admin.collaborations.export'));
-
-        const updateSelectedCount = () => {
-            const selected = rowCheckboxes().filter(cb => cb.checked).length;
-            if (selectedCount) {
-                selectedCount.textContent = `(Selected: ${selected})`;
-            }
-        };
-
-        selectAll?.addEventListener('change', () => {
-            rowCheckboxes().forEach(cb => {
-                cb.checked = selectAll.checked;
-            });
-            updateSelectedCount();
-        });
-
-        rowCheckboxes().forEach(cb => {
-            cb.addEventListener('change', () => {
-                const all = rowCheckboxes();
-                if (selectAll) {
-                    selectAll.checked = all.length > 0 && all.every(item => item.checked);
-                }
-                updateSelectedCount();
-            });
-        });
 
         if (perPage) {
             perPage.addEventListener('change', () => {
@@ -217,16 +148,6 @@
                 window.location = `${window.location.pathname}?${params.toString()}`;
             });
         }
-
-        exportBtn?.addEventListener('click', () => {
-            const params = new URLSearchParams(window.location.search);
-            rowCheckboxes().filter(cb => cb.checked).forEach(cb => {
-                params.append('selected_ids[]', cb.value);
-            });
-            window.location.href = `${exportRoute}?${params.toString()}`;
-        });
-
-        updateSelectedCount();
     });
 </script>
 @endpush

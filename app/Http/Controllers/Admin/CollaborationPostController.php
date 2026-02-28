@@ -179,6 +179,9 @@ class CollaborationPostController extends Controller
 
     private function collectFilters(Request $request, int $rowsPerPage): array
     {
+        $from = (string) $request->query('from', $request->query('created_from', ''));
+        $to = (string) $request->query('to', $request->query('created_to', ''));
+
         return [
             'q' => trim((string) $request->query('q', '')),
             'collaboration_type' => (string) $request->query('collaboration_type', 'all'),
@@ -188,8 +191,10 @@ class CollaborationPostController extends Controller
             'business_stage' => trim((string) $request->query('business_stage', '')),
             'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
             'status' => (string) $request->query('status', 'all'),
-            'created_from' => (string) $request->query('created_from', ''),
-            'created_to' => (string) $request->query('created_to', ''),
+            'from' => $from,
+            'to' => $to,
+            'created_from' => $from,
+            'created_to' => $to,
             'per_page' => $rowsPerPage,
         ];
     }
@@ -279,12 +284,20 @@ class CollaborationPostController extends Controller
             $query->where('status', $filters['status']);
         }
 
-        if ($filters['created_from'] !== '') {
-            $query->where('created_at', '>=', Carbon::parse($filters['created_from'])->startOfDay());
+        try {
+            if ($filters['from'] !== '') {
+                $query->where('created_at', '>=', Carbon::parse($filters['from'])->startOfDay());
+            }
+        } catch (\Throwable $exception) {
+            // ignore invalid date
         }
 
-        if ($filters['created_to'] !== '') {
-            $query->where('created_at', '<=', Carbon::parse($filters['created_to'])->endOfDay());
+        try {
+            if ($filters['to'] !== '') {
+                $query->where('created_at', '<=', Carbon::parse($filters['to'])->endOfDay());
+            }
+        } catch (\Throwable $exception) {
+            // ignore invalid date
         }
     }
 

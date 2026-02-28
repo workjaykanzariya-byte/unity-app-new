@@ -38,29 +38,11 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <form method="GET" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control" placeholder="Name, email, company, or city">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">From</label>
-                    <input type="date" name="from" value="{{ $filters['from'] }}" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">To</label>
-                    <input type="date" name="to" value="{{ $filters['to'] }}" class="form-control">
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100">Apply</button>
-                    <a href="{{ route('admin.activities.become-a-leader.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    @include('admin.components.activity-filter-bar', [
+        'action' => route('admin.activities.become-a-leader.index'),
+        'resetUrl' => route('admin.activities.become-a-leader.index'),
+        'filters' => $filters,
+    ])
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
