@@ -21,10 +21,12 @@ class CollaborationPostController extends Controller
                 ->where('id', $request->collaboration_type_id)
                 ->firstOrFail();
 
+            $collaborationTypeSlug = $type->slug ?: $type->name;
+
             $post = CollaborationPost::create([
                 'user_id' => $user->id,
                 'collaboration_type_id' => $type->id,
-                'collaboration_type' => $type->slug,
+                'collaboration_type' => $collaborationTypeSlug,
                 'title' => $request->title,
                 'description' => $request->description,
                 'scope' => $request->scope,
