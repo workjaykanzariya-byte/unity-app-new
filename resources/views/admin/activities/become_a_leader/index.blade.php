@@ -3,6 +3,9 @@
 @section('title', 'Become A Leader')
 
 @section('content')
+    <style>
+        .peer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: block; }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -79,15 +82,18 @@
                 <tbody>
                     @forelse ($items as $item)
                         @php
-                            $peer = $item->user;
-                            $peerName = $displayName($peer->display_name ?? null, $peer->first_name ?? null, $peer->last_name ?? null);
+                            $peerName = $item->peer_name ?? '—';
                         @endphp
                         <tr>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
-                            <td><div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
-                            <div class="text-muted small">{{ $peer->company_name ?? '—' }}</div>
-                            <div class="text-muted small">{{ $peer->city ?? 'No City' }}</div></td>
-                            <td>{{ $peer->phone ?? '—' }}</td>
+                            <td>
+                                @include('admin.components.peer-card', [
+                                    'name' => $peerName,
+                                    'company' => $item->peer_company ?? '',
+                                    'city' => $item->peer_city ?? '',
+                                ])
+                            </td>
+                            <td>{{ $item->peer_phone ?? '—' }}</td>
                             <td>{{ $item->applying_for ?? '—' }}</td>
                             <td>{{ $item->referred_name ?? '—' }}</td>
                             <td>{{ $item->referred_mobile ?? '—' }}</td>

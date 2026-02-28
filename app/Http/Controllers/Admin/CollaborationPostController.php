@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -27,8 +28,15 @@ class CollaborationPostController extends Controller
         $filters = $this->collectFilters($request, $rowsPerPage);
 
         $query = CollaborationPost::query()
-            ->with(['user', 'collaborationType'])
-            ->latest('created_at');
+            ->leftJoin('users as peer', 'peer.id', '=', 'collaboration_posts.user_id')
+            ->with(['collaborationType'])
+            ->select([
+                'collaboration_posts.*',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '—') as peer_name"),
+                DB::raw("coalesce(peer.company_name, '') as peer_company"),
+                DB::raw("coalesce(peer.city, '') as peer_city"),
+            ])
+            ->latest('collaboration_posts.created_at');
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'collaboration_posts.user_id', null);
 
@@ -64,8 +72,15 @@ class CollaborationPostController extends Controller
     public function export(Request $request)
     {
         $query = CollaborationPost::query()
-            ->with(['user', 'collaborationType'])
-            ->latest('created_at');
+            ->leftJoin('users as peer', 'peer.id', '=', 'collaboration_posts.user_id')
+            ->with(['collaborationType'])
+            ->select([
+                'collaboration_posts.*',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '—') as peer_name"),
+                DB::raw("coalesce(peer.company_name, '') as peer_company"),
+                DB::raw("coalesce(peer.city, '') as peer_city"),
+            ])
+            ->latest('collaboration_posts.created_at');
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'collaboration_posts.user_id', null);
 
@@ -101,19 +116,16 @@ class CollaborationPostController extends Controller
 
             $query->chunk(500, function ($rows) use ($out) {
                 foreach ($rows as $post) {
-                    $user = $post->user;
-                    $peerName = $user?->name
-                        ?? $user?->display_name
-                        ?? $post->peer_name
+                    $peerName = $post->peer_name
                         ?? $post->person_name
                         ?? $post->name
                         ?? '—';
-                    $company = ($user?->company_name ?? $user?->company ?? $user?->business_name ?? null)
+                    $company = ($post->peer_company ?? null)
                         ?? $post->company
                         ?? $post->company_name
                         ?? $post->business_name
                         ?? '—';
-                    $city = ($user?->city ?? $user?->current_city ?? $user?->location_city ?? null)
+                    $city = ($post->peer_city ?? null)
                         ?? $post->city
                         ?? $post->user_city
                         ?? '—';

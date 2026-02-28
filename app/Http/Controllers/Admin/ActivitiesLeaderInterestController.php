@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ActivitiesLeaderInterestController extends Controller
@@ -23,7 +24,14 @@ class ActivitiesLeaderInterestController extends Controller
         $applyingFor = $request->query('applying_for', 'all');
 
         $query = LeaderInterestSubmission::query()
-            ->with(['user:id,display_name,first_name,last_name,phone,email,company_name,city']);
+            ->leftJoin('users as peer', 'peer.id', '=', 'leader_interest_submissions.user_id')
+            ->select([
+                'leader_interest_submissions.*',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '—') as peer_name"),
+                DB::raw("coalesce(peer.company_name, '') as peer_company"),
+                DB::raw("coalesce(peer.city, '') as peer_city"),
+                'peer.phone as peer_phone',
+            ]);
 
         if ($applyingFor && $applyingFor !== 'all') {
             $query->where('applying_for', $applyingFor);
@@ -35,15 +43,13 @@ class ActivitiesLeaderInterestController extends Controller
                 $q->where('referred_name', 'ILIKE', $like)
                     ->orWhere('referred_mobile', 'ILIKE', $like)
                     ->orWhere('contribute_city', 'ILIKE', $like)
-                    ->orWhereHas('user', function ($userQuery) use ($like) {
-                        $userQuery->where('display_name', 'ILIKE', $like)
-                            ->orWhere('first_name', 'ILIKE', $like)
-                            ->orWhere('last_name', 'ILIKE', $like)
-                            ->orWhere('phone', 'ILIKE', $like)
-                            ->orWhere('email', 'ILIKE', $like)
-                            ->orWhere('company_name', 'ILIKE', $like)
-                            ->orWhere('city', 'ILIKE', $like);
-                    });
+                    ->orWhere('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like)
+                    ->orWhere('peer.phone', 'ILIKE', $like)
+                    ->orWhere('peer.email', 'ILIKE', $like)
+                    ->orWhere('peer.company_name', 'ILIKE', $like)
+                    ->orWhere('peer.city', 'ILIKE', $like);
             });
         }
 

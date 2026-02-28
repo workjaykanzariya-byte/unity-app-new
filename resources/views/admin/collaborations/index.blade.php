@@ -3,6 +3,9 @@
 @section('title', 'Find & Build Collaborations')
 
 @section('content')
+    <style>
+        .peer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: block; }
+    </style>
 @php use App\Support\CollaborationFormatter; @endphp
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -94,22 +97,18 @@
             <tbody>
                 @forelse ($posts as $post)
                     @php
-                        $u = $post->user;
-
-                        $peerName = $u?->name
-                            ?? $u?->display_name
-                            ?? $post->peer_name
+                        $peerName = $post->peer_name
                             ?? $post->person_name
                             ?? $post->name
                             ?? '—';
 
-                        $company = ($u?->company_name ?? $u?->company ?? $u?->business_name ?? null)
+                        $company = ($post->peer_company ?? null)
                             ?? $post->company
                             ?? $post->company_name
                             ?? $post->business_name
                             ?? '—';
 
-                        $city = ($u?->city ?? $u?->current_city ?? $u?->location_city ?? null)
+                        $city = ($post->peer_city ?? null)
                             ?? $post->city
                             ?? $post->user_city
                             ?? '—';
@@ -132,9 +131,11 @@
                                 </div>
 
                                 <div class="min-w-0">
-                                    <div class="fw-semibold text-truncate">{{ $peerName }}</div>
-                                    <div class="text-muted small text-truncate">{{ $company }}</div>
-                                    <div class="text-muted small text-truncate">{{ $city }}</div>
+                                    @include('admin.components.peer-card', [
+                                        'name' => $peerName,
+                                        'company' => $company,
+                                        'city' => $city,
+                                    ])
                                 </div>
                             </div>
                         </td>

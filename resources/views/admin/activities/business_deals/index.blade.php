@@ -3,6 +3,9 @@
 @section('title', 'Business Deals')
 
 @section('content')
+    <style>
+        .peer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: block; }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -123,14 +126,18 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $deal->actor_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $deal->actor_city_name ?? 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $deal->from_user_name ?? $actorName,
+                                    'company' => $deal->from_company ?? '',
+                                    'city' => $deal->from_city ?? '',
+                                ])
                             </td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $deal->peer_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $deal->peer_city_name ?? 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $deal->to_user_name ?? $peerName,
+                                    'company' => $deal->to_company ?? '',
+                                    'city' => $deal->to_city ?? '',
+                                ])
                             </td>
                             <td>{{ $formatDate($deal->deal_date ?? null) }}</td>
                             <td>{{ $deal->deal_amount ?? '—' }}</td>
