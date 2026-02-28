@@ -31,14 +31,6 @@
         </div>
     </div>
 
-    @include('admin.components.activity-filter-bar', [
-        'action' => route('admin.collaborations.index'),
-        'resetUrl' => route('admin.collaborations.index'),
-        'filters' => $filters,
-        'label' => 'Search',
-        'showExport' => true,
-        'exportUrl' => route('admin.collaborations.export', request()->query()),
-    ])
 
     <div class="table-responsive">
         <table class="table align-middle">
@@ -54,6 +46,15 @@
                     <th>Status</th>
                     <th class="text-end">Actions</th>
                 </tr>
+
+                    @include('admin.components.activity-table-header-filters', [
+                        'actionUrl' => route('admin.collaborations.index'),
+                        'resetUrl' => route('admin.collaborations.index'),
+                        'filters' => $filters,
+                        'colspan' => 9,
+                        'showExport' => true,
+                        'exportUrl' => route('admin.collaborations.export', request()->query()),
+                    ])
             </thead>
             <tbody>
                 @forelse ($posts as $post)

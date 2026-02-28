@@ -47,15 +47,9 @@
         <h1 class="h4 mb-0">P2P Meetings</h1>
         <div class="d-flex gap-2 align-items-center">
             <span class="badge bg-light text-dark border">Total Meetings: {{ number_format($total) }}</span>
-            <a href="{{ route('admin.activities.p2p-meetings.export', request()->query()) }}" class="btn btn-outline-primary">Export</a>
         </div>
     </div>
 
-    @include('admin.components.activity-filter-bar', [
-        'action' => route('admin.activities.p2p-meetings.index'),
-        'resetUrl' => route('admin.activities.p2p-meetings.index'),
-        'filters' => $filters,
-    ])
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
             <strong>Top 5 Peers</strong>
@@ -106,6 +100,15 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+
+                    @include('admin.components.activity-table-header-filters', [
+                        'actionUrl' => route('admin.activities.p2p-meetings.index'),
+                        'resetUrl' => route('admin.activities.p2p-meetings.index'),
+                        'filters' => $filters,
+                        'colspan' => 7,
+                        'showExport' => true,
+                        'exportUrl' => route('admin.activities.p2p-meetings.export', request()->query()),
+                    ])
                 </thead>
                 <tbody>
                     @forelse ($items as $meeting)

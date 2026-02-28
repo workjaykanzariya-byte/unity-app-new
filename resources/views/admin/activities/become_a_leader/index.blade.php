@@ -38,11 +38,6 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
-    @include('admin.components.activity-filter-bar', [
-        'action' => route('admin.activities.become-a-leader.index'),
-        'resetUrl' => route('admin.activities.become-a-leader.index'),
-        'filters' => $filters,
-    ])
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
@@ -60,6 +55,14 @@
                         <th>Why Interested</th>
                         <th>Created At</th>
                     </tr>
+
+                    @include('admin.components.activity-table-header-filters', [
+                        'actionUrl' => route('admin.activities.become-a-leader.index'),
+                        'resetUrl' => route('admin.activities.become-a-leader.index'),
+                        'filters' => $filters,
+                        'colspan' => 11,
+                        'showExport' => false,
+                    ])
                 </thead>
                 <tbody>
                     @forelse ($items as $item)
