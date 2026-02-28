@@ -15,9 +15,9 @@ class ActivitiesRequirementsController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $this->filters($request);
+        $filters = $this->buildFilters($request);
 
-        $baseQuery = $this->baseQuery($request, $filters);
+        $baseQuery = $this->baseQuery($filters);
         $total = (clone $baseQuery)->count();
 
         $items = $baseQuery
@@ -51,7 +51,7 @@ class ActivitiesRequirementsController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $filters = $this->filters($request);
+        $filters = $this->buildFilters($request);
         $filename = 'requirements_' . now()->format('Ymd_His') . '.csv';
 
         return response()->streamDownload(function () use ($request, $filters) {
@@ -80,7 +80,7 @@ class ActivitiesRequirementsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($request, $filters)
+                $this->baseQuery($filters)
                     ->select([
                         'activity.id',
                         'activity.subject',
@@ -132,17 +132,27 @@ class ActivitiesRequirementsController extends Controller
         ]);
     }
 
-    private function filters(Request $request): array
+    private function buildFilters(Request $request): array
     {
+        $from = $request->query('from');
+        $to = $request->query('to');
+        $fromAtRaw = $request->query('from_at', $from);
+        $toAtRaw = $request->query('to_at', $to);
+
         return [
             'q' => trim((string) $request->query('q', $request->query('search', ''))),
             'status' => $request->query('status'),
-            'from' => $request->query('from'),
-            'to' => $request->query('to'),
+            'from' => $from,
+            'to' => $to,
+            'from_at' => $fromAtRaw,
+            'to_at' => $toAtRaw,
+            'from_dt' => $this->parseDayBoundary($fromAtRaw, false),
+            'to_dt' => $this->parseDayBoundary($toAtRaw, true),
+            'per_page' => (int) $request->query('per_page', 20),
         ];
     }
 
-    private function baseQuery(Request $request, array $filters)
+    private function baseQuery(array $filters)
     {
         $query = DB::table('requirements as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.user_id')
@@ -162,17 +172,15 @@ class ActivitiesRequirementsController extends Controller
             });
         }
 
-        if ($filters['status']) {
+        if (! empty($filters['status'])) {
             $query->where('activity.status', $filters['status']);
         }
 
-        if ($filters['from_at']) {
-            $query->where('activity.created_at', '>=', $filters['from_at']);
-        }
+        $from = $filters['from_dt'] ?? null;
+        $to = $filters['to_dt'] ?? null;
 
-        if ($filters['to_at']) {
-            $query->where('activity.created_at', '<=', $filters['to_at']);
-        }
+        $query->when($from, fn ($inner) => $inner->where('activity.created_at', '>=', $from))
+            ->when($to, fn ($inner) => $inner->where('activity.created_at', '<=', $to));
 
         $this->applyScopeToActivityQuery($query, 'activity.user_id');
 
