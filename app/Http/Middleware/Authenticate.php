@@ -8,13 +8,12 @@ class Authenticate extends Middleware
 {
     protected function redirectTo($request)
     {
-        // ✅ IMPORTANT: For API/JSON requests, NEVER redirect to route('login')
-        // Returning null makes Laravel return 401/403 JSON instead of throwing "Route [login] not defined."
-        if ($request->expectsJson()) {
+        // ✅ For any API request, never redirect to route('login')
+        if ($request->expectsJson() || $request->is('api/*') || $request->routeIs('api.*')) {
             return null;
         }
 
-        // If this project does not use a web login route, keep null to avoid exceptions.
+        // This project doesn't rely on web login redirects here
         return null;
     }
 }
