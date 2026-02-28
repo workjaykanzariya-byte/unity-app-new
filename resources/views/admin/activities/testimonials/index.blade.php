@@ -112,7 +112,12 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $member->peer_name ?? $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null),
+                                    'company' => $member->peer_company ?? '',
+                                    'city' => $member->peer_city ?? '',
+                                    'maxWidth' => 260,
+                                ])
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
@@ -148,14 +153,18 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $testimonial->from_user_name ?? $actorName }}</div>
-                                <div class="small text-muted">{{ ($testimonial->from_company ?? '') !== '' ? $testimonial->from_company : '—' }}</div>
-                                <div class="small text-muted">{{ ($testimonial->from_city ?? '') !== '' ? $testimonial->from_city : 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $testimonial->from_user_name ?? $actorName,
+                                    'company' => $testimonial->from_company ?? '',
+                                    'city' => $testimonial->from_city ?? '',
+                                ])
                             </td>
                             <td>
-                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $testimonial->to_user_name ?? $peerName }}</div>
-                                <div class="small text-muted">{{ ($testimonial->to_company ?? '') !== '' ? $testimonial->to_company : '—' }}</div>
-                                <div class="small text-muted">{{ ($testimonial->to_city ?? '') !== '' ? $testimonial->to_city : 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $testimonial->to_user_name ?? $peerName,
+                                    'company' => $testimonial->to_company ?? '',
+                                    'city' => $testimonial->to_city ?? '',
+                                ])
                             </td>
                             <td class="text-muted">{{ $testimonial->content ?? '—' }}</td>
                             <td>

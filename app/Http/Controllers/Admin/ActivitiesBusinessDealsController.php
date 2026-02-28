@@ -215,7 +215,9 @@ class ActivitiesBusinessDealsController extends Controller
                 'actor.display_name',
                 'actor.first_name',
                 'actor.last_name',
-                'actor.email'
+                'actor.email',
+                'actor.company_name',
+                'actor.city'
             )
             ->orderByDesc(DB::raw('count(*)'))
             ->limit(5)
@@ -225,6 +227,11 @@ class ActivitiesBusinessDealsController extends Controller
                 'actor.first_name',
                 'actor.last_name',
                 'actor.email',
+                'actor.company_name',
+                'actor.city',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '—') as peer_name"),
+                DB::raw("coalesce(actor.company_name, '') as peer_company"),
+                DB::raw("coalesce(actor.city, '') as peer_city"),
                 DB::raw('count(*) as total_count'),
             ])
             ->get();

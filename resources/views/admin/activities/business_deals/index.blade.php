@@ -88,7 +88,12 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $member->peer_name ?? $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null),
+                                    'company' => $member->peer_company ?? '',
+                                    'city' => $member->peer_city ?? '',
+                                    'maxWidth' => 260,
+                                ])
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>

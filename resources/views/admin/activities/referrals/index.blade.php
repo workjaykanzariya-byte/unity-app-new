@@ -92,7 +92,12 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $member->peer_name ?? $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null),
+                                    'company' => $member->peer_company ?? '',
+                                    'city' => $member->peer_city ?? '',
+                                    'maxWidth' => 260,
+                                ])
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
@@ -134,14 +139,18 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $referral->from_user_name ?? $actorName }}</div>
-                                <div class="small text-muted">{{ ($referral->from_company ?? '') !== '' ? $referral->from_company : '—' }}</div>
-                                <div class="small text-muted">{{ ($referral->from_city ?? '') !== '' ? $referral->from_city : 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $referral->from_user_name ?? $actorName,
+                                    'company' => $referral->from_company ?? '',
+                                    'city' => $referral->from_city ?? '',
+                                ])
                             </td>
                             <td>
-                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $referral->to_user_name ?? $peerName }}</div>
-                                <div class="small text-muted">{{ ($referral->to_company ?? '') !== '' ? $referral->to_company : '—' }}</div>
-                                <div class="small text-muted">{{ ($referral->to_city ?? '') !== '' ? $referral->to_city : 'No City' }}</div>
+                                @include('admin.components.peer-card', [
+                                    'name' => $referral->to_user_name ?? $peerName,
+                                    'company' => $referral->to_company ?? '',
+                                    'city' => $referral->to_city ?? '',
+                                ])
                             </td>
                             <td>{{ $referral->referral_type ?? '—' }}</td>
                             <td>{{ $formatDate($referral->referral_date ?? null) }}</td>

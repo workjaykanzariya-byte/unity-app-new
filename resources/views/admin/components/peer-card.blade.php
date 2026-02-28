@@ -1,5 +1,5 @@
 <div class="peer-card">
-    <div class="peer-name fw-semibold text-truncate" style="max-width:220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display:block;">
+    <div class="peer-name fw-semibold text-truncate" style="max-width: {{ $maxWidth ?? 220 }}px;">
         {{ ($name ?? '') !== '' ? $name : '—' }}
     </div>
     <div class="small text-muted">{{ ($company ?? '') !== '' ? $company : '—' }}</div>
