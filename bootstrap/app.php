@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AdminCircleScope;
 use App\Http\Middleware\AdminRoleMiddleware;
+use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EnsureAdminAuthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'auth' => Authenticate::class,
             'admin.auth' => EnsureAdminAuthenticated::class,
             'admin.role' => AdminRoleMiddleware::class,
             'admin.circle' => AdminCircleScope::class,
