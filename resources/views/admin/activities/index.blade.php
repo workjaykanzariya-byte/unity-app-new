@@ -9,43 +9,6 @@
         </div>
     @endif
 
-    <div class="row g-3 mb-3">
-        <div class="col-lg-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Top by P2P Meetings Completed</h5>
-                    <ul class="list-group list-group-flush">
-                        @forelse ($topP2pPeers as $rank => $peer)
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <div>
-                                    <div class="fw-semibold">#{{ $rank + 1 }} {{ $peer->peer_name }}</div>
-                                    <div class="small text-muted">{{ $peer->company_name ?: '—' }} · {{ $peer->city_name ?: '—' }}</div>
-                                </div>
-                                <span class="badge bg-primary rounded-pill">{{ (int) $peer->p2p_completed_count }}</span>
-                            </li>
-                        @empty
-                            <li class="list-group-item px-0 text-muted">No peers found.</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">My Rank</h5>
-                    @if ($myRank)
-                        <div class="display-6 fw-bold">#{{ $myRank['rank'] }}</div>
-                        <div class="fw-semibold">{{ $myRank['peer_name'] }}</div>
-                        <div class="small text-muted">P2P Meetings Completed: {{ $myRank['p2p_completed_count'] }}</div>
-                    @else
-                        <div class="text-muted small">No linked peer account found for this admin.</div>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="card shadow-sm">
         <form id="activitiesFiltersForm" method="GET" action="{{ route('admin.activities.index') }}"></form>
 
@@ -90,10 +53,7 @@
                         <th style="width: 40px;">
                             <input type="checkbox" class="form-check-input" id="select-all-members">
                         </th>
-                        <th>Peer Name</th>
-                        <th>City</th>
-                        <th>Company</th>
-                        <th>Circles</th>
+                        <th>Peer</th>
                         <th>Testimonials</th>
                         <th>Referrals</th>
                         <th>Business Deals</th>
@@ -106,45 +66,49 @@
                     <tr class="bg-light align-middle">
                         <th></th>
                         <th>
-                            <input
-                                type="text"
-                                name="q"
-                                form="activitiesFiltersForm"
-                                class="form-control form-control-sm"
-                                placeholder="Name or email"
-                                value="{{ $filters['q'] }}"
-                            >
-                        </th>
-                        <th>
-                            <input
-                                type="text"
-                                name="city"
-                                form="activitiesFiltersForm"
-                                class="form-control form-control-sm"
-                                placeholder="City"
-                                value="{{ $filters['city'] }}"
-                            >
-                        </th>
-                        <th>
-                            <input
-                                type="text"
-                                name="company"
-                                form="activitiesFiltersForm"
-                                class="form-control form-control-sm"
-                                placeholder="Company"
-                                value="{{ $filters['company'] }}"
-                            >
-                        </th>
-                        <th>
-                            <select name="circle_id" form="activitiesFiltersForm" class="form-select form-select-sm">
-                                <option value="any">All Circles</option>
-                                @foreach ($circles as $circle)
-                                    <option value="{{ $circle->id }}" @selected($filters['circle_id'] === $circle->id)>{{ $circle->name }}</option>
-                                @endforeach
-                            </select>
-                            <select name="circle_filter" form="activitiesFiltersForm" class="form-select form-select-sm mt-2">
-                                <option value="all" @selected(($filters['circle_filter'] ?? 'all') === 'all')>All</option>
-                            </select>
+                            <div class="d-flex flex-column gap-2">
+                                <input
+                                    type="text"
+                                    name="q"
+                                    form="activitiesFiltersForm"
+                                    class="form-control form-control-sm"
+                                    placeholder="Name or email"
+                                    value="{{ $filters['q'] ?? '' }}"
+                                >
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            form="activitiesFiltersForm"
+                                            class="form-control form-control-sm"
+                                            placeholder="City"
+                                            value="{{ $filters['city'] ?? '' }}"
+                                        >
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input
+                                            type="text"
+                                            name="company"
+                                            form="activitiesFiltersForm"
+                                            class="form-control form-control-sm"
+                                            placeholder="Company"
+                                            value="{{ $filters['company'] ?? '' }}"
+                                        >
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select name="circle_id" form="activitiesFiltersForm" class="form-select form-select-sm">
+                                            <option value="any">All Circles</option>
+                                            @foreach ($circles as $circle)
+                                                <option value="{{ $circle->id }}" @selected(($filters['circle_id'] ?? '') === $circle->id)>{{ $circle->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <select name="circle_filter" form="activitiesFiltersForm" class="form-select form-select-sm mt-2">
+                                            <option value="all" @selected(($filters['circle_filter'] ?? 'all') === 'all')>All</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </th>
                         <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
                         <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
@@ -168,11 +132,11 @@
                             <td><input type="checkbox" class="form-check-input member-checkbox" value="{{ $member->id }}"></td>
                             <td>
                                 <div class="fw-bold">{{ $member->peer_name }}</div>
-                                <div class="small text-muted">{{ $member->email }}</div>
+                                <div class="small text-muted">{{ $member->company_name ?: '—' }}</div>
+                                <div class="small text-muted">{{ $member->city_name ?: 'No City' }}</div>
+                                <div class="small text-muted">{{ $member->circle_name ?: 'No Circle' }}</div>
+                                <div class="small text-muted">{{ $member->email ?: '—' }}</div>
                             </td>
-                            <td>{{ $member->city_name ?: 'No City' }}</td>
-                            <td>{{ $member->company_name ?: 'No Company' }}</td>
-                            <td>{{ $member->circle_name ?: 'No Circle' }}</td>
                             <td>@if ($member->testimonials_count > 0)<a href="{{ route('admin.activities.testimonials', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->testimonials_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                             <td>@if ($member->referrals_count > 0)<a href="{{ route('admin.activities.referrals', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->referrals_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                             <td>@if ($member->business_deals_count > 0)<a href="{{ route('admin.activities.business-deals', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->business_deals_count }}</a>@else<span class="text-muted">0</span>@endif</td>
@@ -183,7 +147,7 @@
                             <td>@if ($member->register_visitor_count > 0)<a href="{{ route('admin.activities.register-visitor.show', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->register_visitor_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                         </tr>
                     @empty
-                        <tr><td colspan="13" class="text-center text-muted">No peers found.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted">No peers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

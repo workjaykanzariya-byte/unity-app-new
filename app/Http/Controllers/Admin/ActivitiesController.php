@@ -42,22 +42,10 @@ class ActivitiesController extends Controller
 
         $circles = $this->buildCircleFilterOptions($admin);
 
-        $topP2pPeers = (clone $summaryQuery)
-            ->orderByDesc('p2p_completed_count')
-            ->orderByDesc('testimonials_count')
-            ->orderByDesc('referrals_count')
-            ->orderBy('peer_name')
-            ->limit(5)
-            ->get();
-
-        $myRank = $this->resolveMyRank($summaryQuery, $admin);
-
         return view('admin.activities.index', [
             'members' => $members,
             'filters' => $filters,
             'circles' => $circles,
-            'topP2pPeers' => $topP2pPeers,
-            'myRank' => $myRank,
         ]);
     }
 
@@ -270,34 +258,6 @@ class ActivitiesController extends Controller
         }
 
         return $query->get();
-    }
-
-    private function resolveMyRank($summaryQuery, $admin): ?array
-    {
-        $adminPeer = \App\Support\AdminAccess::resolveAppUser($admin);
-        if (! $adminPeer) {
-            return null;
-        }
-
-        $rows = (clone $summaryQuery)
-            ->addSelect('users.id')
-            ->orderByDesc('p2p_completed_count')
-            ->orderByDesc('testimonials_count')
-            ->orderByDesc('referrals_count')
-            ->orderBy('peer_name')
-            ->get();
-
-        foreach ($rows as $index => $row) {
-            if ($row->id === $adminPeer->id) {
-                return [
-                    'rank' => $index + 1,
-                    'peer_name' => $row->peer_name,
-                    'p2p_completed_count' => (int) ($row->p2p_completed_count ?? 0),
-                ];
-            }
-        }
-
-        return null;
     }
 
     public function testimonials(User $member, Request $request): View
