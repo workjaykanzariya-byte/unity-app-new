@@ -22,6 +22,8 @@ class CollaborationPost extends Model
     public const STATUS_EXPIRED = 'expired';
     public const STATUS_DELETED = 'deleted';
 
+    protected $guarded = [];
+
     protected $fillable = [
         'id',
         'user_id',
