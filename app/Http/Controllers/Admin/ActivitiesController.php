@@ -196,7 +196,6 @@ class ActivitiesController extends Controller
             'city' => trim((string) $request->input('city', '')),
             'company' => trim((string) $request->input('company', '')),
             'circle_id' => $request->input('circle_id', ''),
-            'circle_filter' => (string) $request->input('circle_filter', 'all'),
             'from' => $request->input('from'),
             'to' => $request->input('to'),
             'per_page' => $perPage,

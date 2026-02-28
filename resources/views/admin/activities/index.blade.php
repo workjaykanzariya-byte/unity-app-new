@@ -103,9 +103,6 @@
                                                 <option value="{{ $circle->id }}" @selected(($filters['circle_id'] ?? '') === $circle->id)>{{ $circle->name }}</option>
                                             @endforeach
                                         </select>
-                                        <select name="circle_filter" form="activitiesFiltersForm" class="form-select form-select-sm mt-2">
-                                            <option value="all" @selected(($filters['circle_filter'] ?? 'all') === 'all')>All</option>
-                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -135,7 +132,6 @@
                                 <div class="small text-muted">{{ $member->company_name ?: '—' }}</div>
                                 <div class="small text-muted">{{ $member->city_name ?: 'No City' }}</div>
                                 <div class="small text-muted">{{ $member->circle_name ?: 'No Circle' }}</div>
-                                <div class="small text-muted">{{ $member->email ?: '—' }}</div>
                             </td>
                             <td>@if ($member->testimonials_count > 0)<a href="{{ route('admin.activities.testimonials', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->testimonials_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                             <td>@if ($member->referrals_count > 0)<a href="{{ route('admin.activities.referrals', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->referrals_count }}</a>@else<span class="text-muted">0</span>@endif</td>
@@ -181,7 +177,6 @@
                         <input type="hidden" name="company" value="{{ $filters['company'] }}">
                         <input type="hidden" name="city" value="{{ $filters['city'] }}">
                         <input type="hidden" name="circle_id" value="{{ $filters['circle_id'] }}">
-                        <input type="hidden" name="circle_filter" value="{{ $filters['circle_filter'] }}">
                         <input type="hidden" name="from" value="{{ $filters['from'] }}">
                         <input type="hidden" name="to" value="{{ $filters['to'] }}">
                         <div id="selectedMemberIdsContainer"></div>
