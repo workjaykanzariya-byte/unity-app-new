@@ -45,6 +45,7 @@ class CollaborationPost extends Model
         'countries_of_interest' => 'array',
         'posted_at' => 'datetime',
         'expires_at' => 'datetime',
+        'renewed_at' => 'datetime',
     ];
 
     protected static function booted(): void

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreCollaborationInterestRequest;
-use App\Http\Requests\Api\V1\StoreCollaborationPostRequest;
+use App\Http\Requests\CollaborationStoreRequest;
 use App\Http\Requests\Api\V1\StoreCollaborationMeetingRequestRequest;
 use App\Http\Requests\Api\V1\UpdateCollaborationPostRequest;
 use App\Http\Resources\CollaborationMeetingRequestResource;
@@ -13,9 +13,11 @@ use App\Http\Resources\CollaborationPostResource;
 use App\Models\CollaborationPost;
 use App\Models\CollaborationPostInterest;
 use App\Models\CollaborationPostMeetingRequest;
+use App\Models\CollaborationType;
 use App\Models\User;
 use App\Services\Notifications\NotifyUserService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -89,25 +91,47 @@ class CollaborationController extends Controller
         ]);
     }
 
-    public function store(StoreCollaborationPostRequest $request): JsonResponse
+    public function store(CollaborationStoreRequest $request): JsonResponse
     {
-        $user = $request->user();
+        try {
+            $user = $request->user();
+            $type = CollaborationType::query()->where('id', $request->collaboration_type_id)->firstOrFail();
 
-        $post = CollaborationPost::query()->create([
-            ...$request->validated(),
-            'user_id' => $user->id,
-            'posted_at' => now(),
-            'expires_at' => now()->addDays(60),
-            'status' => CollaborationPost::STATUS_ACTIVE,
-        ]);
+            $post = CollaborationPost::query()->create([
+                'user_id' => $user->id,
+                'collaboration_type_id' => $type->id,
+                'collaboration_type' => $type->slug,
+                'title' => $request->title,
+                'description' => $request->description,
+                'scope' => $request->scope,
+                'countries_of_interest' => $request->countries_of_interest ?? [],
+                'preferred_model' => $request->preferred_model,
+                'industry_id' => $request->industry_id,
+                'business_stage' => $request->business_stage,
+                'years_in_operation' => $request->years_in_operation,
+                'urgency' => $request->urgency,
+                'posted_at' => now(),
+                'expires_at' => now()->addDays(60),
+                'status' => CollaborationPost::STATUS_ACTIVE,
+            ]);
 
-        $post->load(['user', 'industry.parent'])->loadCount(['interests', 'meetingRequests']);
+            $post->load(['user', 'industry.parent'])->loadCount(['interests', 'meetingRequests']);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Collaboration post created successfully.',
-            'data' => new CollaborationPostResource($post),
-        ], 201);
+            return response()->json([
+                'status' => true,
+                'message' => 'Collaboration post created successfully.',
+                'data' => new CollaborationPostResource($post),
+            ], 201);
+        } catch (QueryException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'data' => null,
+                'meta' => [
+                    'db_error' => $e->getMessage(),
+                ],
+            ], 422);
+        }
     }
 
     public function update(UpdateCollaborationPostRequest $request, string $id): JsonResponse
