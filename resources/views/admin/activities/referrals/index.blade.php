@@ -3,6 +3,13 @@
 @section('title', 'Referrals')
 
 @section('content')
+    <style>
+        .peer-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -127,14 +134,14 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $referral->actor_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $referral->actor_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $referral->from_user_name ?? $actorName }}</div>
+                                <div class="small text-muted">{{ ($referral->from_company ?? '') !== '' ? $referral->from_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($referral->from_city ?? '') !== '' ? $referral->from_city : 'No City' }}</div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $referral->peer_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $referral->peer_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $referral->to_user_name ?? $peerName }}</div>
+                                <div class="small text-muted">{{ ($referral->to_company ?? '') !== '' ? $referral->to_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($referral->to_city ?? '') !== '' ? $referral->to_city : 'No City' }}</div>
                             </td>
                             <td>{{ $referral->referral_type ?? '—' }}</td>
                             <td>{{ $formatDate($referral->referral_date ?? null) }}</td>

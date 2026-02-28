@@ -34,6 +34,12 @@ class ActivitiesRequirementsController extends Controller
                 'actor.first_name as actor_first_name',
                 'actor.last_name as actor_last_name',
                 'actor.email as actor_email',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '—') as from_user_name"),
+                DB::raw("coalesce(actor.company_name, '') as from_company"),
+                DB::raw("coalesce(actor.city, '') as from_city"),
+                DB::raw('NULL as to_user_name'),
+                DB::raw("'' as to_company"),
+                DB::raw("'' as to_city"),
             ])
             ->orderByDesc('activity.created_at')
             ->paginate(20)

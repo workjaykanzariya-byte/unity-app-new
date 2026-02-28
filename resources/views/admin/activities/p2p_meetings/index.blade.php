@@ -3,6 +3,13 @@
 @section('title', 'P2P Meetings')
 
 @section('content')
+    <style>
+        .peer-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -122,14 +129,14 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $meeting->actor_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $meeting->actor_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $meeting->from_user_name ?? $actorName }}</div>
+                                <div class="small text-muted">{{ ($meeting->from_company ?? '') !== '' ? $meeting->from_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($meeting->from_city ?? '') !== '' ? $meeting->from_city : 'No City' }}</div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $meeting->peer_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $meeting->peer_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $meeting->to_user_name ?? $peerName }}</div>
+                                <div class="small text-muted">{{ ($meeting->to_company ?? '') !== '' ? $meeting->to_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($meeting->to_city ?? '') !== '' ? $meeting->to_city : 'No City' }}</div>
                             </td>
                             <td>{{ $formatDate($meeting->meeting_date ?? null) }}</td>
                             <td>{{ $meeting->meeting_place ?? '—' }}</td>

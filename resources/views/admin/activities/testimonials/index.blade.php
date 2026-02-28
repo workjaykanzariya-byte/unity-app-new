@@ -3,6 +3,13 @@
 @section('title', 'Testimonials')
 
 @section('content')
+    <style>
+        .peer-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -141,14 +148,14 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $testimonial->actor_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $testimonial->actor_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $testimonial->from_user_name ?? $actorName }}</div>
+                                <div class="small text-muted">{{ ($testimonial->from_company ?? '') !== '' ? $testimonial->from_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($testimonial->from_city ?? '') !== '' ? $testimonial->from_city : 'No City' }}</div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $testimonial->peer_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $testimonial->peer_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $testimonial->to_user_name ?? $peerName }}</div>
+                                <div class="small text-muted">{{ ($testimonial->to_company ?? '') !== '' ? $testimonial->to_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($testimonial->to_city ?? '') !== '' ? $testimonial->to_city : 'No City' }}</div>
                             </td>
                             <td class="text-muted">{{ $testimonial->content ?? '—' }}</td>
                             <td>

@@ -36,10 +36,16 @@ class ActivitiesReferralsController extends Controller
                 'actor.first_name as actor_first_name',
                 'actor.last_name as actor_last_name',
                 'actor.email as actor_email',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '—') as from_user_name"),
+                DB::raw("coalesce(actor.company_name, '') as from_company"),
+                DB::raw("coalesce(actor.city, '') as from_city"),
                 'peer.display_name as peer_display_name',
                 'peer.first_name as peer_first_name',
                 'peer.last_name as peer_last_name',
                 'peer.email as peer_email',
+                DB::raw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '—') as to_user_name"),
+                DB::raw("coalesce(peer.company_name, '') as to_company"),
+                DB::raw("coalesce(peer.city, '') as to_city"),
             ])
             ->orderByDesc('activity.created_at')
             ->paginate($filters['per_page'])

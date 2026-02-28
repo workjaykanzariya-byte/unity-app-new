@@ -3,6 +3,13 @@
 @section('title', 'Requirements')
 
 @section('content')
+    <style>
+        .peer-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
             if ($display) {
@@ -160,9 +167,9 @@
                         @endphp
                         <tr>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $requirement->actor_company_name ?? '—' }}</div>
-                                <div class="text-muted small">{{ $requirement->actor_city_name ?? 'No City' }}</div>
+                                <div class="peer-name fw-semibold" style="max-width: 220px;">{{ $requirement->from_user_name ?? $actorName }}</div>
+                                <div class="small text-muted">{{ ($requirement->from_company ?? '') !== '' ? $requirement->from_company : '—' }}</div>
+                                <div class="small text-muted">{{ ($requirement->from_city ?? '') !== '' ? $requirement->from_city : 'No City' }}</div>
                             </td>
                             <td>{{ $requirement->subject ?? '—' }}</td>
                             <td class="text-muted">{{ $requirement->description ?? '—' }}</td>
