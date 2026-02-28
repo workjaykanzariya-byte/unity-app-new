@@ -11,6 +11,20 @@ class CollaborationPostController extends Controller
 {
     public function store(Request $request)
     {
+        // normalize inputs
+        $title = is_string($request->title) ? trim($request->title) : $request->title;
+        $businessStage = $request->business_stage;
+
+        // Fix common typo from client
+        if ($businessStage === 'growing_101_1cr') {
+            $businessStage = 'growing_10l_1cr';
+        }
+
+        $request->merge([
+            'title' => $title,
+            'business_stage' => $businessStage,
+        ]);
+
         $request->validate([
             'collaboration_type_id' => ['required','uuid','exists:collaboration_types,id'],
             'title' => ['required','string','max:80'],
@@ -32,8 +46,6 @@ class CollaborationPostController extends Controller
                 ->firstOrFail();
 
             $collaborationTypeValue = trim((string)($type->slug ?: $type->name));
-
-            // must never be null/empty because DB has NOT NULL
             if ($collaborationTypeValue === '') {
                 $collaborationTypeValue = 'unknown';
             }
@@ -41,8 +53,8 @@ class CollaborationPostController extends Controller
             $post = CollaborationPost::create([
                 'user_id' => $user->id,
                 'collaboration_type_id' => $type->id,
-                'collaboration_type' => $collaborationTypeValue, // ✅ FIX
-                'title' => trim($request->title),
+                'collaboration_type' => $collaborationTypeValue, // ✅ required by DB
+                'title' => $request->title,
                 'description' => $request->description,
                 'scope' => $request->scope,
                 'countries_of_interest' => $request->countries_of_interest ?? [],
@@ -61,7 +73,7 @@ class CollaborationPostController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
-            // IMPORTANT: Only for this endpoint - return real error so debugging is never blind again
+            // ONLY for this endpoint to unblock debugging
             return response()->json([
                 'status' => false,
                 'message' => 'Server error',
