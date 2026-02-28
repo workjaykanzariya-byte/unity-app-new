@@ -15,9 +15,9 @@ class ActivitiesReferralsController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $this->filters($request);
+        $filters = $this->buildFilters($request);
 
-        $baseQuery = $this->baseQuery($request, $filters);
+        $baseQuery = $this->baseQuery($filters);
         $total = (clone $baseQuery)->count();
 
         $items = $baseQuery
@@ -42,7 +42,7 @@ class ActivitiesReferralsController extends Controller
                 'peer.email as peer_email',
             ])
             ->orderByDesc('activity.created_at')
-            ->paginate(20)
+            ->paginate($filters['per_page'])
             ->withQueryString();
 
         $topMembers = $this->topMembers($request);
@@ -57,10 +57,10 @@ class ActivitiesReferralsController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $filters = $this->filters($request);
+        $filters = $this->buildFilters($request);
         $filename = 'referrals_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($request, $filters) {
+        return response()->streamDownload(function () use ($filters) {
             @ini_set('zlib.output_compression', '0');
             @ini_set('output_buffering', '0');
             while (ob_get_level() > 0) {
@@ -91,7 +91,7 @@ class ActivitiesReferralsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($request, $filters)
+                $this->baseQuery($filters)
                     ->select([
                         'activity.id',
                         'activity.referral_type',
@@ -160,17 +160,36 @@ class ActivitiesReferralsController extends Controller
         ]);
     }
 
-    private function filters(Request $request): array
+    private function buildFilters(Request $request): array
     {
+        $from = $request->get('from');
+        $to = $request->get('to');
+        $fromAtRaw = $request->get('from_at') ?? $from;
+        $toAtRaw = $request->get('to_at') ?? $to;
+
+        $filters = [
+            'q' => trim((string) $request->get('q', $request->get('search', ''))),
+            'from' => $from,
+            'to' => $to,
+            'from_at' => $fromAtRaw,
+            'to_at' => $toAtRaw,
+            'referral_type' => $request->get('referral_type') ?? $request->get('type'),
+            'per_page' => (int) $request->get('per_page', 20),
+        ];
+
+        $filters['from_dt'] = $this->parseDayBoundary($filters['from_at'], false);
+        $filters['to_dt'] = $this->parseDayBoundary($filters['to_at'], true);
+
+        if ($filters['per_page'] <= 0) {
+            $filters['per_page'] = 20;
+        }
+
         return [
-            'q' => trim((string) $request->query('q', $request->query('search', ''))),
-            'referral_type' => $request->query('referral_type'),
-            'from' => $request->query('from'),
-            'to' => $request->query('to'),
+            ...$filters,
         ];
     }
 
-    private function baseQuery(Request $request, array $filters)
+    private function baseQuery(array $filters)
     {
         $query = DB::table('referrals as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.from_user_id')
@@ -192,17 +211,15 @@ class ActivitiesReferralsController extends Controller
             });
         }
 
-        if ($filters['referral_type']) {
+        if (! empty($filters['referral_type'])) {
             $query->where('activity.referral_type', $filters['referral_type']);
         }
 
-        if ($filters['from_at']) {
-            $query->where('activity.created_at', '>=', $filters['from_at']);
-        }
+        $from = $filters['from_dt'] ?? null;
+        $to = $filters['to_dt'] ?? null;
 
-        if ($filters['to_at']) {
-            $query->where('activity.created_at', '<=', $filters['to_at']);
-        }
+        $query->when($from, fn ($inner) => $inner->where('activity.created_at', '>=', $from))
+            ->when($to, fn ($inner) => $inner->where('activity.created_at', '<=', $to));
 
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
