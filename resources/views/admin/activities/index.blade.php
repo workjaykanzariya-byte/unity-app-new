@@ -72,31 +72,11 @@
                                     name="q"
                                     form="activitiesFiltersForm"
                                     class="form-control form-control-sm"
-                                    placeholder="Name or email"
+                                    placeholder="Name, email, company, or city"
                                     value="{{ $filters['q'] ?? '' }}"
                                 >
                                 <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            form="activitiesFiltersForm"
-                                            class="form-control form-control-sm"
-                                            placeholder="City"
-                                            value="{{ $filters['city'] ?? '' }}"
-                                        >
-                                    </div>
-                                    <div class="col-md-4">
-                                        <input
-                                            type="text"
-                                            name="company"
-                                            form="activitiesFiltersForm"
-                                            class="form-control form-control-sm"
-                                            placeholder="Company"
-                                            value="{{ $filters['company'] ?? '' }}"
-                                        >
-                                    </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-12">
                                         <select name="circle_id" form="activitiesFiltersForm" class="form-select form-select-sm">
                                             <option value="any">All Circles</option>
                                             @foreach ($circles as $circle)
@@ -174,8 +154,6 @@
                         </div>
                         <input type="hidden" name="q" value="{{ $filters['q'] }}">
                         <input type="hidden" name="search" value="{{ $filters['q'] }}">
-                        <input type="hidden" name="company" value="{{ $filters['company'] }}">
-                        <input type="hidden" name="city" value="{{ $filters['city'] }}">
                         <input type="hidden" name="circle_id" value="{{ $filters['circle_id'] }}">
                         <input type="hidden" name="from" value="{{ $filters['from'] }}">
                         <input type="hidden" name="to" value="{{ $filters['to'] }}">

@@ -32,8 +32,6 @@ class ActivitiesExportRequest extends FormRequest
             'q' => ['nullable', 'string'],
             'membership_status' => ['nullable', 'string'],
             'search' => ['nullable', 'string'],
-            'company' => ['nullable', 'string'],
-            'city' => ['nullable', 'string'],
             'circle_id' => ['nullable', 'string'],
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],

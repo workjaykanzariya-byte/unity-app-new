@@ -149,17 +149,6 @@ class ActivitiesController extends Controller
             });
         }
 
-        if ($filters['company'] !== '') {
-            $query->where('users.company_name', 'ILIKE', "%{$filters['company']}%");
-        }
-
-        if ($filters['city'] !== '') {
-            $cityLike = "%{$filters['city']}%";
-            $query->where(function ($q) use ($cityLike) {
-                $q->where('users.city', 'ILIKE', $cityLike)
-                    ->orWhere('cities.name', 'ILIKE', $cityLike);
-            });
-        }
 
         if (! empty($filters['circle_id']) && $filters['circle_id'] !== 'any') {
             $query->whereExists(function ($sub) use ($filters) {
@@ -193,8 +182,6 @@ class ActivitiesController extends Controller
 
         $filters = [
             'q' => trim((string) $request->input('q', $request->input('search', ''))),
-            'city' => trim((string) $request->input('city', '')),
-            'company' => trim((string) $request->input('company', '')),
             'circle_id' => $request->input('circle_id', ''),
             'from' => $request->input('from'),
             'to' => $request->input('to'),
