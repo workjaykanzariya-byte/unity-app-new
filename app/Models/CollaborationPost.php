@@ -22,29 +22,13 @@ class CollaborationPost extends Model
     public const STATUS_EXPIRED = 'expired';
     public const STATUS_DELETED = 'deleted';
 
-    protected $fillable = [
-        'id',
-        'user_id',
-        'collaboration_type_id',
-        'collaboration_type',
-        'title',
-        'description',
-        'scope',
-        'countries_of_interest',
-        'preferred_model',
-        'industry_id',
-        'business_stage',
-        'years_in_operation',
-        'urgency',
-        'status',
-        'posted_at',
-        'expires_at',
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'countries_of_interest' => 'array',
         'posted_at' => 'datetime',
         'expires_at' => 'datetime',
+        'renewed_at' => 'datetime',
     ];
 
     protected static function booted(): void

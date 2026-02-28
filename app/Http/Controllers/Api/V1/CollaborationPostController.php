@@ -3,58 +3,91 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\StoreCollaborationPostRequest;
-use App\Http\Resources\CollaborationPostResource;
-use App\Services\Collaboration\CollaborationPostService;
+use App\Models\CollaborationPost;
+use App\Models\CollaborationType;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CollaborationPostController extends Controller
 {
-    public function __construct(private readonly CollaborationPostService $collaborationPostService)
+    public function store(Request $request): JsonResponse
     {
-    }
-
-    public function store(StoreCollaborationPostRequest $request): JsonResponse
-    {
-        try {
-            $post = $this->collaborationPostService->createForUser($request->user(), $request->validated());
-        } catch (ValidationException $exception) {
-            $errors = $exception->errors();
-
-            if (isset($errors['industry_id']) && in_array('Please select a leaf industry.', $errors['industry_id'], true)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Please select a leaf industry.',
-                    'data' => null,
-                    'errors' => $errors,
-                ], 422);
-            }
-
-            if (isset($errors['collaborations'])) {
-                $message = $errors['collaborations'][0] ?? 'You have reached the active collaboration post limit.';
-
-                return response()->json([
-                    'status' => false,
-                    'message' => $message,
-                    'data' => null,
-                    'errors' => $errors,
-                ], 422);
-            }
-
-            throw $exception;
-        }
-
-        $post->load([
-            'user:id,first_name,last_name,display_name,city,membership_status,profile_photo_file_id',
-            'industry:id,name,parent_id',
-            'collaborationType:id,name,slug',
+        $request->validate([
+            'collaboration_type_id' => ['required', 'uuid', 'exists:collaboration_types,id'],
+            'title' => ['required', 'string', 'max:80'],
+            'description' => ['nullable', 'string'],
+            'scope' => ['required', 'string'],
+            'countries_of_interest' => ['nullable', 'array'],
+            'preferred_model' => ['required', 'string'],
+            'industry_id' => ['required', 'uuid'],
+            'business_stage' => ['required', 'string'],
+            'years_in_operation' => ['required', 'string'],
+            'urgency' => ['required', 'string'],
         ]);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Collaboration post created successfully.',
-            'data' => new CollaborationPostResource($post),
-        ], 201);
+        try {
+            $user = $request->user();
+
+            $type = CollaborationType::query()
+                ->where('id', $request->collaboration_type_id)
+                ->firstOrFail();
+
+            $collaborationTypeValue = trim((string) ($type->slug ?: $type->name));
+
+            if ($collaborationTypeValue === '') {
+                // absolute safety fallback
+                $collaborationTypeValue = 'unknown';
+            }
+
+            $post = CollaborationPost::create([
+                'user_id' => $user->id,
+                'collaboration_type_id' => $type->id,
+                'collaboration_type' => $collaborationTypeValue,
+                'title' => trim($request->title),
+                'description' => $request->description,
+                'scope' => $request->scope,
+                'countries_of_interest' => $request->countries_of_interest ?? [],
+                'preferred_model' => $request->preferred_model,
+                'industry_id' => $request->industry_id,
+                'business_stage' => $request->business_stage,
+                'years_in_operation' => $request->years_in_operation,
+                'urgency' => $request->urgency,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Collaboration created',
+                'data' => $post,
+                'meta' => null,
+            ], 201);
+        } catch (QueryException $e) {
+            Log::error('Collaboration create DB error', [
+                'error' => $e->getMessage(),
+                'payload' => $request->all(),
+                'user_id' => optional($request->user())->id,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'data' => null,
+                'meta' => ['db' => 'constraint_failed'],
+            ], 422);
+        } catch (\Throwable $e) {
+            Log::error('Collaboration create unexpected error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Server error',
+                'data' => null,
+                'meta' => null,
+            ], 500);
+        }
     }
 }
