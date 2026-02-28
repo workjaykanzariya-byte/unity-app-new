@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Models\PeerRecommendation;
 use App\Models\User;
@@ -14,11 +15,15 @@ class ActivitiesPeerRecommendationController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('search', ''));
+        $search = trim((string) $request->query('q', $request->query('search', '')));
+        $from = $request->query('from');
+        $to = $request->query('to');
+        $fromAt = $this->parseDayBoundary($from, false);
+        $toAt = $this->parseDayBoundary($to, true);
         $known = $request->query('how_well_known', 'all');
 
         $query = PeerRecommendation::query()
-            ->with(['user:id,display_name,first_name,last_name,phone']);
+            ->with(['user:id,display_name,first_name,last_name,phone,email,company_name,city']);
 
         if ($known && $known !== 'all') {
             $query->where('how_well_known', $known);
@@ -33,9 +38,20 @@ class ActivitiesPeerRecommendationController extends Controller
                         $userQuery->where('display_name', 'ILIKE', $like)
                             ->orWhere('first_name', 'ILIKE', $like)
                             ->orWhere('last_name', 'ILIKE', $like)
-                            ->orWhere('phone', 'ILIKE', $like);
+                            ->orWhere('phone', 'ILIKE', $like)
+                            ->orWhere('email', 'ILIKE', $like)
+                            ->orWhere('company_name', 'ILIKE', $like)
+                            ->orWhere('city', 'ILIKE', $like);
                     });
             });
+        }
+
+        if ($fromAt) {
+            $query->where('created_at', '>=', $fromAt);
+        }
+
+        if ($toAt) {
+            $query->where('created_at', '<=', $toAt);
         }
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'peer_recommendations.user_id', null);
@@ -48,17 +64,26 @@ class ActivitiesPeerRecommendationController extends Controller
         return view('admin.activities.recommend_peer.index', [
             'items' => $items,
             'filters' => [
-                'search' => $search,
-                'how_well_known' => $known,
-            ],
-            'knownOptions' => [
-                'all',
-                'close_friend',
-                'business_associate',
-                'client',
-                'community_contact',
+                'q' => $search,
+                'from' => $from,
+                'to' => $to,
             ],
         ]);
+    }
+
+    private function parseDayBoundary($value, bool $endOfDay): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Carbon::parse($value);
+
+            return $endOfDay ? $parsed->endOfDay() : $parsed->startOfDay();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     public function show(User $peer, Request $request): View

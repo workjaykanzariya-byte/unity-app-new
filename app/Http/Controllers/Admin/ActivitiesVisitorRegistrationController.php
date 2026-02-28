@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Models\VisitorRegistration;
 use App\Models\User;
@@ -14,15 +15,14 @@ class ActivitiesVisitorRegistrationController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('search', ''));
-        $status = $request->query('status', 'all');
+        $search = trim((string) $request->query('q', $request->query('search', '')));
+        $from = $request->query('from');
+        $to = $request->query('to');
+        $fromAt = $this->parseDayBoundary($from, false);
+        $toAt = $this->parseDayBoundary($to, true);
 
         $query = VisitorRegistration::query()
-            ->with(['user:id,display_name,first_name,last_name,phone']);
-
-        if ($status && $status !== 'all') {
-            $query->where('status', $status);
-        }
+            ->with(['user:id,display_name,first_name,last_name,phone,email,company_name,city']);
 
         if ($search !== '') {
             $like = "%{$search}%";
@@ -33,9 +33,20 @@ class ActivitiesVisitorRegistrationController extends Controller
                         $userQuery->where('display_name', 'ILIKE', $like)
                             ->orWhere('first_name', 'ILIKE', $like)
                             ->orWhere('last_name', 'ILIKE', $like)
-                            ->orWhere('phone', 'ILIKE', $like);
+                            ->orWhere('phone', 'ILIKE', $like)
+                            ->orWhere('email', 'ILIKE', $like)
+                            ->orWhere('company_name', 'ILIKE', $like)
+                            ->orWhere('city', 'ILIKE', $like);
                     });
             });
+        }
+
+        if ($fromAt) {
+            $query->where('created_at', '>=', $fromAt);
+        }
+
+        if ($toAt) {
+            $query->where('created_at', '<=', $toAt);
         }
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'visitor_registrations.user_id', null);
@@ -48,11 +59,26 @@ class ActivitiesVisitorRegistrationController extends Controller
         return view('admin.activities.register_visitor.index', [
             'items' => $items,
             'filters' => [
-                'search' => $search,
-                'status' => $status,
+                'q' => $search,
+                'from' => $from,
+                'to' => $to,
             ],
-            'statusOptions' => ['all', 'pending', 'approved', 'rejected'],
         ]);
+    }
+
+    private function parseDayBoundary($value, bool $endOfDay): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Carbon::parse($value);
+
+            return $endOfDay ? $parsed->endOfDay() : $parsed->startOfDay();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     public function show(User $peer, Request $request): View

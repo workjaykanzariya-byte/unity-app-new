@@ -49,7 +49,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
+                    <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">From</label>
@@ -85,8 +85,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div>{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
-                                <div class="text-muted small">{{ $member->email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
@@ -124,12 +123,14 @@
                         @endphp
                         <tr>
                             <td>
-                                <div>{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $deal->actor_email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
+                                <div class="text-muted small">{{ $deal->actor_company_name ?? '—' }}</div>
+                                <div class="text-muted small">{{ $deal->actor_city_name ?? 'No City' }}</div>
                             </td>
                             <td>
-                                <div>{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $deal->peer_email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
+                                <div class="text-muted small">{{ $deal->peer_company_name ?? '—' }}</div>
+                                <div class="text-muted small">{{ $deal->peer_city_name ?? 'No City' }}</div>
                             </td>
                             <td>{{ $formatDate($deal->deal_date ?? null) }}</td>
                             <td>{{ $deal->deal_amount ?? '—' }}</td>

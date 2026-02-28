@@ -30,20 +30,20 @@
         <div class="card-body">
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label small text-muted">Search</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Peer name/phone or visitor details">
+                    <label class="form-label small text-muted">Search created by</label>
+                    <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">Status</label>
-                    <select name="status" class="form-select">
-                        @foreach ($statusOptions as $option)
-                            <option value="{{ $option }}" @selected($filters['status'] === $option)>{{ ucfirst($option) }}</option>
-                        @endforeach
-                    </select>
+                    <label class="form-label small text-muted">From</label>
+                    <input type="date" name="from" value="{{ $filters['from'] }}" class="form-control">
                 </div>
-                <div class="col-md-2 d-flex flex-column gap-2">
-                    <button type="submit" class="btn btn-primary">Apply</button>
-                    <a href="{{ route('admin.activities.register-visitor.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">To</label>
+                    <input type="date" name="to" value="{{ $filters['to'] }}" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    <a href="{{ route('admin.activities.register-visitor.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
                 </div>
             </form>
         </div>
@@ -79,7 +79,9 @@
                         @endphp
                         <tr>
                             <td>{{ $formatDateTime($item->created_at ?? null) }}</td>
-                            <td>{{ $peerName }}</td>
+                            <td><div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
+                            <div class="text-muted small">{{ $peer->company_name ?? '—' }}</div>
+                            <div class="text-muted small">{{ $peer->city ?? 'No City' }}</div></td>
                             <td>{{ $peer->phone ?? '—' }}</td>
                             <td>{{ ucfirst($item->event_type ?? '—') }}</td>
                             <td>{{ $item->event_name ?? '—' }}</td>

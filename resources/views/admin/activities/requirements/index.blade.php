@@ -82,11 +82,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">Status</label>
-                    <input type="text" name="status" value="{{ $filters['status'] }}" class="form-control" placeholder="Status">
+                    <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted">From</label>
@@ -96,9 +92,9 @@
                     <label class="form-label small text-muted">To</label>
                     <input type="date" name="to" value="{{ $filters['to'] }}" class="form-control">
                 </div>
-                <div class="col-md-1 d-flex flex-column gap-2">
-                    <button type="submit" class="btn btn-primary">Apply</button>
-                    <a href="{{ route('admin.activities.requirements.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    <a href="{{ route('admin.activities.requirements.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
                 </div>
             </form>
         </div>
@@ -122,8 +118,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div>{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
-                                <div class="text-muted small">{{ $member->email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
@@ -165,8 +160,9 @@
                         @endphp
                         <tr>
                             <td>
-                                <div>{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $requirement->actor_email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
+                                <div class="text-muted small">{{ $requirement->actor_company_name ?? '—' }}</div>
+                                <div class="text-muted small">{{ $requirement->actor_city_name ?? 'No City' }}</div>
                             </td>
                             <td>{{ $requirement->subject ?? '—' }}</td>
                             <td class="text-muted">{{ $requirement->description ?? '—' }}</td>

@@ -49,11 +49,7 @@
             <form method="GET" class="row g-2 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Search created by</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Name, email, company, or city">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted">Referral type</label>
-                    <input type="text" name="referral_type" value="{{ $filters['referral_type'] }}" class="form-control" placeholder="Type">
+                    <input type="text" name="q" value="{{ $filters['q'] }}" class="form-control" placeholder="Name, email, company, or city">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small text-muted">From</label>
@@ -63,9 +59,9 @@
                     <label class="form-label small text-muted">To</label>
                     <input type="date" name="to" value="{{ $filters['to'] }}" class="form-control">
                 </div>
-                <div class="col-md-1 d-flex flex-column gap-2">
-                    <button type="submit" class="btn btn-primary">Apply</button>
-                    <a href="{{ route('admin.activities.referrals.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">Apply</button>
+                    <a href="{{ route('admin.activities.referrals.index') }}" class="btn btn-outline-secondary w-100">Reset</a>
                 </div>
             </form>
         </div>
@@ -89,8 +85,7 @@
                         <tr>
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <div>{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
-                                <div class="text-muted small">{{ $member->email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null) }}</div>
                             </td>
                             <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
@@ -132,12 +127,14 @@
                         @endphp
                         <tr>
                             <td>
-                                <div>{{ $actorName }}</div>
-                                <div class="text-muted small">{{ $referral->actor_email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $actorName }}</div>
+                                <div class="text-muted small">{{ $referral->actor_company_name ?? '—' }}</div>
+                                <div class="text-muted small">{{ $referral->actor_city_name ?? 'No City' }}</div>
                             </td>
                             <td>
-                                <div>{{ $peerName }}</div>
-                                <div class="text-muted small">{{ $referral->peer_email ?? '—' }}</div>
+                                <div class="fw-semibold text-truncate" style="max-width: 240px;">{{ $peerName }}</div>
+                                <div class="text-muted small">{{ $referral->peer_company_name ?? '—' }}</div>
+                                <div class="text-muted small">{{ $referral->peer_city_name ?? 'No City' }}</div>
                             </td>
                             <td>{{ $referral->referral_type ?? '—' }}</td>
                             <td>{{ $formatDate($referral->referral_date ?? null) }}</td>

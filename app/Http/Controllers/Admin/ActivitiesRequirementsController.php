@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
@@ -134,7 +135,7 @@ class ActivitiesRequirementsController extends Controller
     private function filters(Request $request): array
     {
         return [
-            'search' => trim((string) $request->query('search', '')),
+            'q' => trim((string) $request->query('q', $request->query('search', ''))),
             'status' => $request->query('status'),
             'from' => $request->query('from'),
             'to' => $request->query('to'),
@@ -147,9 +148,9 @@ class ActivitiesRequirementsController extends Controller
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.user_id')
             ->whereNull('activity.deleted_at');
 
-        if ($filters['search'] !== '') {
+        if ($filters['q'] !== '') {
             $query->leftJoin('cities as actor_city', 'actor_city.id', '=', 'actor.city_id');
-            $like = '%' . $filters['search'] . '%';
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['q']) . '%';
             $query->where(function ($q) use ($like) {
                 $q->where('actor.display_name', 'ILIKE', $like)
                     ->orWhere('actor.first_name', 'ILIKE', $like)
@@ -165,12 +166,12 @@ class ActivitiesRequirementsController extends Controller
             $query->where('activity.status', $filters['status']);
         }
 
-        if ($filters['from']) {
-            $query->whereDate('activity.created_at', '>=', $filters['from']);
+        if ($filters['from_at']) {
+            $query->where('activity.created_at', '>=', $filters['from_at']);
         }
 
-        if ($filters['to']) {
-            $query->whereDate('activity.created_at', '<=', $filters['to']);
+        if ($filters['to_at']) {
+            $query->where('activity.created_at', '<=', $filters['to_at']);
         }
 
         $this->applyScopeToActivityQuery($query, 'activity.user_id');
@@ -205,6 +206,21 @@ class ActivitiesRequirementsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+    }
+
+    private function parseDayBoundary($value, bool $endOfDay): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Carbon::parse($value);
+
+            return $endOfDay ? $parsed->endOfDay() : $parsed->startOfDay();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     private function applyScopeToActivityQuery($query, string $primaryColumn): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
@@ -146,10 +147,15 @@ class ActivitiesBusinessDealsController extends Controller
 
     private function filters(Request $request): array
     {
+        $from = $request->query('from');
+        $to = $request->query('to');
+
         return [
-            'search' => trim((string) $request->query('search', '')),
-            'from' => $request->query('from'),
-            'to' => $request->query('to'),
+            'q' => trim((string) $request->query('q', $request->query('search', ''))),
+            'from' => $from,
+            'to' => $to,
+            'from_at' => $this->parseDayBoundary($from, false),
+            'to_at' => $this->parseDayBoundary($to, true),
         ];
     }
 
@@ -161,9 +167,9 @@ class ActivitiesBusinessDealsController extends Controller
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false);
 
-        if ($filters['search'] !== '') {
+        if ($filters['q'] !== '') {
             $query->leftJoin('cities as actor_city', 'actor_city.id', '=', 'actor.city_id');
-            $like = '%' . $filters['search'] . '%';
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['q']) . '%';
             $query->where(function ($q) use ($like) {
                 $q->where('actor.display_name', 'ILIKE', $like)
                     ->orWhere('actor.first_name', 'ILIKE', $like)
@@ -175,12 +181,12 @@ class ActivitiesBusinessDealsController extends Controller
             });
         }
 
-        if ($filters['from']) {
-            $query->whereDate('activity.created_at', '>=', $filters['from']);
+        if ($filters['from_at']) {
+            $query->where('activity.created_at', '>=', $filters['from_at']);
         }
 
-        if ($filters['to']) {
-            $query->whereDate('activity.created_at', '<=', $filters['to']);
+        if ($filters['to_at']) {
+            $query->where('activity.created_at', '<=', $filters['to_at']);
         }
 
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
@@ -216,6 +222,21 @@ class ActivitiesBusinessDealsController extends Controller
                 DB::raw('count(*) as total_count'),
             ])
             ->get();
+    }
+
+    private function parseDayBoundary($value, bool $endOfDay): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            $parsed = Carbon::parse($value);
+
+            return $endOfDay ? $parsed->endOfDay() : $parsed->startOfDay();
+        } catch (\Throwable $exception) {
+            return null;
+        }
     }
 
     private function applyScopeToActivityQuery($query, string $primaryColumn, ?string $peerColumn): void
