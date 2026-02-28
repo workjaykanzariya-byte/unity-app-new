@@ -26,10 +26,13 @@ class ActivitiesController extends Controller
     public function index(Request $request): View
     {
         $filters = [
-            'search' => trim((string) $request->query('search', $request->query('q', ''))),
+            'q' => trim((string) $request->query('q', $request->query('search', ''))),
             'company' => trim((string) $request->query('company', '')),
             'city' => trim((string) $request->query('city', '')),
             'circle_id' => $request->query('circle_id', ''),
+            'circle_filter' => (string) $request->query('circle_filter', 'all'),
+            'from' => $request->query('from'),
+            'to' => $request->query('to'),
             'per_page' => in_array($request->integer('per_page'), [10, 20, 25, 50, 100], true) ? $request->integer('per_page') : 20,
         ];
 
@@ -90,6 +93,7 @@ class ActivitiesController extends Controller
                 ->whereColumn('testimonials.from_user_id', 'users.id')
                 ->where('testimonials.is_deleted', false)
                 ->whereNull('testimonials.deleted_at');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'testimonials.created_at');
         }, 'testimonials_count');
 
         $query->selectSub(function ($sub) {
@@ -98,6 +102,7 @@ class ActivitiesController extends Controller
                 ->whereColumn('referrals.from_user_id', 'users.id')
                 ->where('referrals.is_deleted', false)
                 ->whereNull('referrals.deleted_at');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'referrals.created_at');
         }, 'referrals_count');
 
         $query->selectSub(function ($sub) {
@@ -106,6 +111,7 @@ class ActivitiesController extends Controller
                 ->whereColumn('business_deals.from_user_id', 'users.id')
                 ->where('business_deals.is_deleted', false)
                 ->whereNull('business_deals.deleted_at');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'business_deals.created_at');
         }, 'business_deals_count');
 
         $query->selectSub(function ($sub) {
@@ -115,6 +121,7 @@ class ActivitiesController extends Controller
                 ->where('p2p_meetings.is_deleted', false)
                 ->whereNull('p2p_meetings.deleted_at')
                 ->whereDate('p2p_meetings.meeting_date', '<', now()->toDateString());
+            $this->applyDateRangeToSubQuery($sub, $filters, 'p2p_meetings.created_at');
         }, 'p2p_completed_count');
 
         $query->selectSub(function ($sub) {
@@ -122,28 +129,32 @@ class ActivitiesController extends Controller
                 ->selectRaw('count(*)')
                 ->whereColumn('requirements.user_id', 'users.id')
                 ->whereNull('requirements.deleted_at');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'requirements.created_at');
         }, 'requirements_count');
 
         $query->selectSub(function ($sub) {
             $sub->from('leader_interest_submissions')
                 ->selectRaw('count(*)')
                 ->whereColumn('leader_interest_submissions.user_id', 'users.id');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'leader_interest_submissions.created_at');
         }, 'become_leader_count');
 
         $query->selectSub(function ($sub) {
             $sub->from('peer_recommendations')
                 ->selectRaw('count(*)')
                 ->whereColumn('peer_recommendations.user_id', 'users.id');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'peer_recommendations.created_at');
         }, 'recommend_peer_count');
 
         $query->selectSub(function ($sub) {
             $sub->from('visitor_registrations')
                 ->selectRaw('count(*)')
                 ->whereColumn('visitor_registrations.user_id', 'users.id');
+            $this->applyDateRangeToSubQuery($sub, $filters, 'visitor_registrations.created_at');
         }, 'register_visitor_count');
 
-        if ($filters['search'] !== '') {
-            $like = "%{$filters['search']}%";
+        if ($filters['q'] !== '') {
+            $like = "%{$filters['q']}%";
             $query->where(function ($q) use ($like) {
                 $q->where('users.display_name', 'ILIKE', $like)
                     ->orWhere('users.first_name', 'ILIKE', $like)
@@ -179,6 +190,20 @@ class ActivitiesController extends Controller
         }
 
         return $query;
+    }
+
+    private function applyDateRangeToSubQuery($subQuery, array $filters, string $column = 'created_at'): void
+    {
+        $from = $filters['from'] ?? null;
+        $to = $filters['to'] ?? null;
+
+        if ($from) {
+            $subQuery->where($column, '>=', $from);
+        }
+
+        if ($to) {
+            $subQuery->where($column, '<=', $to);
+        }
     }
 
     private function primaryCircleSubquery(string $column)
@@ -452,10 +477,13 @@ class ActivitiesController extends Controller
     {
         if ($activityType === 'summary') {
             $filters = [
-                'search' => trim((string) $request->input('search', $request->input('q', ''))),
+                'q' => trim((string) $request->input('q', $request->input('search', ''))),
                 'company' => trim((string) $request->input('company', '')),
                 'city' => trim((string) $request->input('city', '')),
                 'circle_id' => $request->input('circle_id', ''),
+                'circle_filter' => (string) $request->input('circle_filter', 'all'),
+                'from' => $request->input('from'),
+                'to' => $request->input('to'),
                 'per_page' => 500,
             ];
 

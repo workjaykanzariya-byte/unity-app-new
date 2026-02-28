@@ -35,6 +35,9 @@ class ActivitiesExportRequest extends FormRequest
             'company' => ['nullable', 'string'],
             'city' => ['nullable', 'string'],
             'circle_id' => ['nullable', 'string'],
+            'circle_filter' => ['nullable', 'string'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
         ];
     }
 

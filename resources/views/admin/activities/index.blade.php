@@ -46,56 +46,54 @@
         </div>
     </div>
 
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            <form id="activitiesFiltersForm" method="GET" class="row g-2 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small text-muted">Search</label>
-                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Name, email, company, city" value="{{ $filters['search'] }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted">Company</label>
-                    <input type="text" name="company" class="form-control form-control-sm" value="{{ $filters['company'] }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted">City</label>
-                    <input type="text" name="city" class="form-control form-control-sm" value="{{ $filters['city'] }}">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label small text-muted">Circle</label>
-                    <select name="circle_id" class="form-select form-select-sm">
-                        <option value="any">Any</option>
-                        @foreach ($circles as $circle)
-                            <option value="{{ $circle->id }}" @selected($filters['circle_id'] === $circle->id)>{{ $circle->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label small text-muted">Rows</label>
-                    <select id="perPage" name="per_page" class="form-select form-select-sm">
-                        @foreach ([10, 20, 25, 50, 100] as $size)
-                            <option value="{{ $size }}" @selected($filters['per_page'] === $size)>{{ $size }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-1 d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary w-100">Apply</button>
-                </div>
-            </form>
-            <div class="mt-2">
-                <a href="{{ route('admin.activities.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#activitiesExportModal">Export</button>
+    <div class="card shadow-sm">
+        <form id="activitiesFiltersForm" method="GET" action="{{ route('admin.activities.index') }}"></form>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center p-3 gap-2 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <label for="perPage" class="form-label mb-0 small text-muted">Rows per page:</label>
+                <select id="perPage" name="per_page" form="activitiesFiltersForm" class="form-select form-select-sm" style="width: 90px;">
+                    @foreach ([10, 20, 25, 50, 100] as $size)
+                        <option value="{{ $size }}" @selected($filters['per_page'] === $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <input
+                    type="datetime-local"
+                    name="from"
+                    form="activitiesFiltersForm"
+                    value="{{ $filters['from'] ?? '' }}"
+                    class="form-control form-control-sm"
+                    style="min-width: 180px;"
+                    placeholder="dd-mm-yyyy :.."
+                    title="From"
+                >
+                <input
+                    type="datetime-local"
+                    name="to"
+                    form="activitiesFiltersForm"
+                    value="{{ $filters['to'] ?? '' }}"
+                    class="form-control form-control-sm"
+                    style="min-width: 180px;"
+                    placeholder="dd-mm-yyyy :.."
+                    title="To"
+                >
             </div>
         </div>
-    </div>
 
-    <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:40px;"><input type="checkbox" class="form-check-input" id="select-all-members"></th>
-                        <th>Peer</th>
+                        <th style="width: 40px;">
+                            <input type="checkbox" class="form-check-input" id="select-all-members">
+                        </th>
+                        <th>Peer Name</th>
+                        <th>City</th>
+                        <th>Company</th>
+                        <th>Circles</th>
                         <th>Testimonials</th>
                         <th>Referrals</th>
                         <th>Business Deals</th>
@@ -105,6 +103,64 @@
                         <th>Recommend A Peer</th>
                         <th>Register A Visitor</th>
                     </tr>
+                    <tr class="bg-light align-middle">
+                        <th></th>
+                        <th>
+                            <input
+                                type="text"
+                                name="q"
+                                form="activitiesFiltersForm"
+                                class="form-control form-control-sm"
+                                placeholder="Name or email"
+                                value="{{ $filters['q'] }}"
+                            >
+                        </th>
+                        <th>
+                            <input
+                                type="text"
+                                name="city"
+                                form="activitiesFiltersForm"
+                                class="form-control form-control-sm"
+                                placeholder="City"
+                                value="{{ $filters['city'] }}"
+                            >
+                        </th>
+                        <th>
+                            <input
+                                type="text"
+                                name="company"
+                                form="activitiesFiltersForm"
+                                class="form-control form-control-sm"
+                                placeholder="Company"
+                                value="{{ $filters['company'] }}"
+                            >
+                        </th>
+                        <th>
+                            <select name="circle_id" form="activitiesFiltersForm" class="form-select form-select-sm">
+                                <option value="any">All Circles</option>
+                                @foreach ($circles as $circle)
+                                    <option value="{{ $circle->id }}" @selected($filters['circle_id'] === $circle->id)>{{ $circle->name }}</option>
+                                @endforeach
+                            </select>
+                            <select name="circle_filter" form="activitiesFiltersForm" class="form-select form-select-sm mt-2">
+                                <option value="all" @selected(($filters['circle_filter'] ?? 'all') === 'all')>All</option>
+                            </select>
+                        </th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th><input type="text" class="form-control form-control-sm" disabled placeholder="—"></th>
+                        <th>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="submit" form="activitiesFiltersForm" class="btn btn-sm btn-primary">Apply</button>
+                                <a href="{{ route('admin.activities.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#activitiesExportModal">Export</button>
+                            </div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($members as $member)
@@ -112,11 +168,11 @@
                             <td><input type="checkbox" class="form-check-input member-checkbox" value="{{ $member->id }}"></td>
                             <td>
                                 <div class="fw-bold">{{ $member->peer_name }}</div>
-                                <div class="small text-muted">{{ $member->company_name ?: 'No Company' }}</div>
-                                <div class="small text-muted">{{ $member->city_name ?: 'No City' }}</div>
-                                <div class="small text-muted">{{ $member->circle_name ?: 'No Circle' }}</div>
                                 <div class="small text-muted">{{ $member->email }}</div>
                             </td>
+                            <td>{{ $member->city_name ?: 'No City' }}</td>
+                            <td>{{ $member->company_name ?: 'No Company' }}</td>
+                            <td>{{ $member->circle_name ?: 'No Circle' }}</td>
                             <td>@if ($member->testimonials_count > 0)<a href="{{ route('admin.activities.testimonials', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->testimonials_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                             <td>@if ($member->referrals_count > 0)<a href="{{ route('admin.activities.referrals', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->referrals_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                             <td>@if ($member->business_deals_count > 0)<a href="{{ route('admin.activities.business-deals', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->business_deals_count }}</a>@else<span class="text-muted">0</span>@endif</td>
@@ -127,7 +183,7 @@
                             <td>@if ($member->register_visitor_count > 0)<a href="{{ route('admin.activities.register-visitor.show', $member->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">{{ $member->register_visitor_count }}</a>@else<span class="text-muted">0</span>@endif</td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted">No peers found.</td></tr>
+                        <tr><td colspan="13" class="text-center text-muted">No peers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -156,10 +212,14 @@
                                 <label class="form-check-label" for="scopeAll">All peers (current filters)</label>
                             </div>
                         </div>
-                        <input type="hidden" name="search" value="{{ $filters['search'] }}">
+                        <input type="hidden" name="q" value="{{ $filters['q'] }}">
+                        <input type="hidden" name="search" value="{{ $filters['q'] }}">
                         <input type="hidden" name="company" value="{{ $filters['company'] }}">
                         <input type="hidden" name="city" value="{{ $filters['city'] }}">
                         <input type="hidden" name="circle_id" value="{{ $filters['circle_id'] }}">
+                        <input type="hidden" name="circle_filter" value="{{ $filters['circle_filter'] }}">
+                        <input type="hidden" name="from" value="{{ $filters['from'] }}">
+                        <input type="hidden" name="to" value="{{ $filters['to'] }}">
                         <div id="selectedMemberIdsContainer"></div>
                         <div class="text-danger small d-none" id="exportSelectionError">Please select at least one peer.</div>
                     </div>
