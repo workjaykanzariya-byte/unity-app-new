@@ -14,16 +14,23 @@ class CoinClaimReviewedNotification extends Notification
 
     public function __construct(
         private readonly CoinClaimRequest $claim,
-        private readonly string $status,
+        private readonly string $decision,
         private readonly ?int $coinsAwarded = null,
         private readonly ?string $reason = null,
     ) {
-        $this->afterCommit = true;
+        $this->afterCommit();
     }
 
     public function via(object $notifiable): array
     {
         return ['database', 'broadcast'];
+    }
+
+    public function databaseType(object $notifiable): string
+    {
+        return $this->decision === 'approved'
+            ? 'coin_claim_approved'
+            : 'coin_claim_rejected';
     }
 
     public function toDatabase(object $notifiable): array
@@ -40,17 +47,20 @@ class CoinClaimReviewedNotification extends Notification
     {
         $registry = app(CoinClaimActivityRegistry::class);
         $activity = $registry->get((string) $this->claim->activity_code);
+        $notificationType = $this->decision === 'approved'
+            ? 'coin_claim_approved'
+            : 'coin_claim_rejected';
 
         return [
-            'notification_type' => 'coin_claim_reviewed',
+            'notification_type' => $notificationType,
             'coin_claim_id' => (string) $this->claim->id,
             'claim_id' => (string) $this->claim->id,
             'activity_code' => (string) $this->claim->activity_code,
             'activity_label' => $activity['label'] ?? null,
-            'decision' => $this->status,
-            'status' => $this->status,
+            'decision' => $this->decision,
+            'status' => $this->decision,
             'coins_awarded' => $this->coinsAwarded,
-            'reason' => $this->status === 'rejected' ? $this->reason : null,
+            'reason' => $this->decision === 'rejected' ? $this->reason : null,
             'reviewed_at' => optional($this->claim->reviewed_at)->toISOString(),
         ];
     }
