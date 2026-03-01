@@ -44,14 +44,7 @@ class ActivitiesPeerRecommendationController extends Controller
                     ->orWhere('peer.first_name', 'ILIKE', $like)
                     ->orWhere('peer.last_name', 'ILIKE', $like)
                     ->orWhere('peer.company_name', 'ILIKE', $like)
-                    ->orWhere('peer.city', 'ILIKE', $like)
-                    ->orWhereExists(function ($sub) use ($like) {
-                        $sub->selectRaw('1')
-                            ->from('circle_members as cm_search')
-                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
-                            ->whereColumn('cm_search.user_id', 'peer.id')
-                            ->where('c_search.name', 'ILIKE', $like);
-                    });
+                    ->orWhere('peer.city', 'ILIKE', $like);
             });
         }
 

@@ -180,14 +180,7 @@ class ActivitiesP2PMeetingsController extends Controller
                     ->orWhere('actor.last_name', 'ILIKE', $like)
                     ->orWhere('actor.company_name', 'ILIKE', $like)
                     ->orWhere('actor.city', 'ILIKE', $like)
-                    ->orWhere('actor_city.name', 'ILIKE', $like)
-                    ->orWhereExists(function ($sub) use ($like) {
-                        $sub->selectRaw('1')
-                            ->from('circle_members as cm_search')
-                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
-                            ->whereColumn('cm_search.user_id', 'actor.id')
-                            ->where('c_search.name', 'ILIKE', $like);
-                    });
+                    ->orWhere('actor_city.name', 'ILIKE', $like);
             });
         }
 
