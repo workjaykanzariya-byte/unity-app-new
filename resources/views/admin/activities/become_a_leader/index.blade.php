@@ -70,7 +70,7 @@
                         <th class="text-muted">—</th>
                         <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
                         <th><input type="text" name="peer_phone" value="{{ $filters['peer_phone'] ?? '' }}" placeholder="Peer Phone" class="form-control form-control-sm"></th>
-                        <th><input type="text" name="applying_for_text" value="{{ $filters['applying_for_text'] ?? '' }}" placeholder="Applying For" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="applying_for" value="{{ $filters['applying_for'] ?? '' }}" placeholder="Applying For" class="form-control form-control-sm"></th>
                         <th><input type="text" name="referred_name" value="{{ $filters['referred_name'] ?? '' }}" placeholder="Referred Name" class="form-control form-control-sm"></th>
                         <th><input type="text" name="referred_mobile" value="{{ $filters['referred_mobile'] ?? '' }}" placeholder="Referred Mobile" class="form-control form-control-sm"></th>
                         <th><input type="text" name="leadership_roles" value="{{ $filters['leadership_roles'] ?? '' }}" placeholder="Leadership Roles" class="form-control form-control-sm"></th>

@@ -215,6 +215,49 @@ class ActivitiesBusinessDealsController extends Controller
             });
         }
 
+        if ($filters['from_user'] !== '') {
+            $like = $this->escapeLike($filters['from_user']);
+            $query->where(function ($inner) use ($like) {
+                $inner->whereRaw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '') ILIKE ?", ["%{$like}%"])
+                    ->orWhere('actor.company_name', 'ILIKE', "%{$like}%")
+                    ->orWhere('actor.city', 'ILIKE', "%{$like}%");
+            });
+        }
+
+        if ($filters['to_user'] !== '') {
+            $like = $this->escapeLike($filters['to_user']);
+            $query->where(function ($inner) use ($like) {
+                $inner->whereRaw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '') ILIKE ?", ["%{$like}%"])
+                    ->orWhere('peer.company_name', 'ILIKE', "%{$like}%")
+                    ->orWhere('peer.city', 'ILIKE', "%{$like}%");
+            });
+        }
+
+        if ($filters['deal_date'] !== '') {
+            $dealDate = $this->parseInputDate($filters['deal_date']);
+            if ($dealDate) {
+                $query->whereDate('activity.deal_date', $dealDate->toDateString());
+            }
+        }
+
+        if ($filters['deal_amount'] !== '') {
+            $query->whereRaw('CAST(activity.deal_amount AS TEXT) ILIKE ?', ['%' . $this->escapeLike($filters['deal_amount']) . '%']);
+        }
+
+        if ($filters['business_type'] !== '') {
+            $query->where('activity.business_type', 'ILIKE', '%' . $this->escapeLike($filters['business_type']) . '%');
+        }
+
+        if ($filters['comment'] !== '') {
+            $query->where('activity.comment', 'ILIKE', '%' . $this->escapeLike($filters['comment']) . '%');
+        }
+
+        if ($filters['has_media'] === 'yes') {
+            $this->applyHasMediaFilter($query, true);
+        } elseif ($filters['has_media'] === 'no') {
+            $this->applyHasMediaFilter($query, false);
+        }
+
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query;
@@ -352,6 +395,11 @@ class ActivitiesBusinessDealsController extends Controller
         }
     }
 
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['%', '_'], ['\\%', '\\_'], $value);
+    }
+
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon
     {
         if (! is_string($value) || trim($value) === '') {
@@ -384,4 +432,3 @@ class ActivitiesBusinessDealsController extends Controller
     }
 
 }
-

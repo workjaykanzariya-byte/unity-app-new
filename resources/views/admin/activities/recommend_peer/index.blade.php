@@ -55,9 +55,9 @@
                         <th class="text-muted">—</th>
                         <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
                         <th><input type="text" name="peer_phone" value="{{ $filters['peer_phone'] ?? '' }}" placeholder="Peer Phone" class="form-control form-control-sm"></th>
-                        <th><input type="text" name="recommended_name" value="{{ $filters['recommended_name'] ?? '' }}" placeholder="Recommended Peer Name" class="form-control form-control-sm"></th>
-                        <th><input type="text" name="recommended_mobile" value="{{ $filters['recommended_mobile'] ?? '' }}" placeholder="Recommended Peer Mobile" class="form-control form-control-sm"></th>
-                        <th><input type="text" name="how_well_known_text" value="{{ $filters['how_well_known_text'] ?? '' }}" placeholder="How Well Known" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="recommended_peer_name" value="{{ $filters['recommended_peer_name'] ?? '' }}" placeholder="Recommended Peer Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="recommended_peer_mobile" value="{{ $filters['recommended_peer_mobile'] ?? '' }}" placeholder="Recommended Peer Mobile" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="how_well_known" value="{{ $filters['how_well_known'] ?? '' }}" placeholder="How Well Known" class="form-control form-control-sm"></th>
                         <th>
                             <select name="is_aware" class="form-select form-select-sm">
                                 <option value="">Any</option>

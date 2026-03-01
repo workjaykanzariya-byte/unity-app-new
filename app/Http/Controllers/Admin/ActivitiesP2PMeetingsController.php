@@ -210,6 +210,45 @@ class ActivitiesP2PMeetingsController extends Controller
             });
         }
 
+        if ($filters['from_user'] !== '') {
+            $like = $this->escapeLike($filters['from_user']);
+            $query->where(function ($inner) use ($like) {
+                $inner->whereRaw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '') ILIKE ?", ["%{$like}%"])
+                    ->orWhere('actor.company_name', 'ILIKE', "%{$like}%")
+                    ->orWhere('actor.city', 'ILIKE', "%{$like}%");
+            });
+        }
+
+        if ($filters['to_user'] !== '') {
+            $like = $this->escapeLike($filters['to_user']);
+            $query->where(function ($inner) use ($like) {
+                $inner->whereRaw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '') ILIKE ?", ["%{$like}%"])
+                    ->orWhere('peer.company_name', 'ILIKE', "%{$like}%")
+                    ->orWhere('peer.city', 'ILIKE', "%{$like}%");
+            });
+        }
+
+        if ($filters['meeting_date'] !== '') {
+            $meetingDate = $this->parseInputDate($filters['meeting_date']);
+            if ($meetingDate) {
+                $query->whereDate('activity.meeting_date', $meetingDate->toDateString());
+            }
+        }
+
+        if ($filters['meeting_place'] !== '') {
+            $query->where('activity.meeting_place', 'ILIKE', '%' . $this->escapeLike($filters['meeting_place']) . '%');
+        }
+
+        if ($filters['remarks'] !== '') {
+            $query->where('activity.remarks', 'ILIKE', '%' . $this->escapeLike($filters['remarks']) . '%');
+        }
+
+        if ($filters['has_media'] === 'yes') {
+            $this->applyHasMediaFilter($query, true);
+        } elseif ($filters['has_media'] === 'no') {
+            $this->applyHasMediaFilter($query, false);
+        }
+
         $this->applyScopeToActivityQuery($query, 'activity.initiator_user_id', 'activity.peer_user_id');
 
         return $query;
@@ -347,6 +386,11 @@ class ActivitiesP2PMeetingsController extends Controller
         }
     }
 
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['%', '_'], ['\\%', '\\_'], $value);
+    }
+
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon
     {
         if (! is_string($value) || trim($value) === '') {
@@ -379,4 +423,3 @@ class ActivitiesP2PMeetingsController extends Controller
     }
 
 }
-

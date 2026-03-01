@@ -121,8 +121,8 @@
                         <th>
                             <select name="has_media" class="form-select form-select-sm">
                                 <option value="">Any</option>
-                                <option value="1" @selected(($filters['has_media'] ?? '') === '1')>Yes</option>
-                                <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
+                                <option value="yes" @selected(($filters['has_media'] ?? '') === 'yes')>Yes</option>
+                                <option value="no" @selected(($filters['has_media'] ?? '') === 'no')>No</option>
                             </select>
                         </th>
                         <th>
@@ -136,6 +136,18 @@
                 <tbody>
                     @forelse ($items as $meeting)
                         @php
+                            $mediaValue = $meeting->media_reference ?? null;
+                            $hasMedia = false;
+
+                            if (is_string($mediaValue)) {
+                                $trim = trim($mediaValue);
+                                $hasMedia = ($trim !== '' && $trim !== 'null' && $trim !== '[]' && $trim !== '{}');
+                            } elseif (is_array($mediaValue)) {
+                                $hasMedia = count($mediaValue) > 0;
+                            } elseif (! is_null($mediaValue)) {
+                                $hasMedia = true;
+                            }
+
                             $actorName = $displayName($meeting->actor_display_name ?? null, $meeting->actor_first_name ?? null, $meeting->actor_last_name ?? null);
                             $peerName = $displayName($meeting->peer_display_name ?? null, $meeting->peer_first_name ?? null, $meeting->peer_last_name ?? null);
                         @endphp
@@ -158,10 +170,10 @@
                             <td>{{ $meeting->meeting_place ?? '—' }}</td>
                             <td class="text-muted">{{ $meeting->remarks ?? '—' }}</td>
                             <td>
-                                @if ($mediaInfo['has'])
-                                    <span class="badge bg-success">Yes ({{ $mediaInfo['count'] }})</span>
+                                @if ($hasMedia)
+                                    <span class="badge bg-success">Yes</span>
                                     <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#mediaViewerModal" data-media-source="media-json-{{ $meeting->id }}">View</button>
-                                    <script type="application/json" id="media-json-{{ $meeting->id }}">{{ e(json_encode(is_string($meeting->media ?? null) ? json_decode($meeting->media ?? '[]', true) : ($meeting->media ?? []))) }}</script>
+                                    <script type="application/json" id="media-json-{{ $meeting->id }}">{{ e(json_encode(is_string($meeting->media_reference ?? null) ? json_decode($meeting->media_reference ?? '[]', true) : ($meeting->media_reference ?? []))) }}</script>
                                 @else
                                     <span class="text-muted">No</span>
                                 @endif

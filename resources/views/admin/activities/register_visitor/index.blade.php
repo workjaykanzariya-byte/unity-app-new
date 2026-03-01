@@ -60,6 +60,27 @@
                         <th class="text-end">Actions</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th class="text-muted">—</th>
+                        <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="peer_phone" value="{{ $filters['peer_phone'] ?? '' }}" placeholder="Peer Phone" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="event_type" value="{{ $filters['event_type'] ?? '' }}" placeholder="Event Type" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="event_name" value="{{ $filters['event_name'] ?? '' }}" placeholder="Event Name" class="form-control form-control-sm"></th>
+                        <th><input type="date" name="event_date" value="{{ $filters['event_date'] ?? '' }}" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="visitor_name" value="{{ $filters['visitor_name'] ?? '' }}" placeholder="Visitor Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="visitor_mobile" value="{{ $filters['visitor_mobile'] ?? '' }}" placeholder="Visitor Mobile" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="visitor_city" value="{{ $filters['visitor_city'] ?? '' }}" placeholder="Visitor City" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="visitor_business" value="{{ $filters['visitor_business'] ?? '' }}" placeholder="Visitor Business" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="status" value="{{ $filters['status'] ?? '' }}" placeholder="Status" class="form-control form-control-sm"></th>
+                        <th><input type="number" name="coins_awarded" value="{{ $filters['coins_awarded'] ?? '' }}" placeholder="Coins" class="form-control form-control-sm"></th>
+                        <th class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.register-visitor.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
+                        <th class="text-muted">—</th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $item)

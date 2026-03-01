@@ -24,7 +24,7 @@ class ActivitiesLeaderInterestController extends Controller
         $applyingFor = $request->query('applying_for', 'all');
         $peerName = trim((string) $request->query('peer_name', ''));
         $peerPhone = trim((string) $request->query('peer_phone', ''));
-        $applyingForText = trim((string) $request->query('applying_for_text', ''));
+        $applyingForText = trim((string) $request->query('applying_for', ''));
         $referredName = trim((string) $request->query('referred_name', ''));
         $referredMobile = trim((string) $request->query('referred_mobile', ''));
         $leadershipRoles = trim((string) $request->query('leadership_roles', ''));
@@ -62,7 +62,9 @@ class ActivitiesLeaderInterestController extends Controller
             $query->where(function ($q) use ($like) {
                 $q->where('peer.display_name', 'ILIKE', $like)
                     ->orWhere('peer.first_name', 'ILIKE', $like)
-                    ->orWhere('peer.last_name', 'ILIKE', $like);
+                    ->orWhere('peer.last_name', 'ILIKE', $like)
+                    ->orWhere('peer.company_name', 'ILIKE', $like)
+                    ->orWhere('peer.city', 'ILIKE', $like);
             });
         }
 
@@ -127,7 +129,7 @@ class ActivitiesLeaderInterestController extends Controller
                 'circle_id' => $request->query('circle_id'),
                 'peer_name' => $peerName,
                 'peer_phone' => $peerPhone,
-                'applying_for_text' => $applyingForText,
+                'applying_for' => $applyingForText,
                 'referred_name' => $referredName,
                 'referred_mobile' => $referredMobile,
                 'leadership_roles' => $leadershipRoles,

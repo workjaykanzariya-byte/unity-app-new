@@ -21,12 +21,11 @@ class ActivitiesPeerRecommendationController extends Controller
         $to = $request->query('to');
         $fromAt = $this->parseDayBoundary($from, false);
         $toAt = $this->parseDayBoundary($to, true);
-        $known = $request->query('how_well_known', 'all');
         $peerNameFilter = trim((string) $request->query('peer_name', ''));
         $peerPhone = trim((string) $request->query('peer_phone', ''));
-        $recommendedName = trim((string) $request->query('recommended_name', ''));
-        $recommendedMobile = trim((string) $request->query('recommended_mobile', ''));
-        $howWellKnown = trim((string) $request->query('how_well_known_text', ''));
+        $recommendedName = trim((string) $request->query('recommended_peer_name', ''));
+        $recommendedMobile = trim((string) $request->query('recommended_peer_mobile', ''));
+        $howWellKnown = trim((string) $request->query('how_well_known', ''));
         $isAwareFilter = trim((string) $request->query('is_aware', ''));
         $coinsAwarded = trim((string) $request->query('coins_awarded', ''));
 
@@ -39,10 +38,6 @@ class ActivitiesPeerRecommendationController extends Controller
                 DB::raw("coalesce(peer.city, '') as from_city"),
                 'peer.phone as from_phone',
             ]);
-
-        if ($known && $known !== 'all') {
-            $query->where('how_well_known', $known);
-        }
 
         if ($search !== '') {
             $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
@@ -129,9 +124,9 @@ class ActivitiesPeerRecommendationController extends Controller
                 'circle_id' => $request->query('circle_id'),
                 'peer_name' => $peerNameFilter,
                 'peer_phone' => $peerPhone,
-                'recommended_name' => $recommendedName,
-                'recommended_mobile' => $recommendedMobile,
-                'how_well_known_text' => $howWellKnown,
+                'recommended_peer_name' => $recommendedName,
+                'recommended_peer_mobile' => $recommendedMobile,
+                'how_well_known' => $howWellKnown,
                 'is_aware' => $isAwareFilter,
                 'coins_awarded' => $coinsAwarded,
             ],

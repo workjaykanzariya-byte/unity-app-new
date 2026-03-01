@@ -105,7 +105,7 @@ class ActivitiesVisitorRegistrationController extends Controller
         }
 
         if ($statusFilter !== '') {
-            $query->where('status', $statusFilter);
+            $query->where('status', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $statusFilter) . '%');
         }
 
         if ($coinsAwarded !== '' && is_numeric($coinsAwarded)) {
