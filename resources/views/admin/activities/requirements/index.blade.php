@@ -155,20 +155,10 @@
                         </th>
                         <th class="text-muted">—</th>
                         <th>
-                            <select name="region" class="form-select form-select-sm">
-                                <option value="">Any</option>
-                                @foreach (($regions ?? collect()) as $region)
-                                    <option value="{{ $region }}" @selected(($filters['region'] ?? '') === $region)>{{ $region }}</option>
-                                @endforeach
-                            </select>
+                            <input type="text" name="region" value="{{ $filters['region'] ?? '' }}" placeholder="Region" class="form-control form-control-sm" />
                         </th>
                         <th>
-                            <select name="category" class="form-select form-select-sm">
-                                <option value="">Any</option>
-                                @foreach (($categories ?? collect()) as $category)
-                                    <option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ $category }}</option>
-                                @endforeach
-                            </select>
+                            <input type="text" name="category" value="{{ $filters['category'] ?? '' }}" placeholder="Category" class="form-control form-control-sm" />
                         </th>
                         <th>
                             <select name="status" class="form-select form-select-sm">

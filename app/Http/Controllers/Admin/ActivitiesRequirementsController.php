@@ -54,8 +54,6 @@ class ActivitiesRequirementsController extends Controller
             'topMembers' => $topMembers,
             'total' => $total,
             'circles' => $this->circleOptions(),
-            'regions' => $this->regionOptions(),
-            'categories' => $this->categoryOptions(),
             'statuses' => $this->statusOptions(),
         ]);
     }
@@ -204,11 +202,13 @@ class ActivitiesRequirementsController extends Controller
         }
 
         if ($filters['region'] !== '') {
-            $query->whereRaw("coalesce(nullif(activity.region_filter->>'region_label', ''), nullif(activity.region_filter->>'region_name', ''), nullif(activity.region_filter->>'city_name', '')) = ?", [$filters['region']]);
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['region']) . '%';
+            $query->whereRaw("coalesce(nullif(activity.region_filter->>'region_label', ''), nullif(activity.region_filter->>'region_name', ''), nullif(activity.region_filter->>'city_name', '')) ILIKE ?", [$like]);
         }
 
         if ($filters['category'] !== '') {
-            $query->whereRaw("coalesce(nullif(activity.category_filter->>'category', ''), nullif(activity.category_filter->>'name', '')) = ?", [$filters['category']]);
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['category']) . '%';
+            $query->whereRaw("coalesce(nullif(activity.category_filter->>'category', ''), nullif(activity.category_filter->>'name', '')) ILIKE ?", [$like]);
         }
 
         if ($filters['status'] !== '') {
@@ -301,29 +301,6 @@ class ActivitiesRequirementsController extends Controller
             ->get();
     }
 
-    private function regionOptions()
-    {
-        return Requirement::query()
-            ->whereNotNull('region_filter')
-            ->selectRaw("distinct coalesce(nullif(region_filter->>'region_label', ''), nullif(region_filter->>'region_name', ''), nullif(region_filter->>'city_name', '')) as value")
-            ->whereRaw("coalesce(nullif(region_filter->>'region_label', ''), nullif(region_filter->>'region_name', ''), nullif(region_filter->>'city_name', '')) is not null")
-            ->orderBy('value')
-            ->pluck('value')
-            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
-            ->values();
-    }
-
-    private function categoryOptions()
-    {
-        return Requirement::query()
-            ->whereNotNull('category_filter')
-            ->selectRaw("distinct coalesce(nullif(category_filter->>'category', ''), nullif(category_filter->>'name', '')) as value")
-            ->whereRaw("coalesce(nullif(category_filter->>'category', ''), nullif(category_filter->>'name', '')) is not null")
-            ->orderBy('value')
-            ->pluck('value')
-            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
-            ->values();
-    }
 
     private function statusOptions()
     {
