@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CoinClaims\RejectCoinClaimRequest;
 use App\Models\CoinClaimRequest;
+use App\Notifications\CoinClaimReviewedNotification;
 use App\Services\CoinClaims\CoinClaimEmailService;
 use App\Services\Coins\CoinsService;
 use App\Support\AdminCircleScope;
@@ -116,7 +117,17 @@ class CoinClaimsController extends Controller
                     );
                 }
 
-                $this->emailService->sendApproved($claim->fresh('user'));
+                $claim = $claim->fresh('user');
+                if ($claim->user) {
+                    $claim->user->notify(new CoinClaimReviewedNotification(
+                        claim: $claim,
+                        status: 'approved',
+                        coinsAwarded: $claim->coins_awarded !== null ? (int) $claim->coins_awarded : null,
+                        reason: null,
+                    ));
+                }
+
+                $this->emailService->sendApproved($claim);
 
                 return 'Coin claim approved.';
             });
@@ -159,7 +170,17 @@ class CoinClaimsController extends Controller
                 $claim->admin_note = $request->validated('admin_note');
                 $claim->save();
 
-                $this->emailService->sendRejected($claim->fresh('user'));
+                $claim = $claim->fresh('user');
+                if ($claim->user) {
+                    $claim->user->notify(new CoinClaimReviewedNotification(
+                        claim: $claim,
+                        status: 'rejected',
+                        coinsAwarded: null,
+                        reason: $claim->admin_note,
+                    ));
+                }
+
+                $this->emailService->sendRejected($claim);
 
                 return 'Coin claim rejected.';
             });
