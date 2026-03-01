@@ -164,7 +164,6 @@ class ActivitiesTestimonialsController extends Controller
         return [
             'from_peer' => trim((string) $request->query('from_peer', '')),
             'to_peer' => trim((string) $request->query('to_peer', '')),
-            'content' => trim((string) $request->query('content', '')),
             'media' => (string) $request->query('media', ''),
         ];
     }
@@ -224,11 +223,6 @@ class ActivitiesTestimonialsController extends Controller
                     ->orWhere('peer.city', 'ILIKE', $like);
             });
         }
-
-        if ($tableFilters['content'] !== '') {
-            $query->where('activity.content', 'ILIKE', '%' . $this->escapeLike($tableFilters['content']) . '%');
-        }
-
         if ($tableFilters['media'] === 'yes') {
             $query->whereNotNull('activity.media')
                 ->whereRaw("trim(cast(activity.media as text)) <> ''")

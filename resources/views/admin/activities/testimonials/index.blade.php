@@ -77,7 +77,7 @@
         'filters' => $filters,
         'circles' => $circles ?? collect(),
         'showExport' => true,
-        'exportUrl' => route('admin.activities.testimonials.export', request()->query()),
+        'exportUrl' => route('admin.activities.testimonials.export', request()->except(['content'])),
         'renderFormTag' => false,
         'formId' => 'testimonialsFiltersForm',
     ])
@@ -137,9 +137,7 @@
                         <th>
                             <input type="text" name="to_peer" value="{{ $tableFilters['to_peer'] ?? '' }}" class="form-control form-control-sm" placeholder="To">
                         </th>
-                        <th>
-                            <input type="text" name="content" value="{{ $tableFilters['content'] ?? '' }}" class="form-control form-control-sm" placeholder="Content">
-                        </th>
+                        <th></th>
                         <th>
                             <select name="media" class="form-select form-select-sm">
                                 <option value="" @selected(($tableFilters['media'] ?? '') === '')>Any</option>
