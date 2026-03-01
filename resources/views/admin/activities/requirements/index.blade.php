@@ -175,7 +175,12 @@
                                 <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
                             </select>
                         </th>
-                        <th class="text-muted">—</th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.requirements.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
