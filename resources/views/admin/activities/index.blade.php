@@ -72,7 +72,7 @@
                                     name="q"
                                     form="activitiesFiltersForm"
                                     class="form-control form-control-sm"
-                                    placeholder="Name, email, company, or city"
+                                    placeholder="Name, company, or city"
                                     value="{{ $filters['q'] ?? '' }}"
                                 >
                                 <div class="row g-2">

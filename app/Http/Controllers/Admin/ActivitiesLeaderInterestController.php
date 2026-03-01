@@ -47,7 +47,6 @@ class ActivitiesLeaderInterestController extends Controller
                     ->orWhere('peer.first_name', 'ILIKE', $like)
                     ->orWhere('peer.last_name', 'ILIKE', $like)
                     ->orWhere('peer.phone', 'ILIKE', $like)
-                    ->orWhere('peer.email', 'ILIKE', $like)
                     ->orWhere('peer.company_name', 'ILIKE', $like)
                     ->orWhere('peer.city', 'ILIKE', $like);
             });

@@ -171,7 +171,6 @@ class ActivitiesRequirementsController extends Controller
                 $q->where('actor.display_name', 'ILIKE', $like)
                     ->orWhere('actor.first_name', 'ILIKE', $like)
                     ->orWhere('actor.last_name', 'ILIKE', $like)
-                    ->orWhere('actor.email', 'ILIKE', $like)
                     ->orWhere('actor.company_name', 'ILIKE', $like)
                     ->orWhere('actor.city', 'ILIKE', $like)
                     ->orWhere('actor_city.name', 'ILIKE', $like);

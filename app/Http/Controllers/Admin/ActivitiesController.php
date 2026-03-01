@@ -142,7 +142,6 @@ class ActivitiesController extends Controller
                 $q->where('users.display_name', 'ILIKE', $like)
                     ->orWhere('users.first_name', 'ILIKE', $like)
                     ->orWhere('users.last_name', 'ILIKE', $like)
-                    ->orWhere('users.email', 'ILIKE', $like)
                     ->orWhere('users.company_name', 'ILIKE', $like)
                     ->orWhere('users.city', 'ILIKE', $like)
                     ->orWhere('cities.name', 'ILIKE', $like);
@@ -544,8 +543,7 @@ class ActivitiesController extends Controller
                     $like = "%{$search}%";
                     $q->where('member_user.display_name', 'ILIKE', $like)
                         ->orWhere('member_user.first_name', 'ILIKE', $like)
-                        ->orWhere('member_user.last_name', 'ILIKE', $like)
-                        ->orWhere('member_user.email', 'ILIKE', $like);
+                        ->orWhere('member_user.last_name', 'ILIKE', $like);
                 });
             }
 

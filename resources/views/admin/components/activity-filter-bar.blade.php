@@ -11,7 +11,7 @@
         <form method="GET" action="{{ $action }}" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small text-muted">{{ $label }}</label>
-                <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Name, email, company, or city">
+                <input type="text" name="q" value="{{ $q }}" class="form-control" placeholder="Name, company, or city">
             </div>
             <div class="col-md-3">
                 <label class="form-label small text-muted">From</label>

@@ -10,7 +10,7 @@
             <div class="d-flex flex-wrap gap-2 align-items-end">
                 <div>
                     <label class="form-label small text-muted mb-1">{{ $label ?? 'Search created by' }}</label>
-                    <input type="text" name="q" value="{{ $q }}" class="form-control form-control-sm" placeholder="Name, email, company, or city" style="min-width: 280px;">
+                    <input type="text" name="q" value="{{ $q }}" class="form-control form-control-sm" placeholder="Name, company, or city" style="min-width: 280px;">
                 </div>
                 <div>
                     <label class="form-label small text-muted mb-1">From</label>
