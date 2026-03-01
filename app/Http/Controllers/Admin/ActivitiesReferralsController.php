@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Carbon\Carbon;
 use App\Http\Controllers\Controller;
+use App\Models\Referral;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ class ActivitiesReferralsController extends Controller
                 'activity.address',
                 'activity.hot_value',
                 'activity.remarks',
+                'activity.media',
                 'activity.created_at',
                 'actor.display_name as actor_display_name',
                 'actor.first_name as actor_first_name',
@@ -59,6 +61,7 @@ class ActivitiesReferralsController extends Controller
             'topMembers' => $topMembers,
             'total' => $total,
             'circles' => $this->circleOptions(),
+            'types' => $this->referralTypeOptions(),
         ]);
     }
 
@@ -118,7 +121,7 @@ class ActivitiesReferralsController extends Controller
                         'peer.first_name as peer_first_name',
                         'peer.last_name as peer_last_name',
                         'peer.email as peer_email',
-                        DB::raw('NULL as media'),
+                        'activity.media',
                     ])
                     ->orderBy('activity.created_at')
                     ->orderBy('activity.id')
@@ -180,9 +183,19 @@ class ActivitiesReferralsController extends Controller
             'to' => $to,
             'from_at' => $fromAtRaw,
             'to_at' => $toAtRaw,
-            'referral_type' => $request->get('referral_type') ?? $request->get('type'),
+            'referral_type' => trim((string) ($request->get('referral_type') ?? $request->get('type', ''))),
             'per_page' => (int) $request->get('per_page', 20),
-            'circle_id' => $request->get('circle_id'),
+            'circle_id' => (string) $request->get('circle_id', ''),
+            'from_user' => trim((string) $request->get('from_user', '')),
+            'to_user' => trim((string) $request->get('to_user', '')),
+            'type' => trim((string) $request->get('type', '')),
+            'referral_date' => trim((string) $request->get('referral_date', '')),
+            'referral_of' => trim((string) $request->get('referral_of', '')),
+            'phone' => trim((string) $request->get('phone', '')),
+            'email' => trim((string) $request->get('email', '')),
+            'hot_value' => trim((string) $request->get('hot_value', '')),
+            'remarks' => trim((string) $request->get('remarks', '')),
+            'has_media' => (string) $request->get('has_media', ''),
         ];
 
         $filters['from_dt'] = $this->parseDayBoundary($filters['from_at'], false);
@@ -220,6 +233,72 @@ class ActivitiesReferralsController extends Controller
 
         if (! empty($filters['referral_type'])) {
             $query->where('activity.referral_type', $filters['referral_type']);
+        }
+
+        if ($filters['from_user'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['from_user']) . '%';
+            $query->where(function ($inner) use ($like) {
+                $inner->where('actor.display_name', 'ILIKE', $like)
+                    ->orWhere('actor.first_name', 'ILIKE', $like)
+                    ->orWhere('actor.last_name', 'ILIKE', $like)
+                    ->orWhereRaw("concat_ws(' ', coalesce(actor.first_name, ''), coalesce(actor.last_name, '')) ILIKE ?", [$like]);
+            });
+        }
+
+        if ($filters['to_user'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['to_user']) . '%';
+            $query->where(function ($inner) use ($like) {
+                $inner->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like)
+                    ->orWhereRaw("concat_ws(' ', coalesce(peer.first_name, ''), coalesce(peer.last_name, '')) ILIKE ?", [$like]);
+            });
+        }
+
+        if ($filters['type'] !== '' && $filters['referral_type'] === '') {
+            $query->where('activity.referral_type', $filters['type']);
+        }
+
+        if ($filters['referral_date'] !== '') {
+            $parsedDate = $this->parseInputDate($filters['referral_date']);
+            if ($parsedDate) {
+                $query->whereDate('activity.referral_date', '=', $parsedDate->toDateString());
+            }
+        }
+
+        if ($filters['referral_of'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['referral_of']) . '%';
+            $query->where('activity.referral_of', 'ILIKE', $like);
+        }
+
+        if ($filters['phone'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['phone']) . '%';
+            $query->where('activity.phone', 'ILIKE', $like);
+        }
+
+        if ($filters['email'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['email']) . '%';
+            $query->where('activity.email', 'ILIKE', $like);
+        }
+
+        if ($filters['hot_value'] !== '' && is_numeric($filters['hot_value'])) {
+            $query->where('activity.hot_value', (int) $filters['hot_value']);
+        }
+
+        if ($filters['remarks'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['remarks']) . '%';
+            $query->where('activity.remarks', 'ILIKE', $like);
+        }
+
+        if ($filters['has_media'] === '1') {
+            $query->whereNotNull('activity.media')->whereRaw("activity.media::text <> '[]'");
+        }
+
+        if ($filters['has_media'] === '0') {
+            $query->where(function ($inner) {
+                $inner->whereNull('activity.media')
+                    ->orWhereRaw("activity.media::text = '[]'");
+            });
         }
 
         $from = $filters['from_dt'] ?? null;
@@ -296,6 +375,31 @@ class ActivitiesReferralsController extends Controller
             ->select(['id', 'name'])
             ->orderBy('name')
             ->get();
+    }
+
+    private function referralTypeOptions()
+    {
+        return Referral::query()
+            ->whereNotNull('referral_type')
+            ->select('referral_type')
+            ->distinct()
+            ->orderBy('referral_type')
+            ->pluck('referral_type')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values();
+    }
+
+    private function parseInputDate(string $value): ?Carbon
+    {
+        try {
+            return Carbon::createFromFormat('d-m-Y', $value);
+        } catch (\Throwable $exception) {
+            try {
+                return Carbon::parse($value);
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
     }
 
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon

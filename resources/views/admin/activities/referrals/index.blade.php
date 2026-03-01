@@ -50,6 +50,7 @@
         </div>
     </div>
 
+    <form id="referralsFiltersForm" method="GET" action="{{ route('admin.activities.referrals.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.referrals.index'),
         'resetUrl' => route('admin.activities.referrals.index'),
@@ -57,6 +58,8 @@
         'circles' => $circles ?? collect(),
         'showExport' => true,
         'exportUrl' => route('admin.activities.referrals.export', request()->query()),
+        'renderFormTag' => false,
+        'formId' => 'referralsFiltersForm',
     ])
 
     <div class="card shadow-sm mb-3">
@@ -114,6 +117,38 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th><input type="text" name="from_user" value="{{ $filters['from_user'] ?? '' }}" placeholder="From" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="to_user" value="{{ $filters['to_user'] ?? '' }}" placeholder="To" class="form-control form-control-sm"></th>
+                        <th>
+                            <select name="type" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                @foreach (($types ?? collect()) as $type)
+                                    <option value="{{ $type }}" @selected(($filters['type'] ?? '') === $type || ($filters['referral_type'] ?? '') === $type)>{{ $type }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th><input type="date" name="referral_date" value="{{ $filters['referral_date'] ?? '' }}" class="form-control form-control-sm" placeholder="dd-mm-yyyy"></th>
+                        <th><input type="text" name="referral_of" value="{{ $filters['referral_of'] ?? '' }}" placeholder="Referral Of" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="phone" value="{{ $filters['phone'] ?? '' }}" placeholder="Phone" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="email" value="{{ $filters['email'] ?? '' }}" placeholder="Email" class="form-control form-control-sm"></th>
+                        <th class="text-muted">—</th>
+                        <th><input type="number" name="hot_value" value="{{ $filters['hot_value'] ?? '' }}" placeholder="Hot" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="remarks" value="{{ $filters['remarks'] ?? '' }}" placeholder="Remarks" class="form-control form-control-sm"></th>
+                        <th>
+                            <select name="has_media" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                <option value="1" @selected(($filters['has_media'] ?? '') === '1')>Yes</option>
+                                <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
+                            </select>
+                        </th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.referrals.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $referral)
@@ -165,6 +200,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}
