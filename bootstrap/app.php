@@ -29,19 +29,21 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->is('api/*') || $request->expectsJson();
         });
 
-        $exceptions->render(function (Throwable $throwable, Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if (! ($request->is('api/*') || $request->expectsJson())) {
                 return null;
             }
 
-            $statusCode = 500;
-            if ($throwable instanceof HttpExceptionInterface) {
-                $statusCode = $throwable->getStatusCode();
-            }
+            $statusCode = method_exists($e, 'getStatusCode')
+                ? $e->getStatusCode()
+                : 500;
 
             return response()->json([
                 'status' => false,
-                'message' => $statusCode >= 500 ? 'Server error' : $throwable->getMessage(),
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'data' => null,
                 'meta' => null,
             ], $statusCode);
