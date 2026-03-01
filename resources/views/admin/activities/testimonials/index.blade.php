@@ -70,6 +70,7 @@
         </div>
     </div>
 
+    <form id="testimonialsFiltersForm" method="GET" action="{{ route('admin.activities.testimonials.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.testimonials.index'),
         'resetUrl' => route('admin.activities.testimonials.index'),
@@ -77,6 +78,8 @@
         'circles' => $circles ?? collect(),
         'showExport' => true,
         'exportUrl' => route('admin.activities.testimonials.export', request()->query()),
+        'renderFormTag' => false,
+        'formId' => 'testimonialsFiltersForm',
     ])
 
     <div class="card shadow-sm mb-3">
@@ -127,6 +130,30 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th>
+                            <input type="text" name="from_peer" value="{{ $tableFilters['from_peer'] ?? '' }}" class="form-control form-control-sm" placeholder="From">
+                        </th>
+                        <th>
+                            <input type="text" name="to_peer" value="{{ $tableFilters['to_peer'] ?? '' }}" class="form-control form-control-sm" placeholder="To">
+                        </th>
+                        <th>
+                            <input type="text" name="content" value="{{ $tableFilters['content'] ?? '' }}" class="form-control form-control-sm" placeholder="Content">
+                        </th>
+                        <th>
+                            <select name="media" class="form-select form-select-sm">
+                                <option value="" @selected(($tableFilters['media'] ?? '') === '')>Any</option>
+                                <option value="yes" @selected(($tableFilters['media'] ?? '') === 'yes')>Yes</option>
+                                <option value="no" @selected(($tableFilters['media'] ?? '') === 'no')>No</option>
+                            </select>
+                        </th>
+                        <th class="text-end">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a class="btn btn-outline-secondary btn-sm" href="{{ route('admin.activities.testimonials.index') }}">Reset</a>
+                            </div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $testimonial)
@@ -171,6 +198,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

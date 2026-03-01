@@ -16,8 +16,9 @@ class ActivitiesTestimonialsController extends Controller
     public function index(Request $request): View
     {
         $filters = $this->filters($request);
+        $tableFilters = $this->tableFilters($request);
 
-        $baseQuery = $this->baseQuery($request, $filters);
+        $baseQuery = $this->baseQuery($request, $filters, $tableFilters);
         $total = (clone $baseQuery)->count();
 
         $items = $baseQuery
@@ -50,6 +51,7 @@ class ActivitiesTestimonialsController extends Controller
         return view('admin.activities.testimonials.index', [
             'items' => $items,
             'filters' => $filters,
+            'tableFilters' => $tableFilters,
             'topMembers' => $topMembers,
             'total' => $total,
             'circles' => $this->circleOptions(),
@@ -59,9 +61,10 @@ class ActivitiesTestimonialsController extends Controller
     public function export(Request $request): StreamedResponse
     {
         $filters = $this->filters($request);
+        $tableFilters = $this->tableFilters($request);
         $filename = 'testimonials_' . now()->format('Ymd_His') . '.csv';
 
-        return response()->streamDownload(function () use ($request, $filters) {
+        return response()->streamDownload(function () use ($request, $filters, $tableFilters) {
             @ini_set('zlib.output_compression', '0');
             @ini_set('output_buffering', '0');
             while (ob_get_level() > 0) {
@@ -85,7 +88,7 @@ class ActivitiesTestimonialsController extends Controller
                     'Created At',
                 ]);
 
-                $this->baseQuery($request, $filters)
+                $this->baseQuery($request, $filters, $tableFilters)
                     ->select([
                         'activity.id',
                         'activity.content',
@@ -155,7 +158,18 @@ class ActivitiesTestimonialsController extends Controller
         ];
     }
 
-    private function baseQuery(Request $request, array $filters)
+
+    private function tableFilters(Request $request): array
+    {
+        return [
+            'from_peer' => trim((string) $request->query('from_peer', '')),
+            'to_peer' => trim((string) $request->query('to_peer', '')),
+            'content' => trim((string) $request->query('content', '')),
+            'media' => (string) $request->query('media', ''),
+        ];
+    }
+
+    private function baseQuery(Request $request, array $filters, array $tableFilters)
     {
         $query = DB::table('testimonials as activity')
             ->leftJoin('users as actor', 'actor.id', '=', 'activity.from_user_id')
@@ -193,6 +207,44 @@ class ActivitiesTestimonialsController extends Controller
             });
         }
 
+        if ($tableFilters['from_peer'] !== '') {
+            $like = '%' . $this->escapeLike($tableFilters['from_peer']) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw("coalesce(nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), ''), actor.display_name, '') ILIKE ?", [$like])
+                    ->orWhere('actor.company_name', 'ILIKE', $like)
+                    ->orWhere('actor.city', 'ILIKE', $like);
+            });
+        }
+
+        if ($tableFilters['to_peer'] !== '') {
+            $like = '%' . $this->escapeLike($tableFilters['to_peer']) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw("coalesce(nullif(trim(concat_ws(' ', peer.first_name, peer.last_name)), ''), peer.display_name, '') ILIKE ?", [$like])
+                    ->orWhere('peer.company_name', 'ILIKE', $like)
+                    ->orWhere('peer.city', 'ILIKE', $like);
+            });
+        }
+
+        if ($tableFilters['content'] !== '') {
+            $query->where('activity.content', 'ILIKE', '%' . $this->escapeLike($tableFilters['content']) . '%');
+        }
+
+        if ($tableFilters['media'] === 'yes') {
+            $query->whereNotNull('activity.media')
+                ->whereRaw("trim(cast(activity.media as text)) <> ''")
+                ->whereRaw("trim(cast(activity.media as text)) <> '[]'")
+                ->whereRaw("trim(cast(activity.media as text)) <> '{}'")
+                ->whereRaw("trim(cast(activity.media as text)) <> 'null'");
+        } elseif ($tableFilters['media'] === 'no') {
+            $query->where(function ($q) {
+                $q->whereNull('activity.media')
+                    ->orWhereRaw("trim(cast(activity.media as text)) = ''")
+                    ->orWhereRaw("trim(cast(activity.media as text)) = '[]'")
+                    ->orWhereRaw("trim(cast(activity.media as text)) = '{}'")
+                    ->orWhereRaw("trim(cast(activity.media as text)) = 'null'");
+            });
+        }
+
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query;
@@ -215,7 +267,6 @@ class ActivitiesTestimonialsController extends Controller
                     ->where('cm_filter.circle_id', $filters['circle_id']);
             });
         }
-
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query
@@ -267,6 +318,11 @@ class ActivitiesTestimonialsController extends Controller
         } catch (\Throwable $exception) {
             return null;
         }
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['%', '_'], ['\\%', '\\_'], $value);
     }
 
     private function applyScopeToActivityQuery($query, string $primaryColumn, ?string $peerColumn): void
