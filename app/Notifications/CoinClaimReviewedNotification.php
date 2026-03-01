@@ -12,14 +12,13 @@ class CoinClaimReviewedNotification extends Notification
 {
     use Queueable;
 
-    public bool $afterCommit = true;
-
     public function __construct(
         private readonly CoinClaimRequest $claim,
         private readonly string $status,
         private readonly ?int $coinsAwarded = null,
         private readonly ?string $reason = null,
     ) {
+        $this->afterCommit = true;
     }
 
     public function via(object $notifiable): array
@@ -44,10 +43,12 @@ class CoinClaimReviewedNotification extends Notification
 
         return [
             'notification_type' => 'coin_claim_reviewed',
-            'status' => $this->status,
+            'coin_claim_id' => (string) $this->claim->id,
             'claim_id' => (string) $this->claim->id,
             'activity_code' => (string) $this->claim->activity_code,
             'activity_label' => $activity['label'] ?? null,
+            'decision' => $this->status,
+            'status' => $this->status,
             'coins_awarded' => $this->coinsAwarded,
             'reason' => $this->status === 'rejected' ? $this->reason : null,
             'reviewed_at' => optional($this->claim->reviewed_at)->toISOString(),
