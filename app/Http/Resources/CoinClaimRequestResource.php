@@ -18,6 +18,7 @@ class CoinClaimRequestResource extends JsonResource
             'user_id' => (string) $this->user_id,
             'activity_code' => (string) $this->activity_code,
             'activity_label' => $activity['label'] ?? null,
+            'coins' => (int) ($activity['coins'] ?? 0),
             'payload' => $this->payload,
             'status' => (string) $this->status,
             'coins_awarded' => $this->coins_awarded,

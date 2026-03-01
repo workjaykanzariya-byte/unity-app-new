@@ -260,6 +260,7 @@ Route::prefix('v1')->group(function () {
         // Coin Claims
         Route::get('/coin-claims/activities', [CoinClaimController::class, 'activities']);
         Route::post('/coin-claims', [CoinClaimController::class, 'store']);
+        Route::get('/coin-claims/my', [CoinClaimController::class, 'myRequests']);
 
         // Membership payments
         Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);
