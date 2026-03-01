@@ -86,9 +86,10 @@ class CoinClaimsController extends Controller
         Log::info('Coin claim approve requested', ['request_id' => $requestId, 'id' => $id]);
 
         $admin = Auth::guard('admin')->user();
+        $adminId = $admin?->id;
 
         try {
-            $message = DB::transaction(function () use ($id, $admin, $requestId, $request) {
+            $message = DB::transaction(function () use ($id, $admin, $adminId, $requestId, $request) {
                 $claim = CoinClaimRequest::with('user')->where('id', $id)->lockForUpdate()->firstOrFail();
 
                 if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -103,52 +104,60 @@ class CoinClaimsController extends Controller
                 $coins = (int) ($activity['coins'] ?? 0);
 
                 $claim->status = 'approved';
-                $claim->reviewed_by_admin_id = $admin?->id;
+                $claim->reviewed_by_admin_id = $adminId;
                 $claim->reviewed_at = now();
                 $claim->coins_awarded = $coins;
                 $claim->admin_note = $request->input('admin_note');
                 $claim->save();
 
                 if ($coins > 0 && $claim->user) {
-                    $reference = 'Coin claim approved: ' . $claim->activity_code . ' #' . $claim->id
-                        . ' | admin: ' . ($admin?->id ?? 'unknown');
+                    $reference = 'Coin claim approved: ' . $claim->activity_code . ' #' . $claim->id;
+
+                    // ✅ IMPORTANT:
+                    // Coins ledger "created_by" is a FK to users (not admins),
+                    // so we never pass admin_id as created_by.
+                    // We store admin_id safely inside meta.
+                    $meta = [
+                        'source' => 'coin_claim',
+                        'coin_claim_request_id' => (string) $claim->id,
+                        'activity_code' => (string) $claim->activity_code,
+                        'reviewed_by_admin_id' => $adminId ? (string) $adminId : null,
+                        'admin_note' => $claim->admin_note ? (string) $claim->admin_note : null,
+                        // keep a user-safe creator marker if your service uses it
+                        'created_by_user_id' => (string) $claim->user_id,
+                    ];
 
                     Log::info('coin_claim.approve.ledger_payload', [
                         'claim_id' => (string) $claim->id,
                         'user_id' => (string) $claim->user_id,
                         'amount' => $coins,
                         'reference' => $reference,
-                        'created_by' => (string) $claim->user_id,
-                        'reviewed_by_admin_id' => $admin?->id,
+                        'meta' => $meta,
                     ]);
 
+                    $this->coinsService->reward(
+                        $claim->user,      // User model
+                        $coins,            // amount
+                        $reference,        // reference string
+                        $meta              // ✅ meta MUST be array
+                    );
+                }
+
+                // Fire notifications/emails AFTER COMMIT (prevents partial writes on rollback)
+                DB::afterCommit(function () use ($claim) {
                     try {
-                        $this->coinsService->reward(
-                            $claim->user,
-                            $coins,
-                            $reference,
-                            $claim->user_id
-                        );
-                    } catch (\Throwable $exception) {
-                        Log::error('coin_claim.approve.ledger_insert_failed', [
+                        $fresh = $claim->fresh('user');
+                        if ($fresh && $fresh->user) {
+                            $this->userNotificationService->sendApproved($fresh);
+                        }
+                        $this->emailService->sendApproved($fresh);
+                    } catch (\Throwable $e) {
+                        Log::error('coin_claim.approve.after_commit_failed', [
                             'claim_id' => (string) $claim->id,
-                            'user_id' => (string) $claim->user_id,
-                            'amount' => $coins,
-                            'created_by' => (string) $claim->user_id,
-                            'reviewed_by_admin_id' => $admin?->id,
-                            'error' => $exception->getMessage(),
+                            'error' => $e->getMessage(),
                         ]);
-
-                        throw $exception;
                     }
-                }
-
-                $claim = $claim->fresh('user');
-                if ($claim->user) {
-                    $this->userNotificationService->sendApproved($claim);
-                }
-
-                $this->emailService->sendApproved($claim);
+                });
 
                 return 'Coin claim approved.';
             });
@@ -158,7 +167,7 @@ class CoinClaimsController extends Controller
             Log::error('Coin claim approve failed', [
                 'request_id' => $requestId,
                 'id' => $id,
-                'admin_id' => $admin?->id,
+                'admin_id' => $adminId,
                 'error' => $exception->getMessage(),
             ]);
 
@@ -172,9 +181,10 @@ class CoinClaimsController extends Controller
         Log::info('Coin claim reject requested', ['request_id' => $requestId, 'id' => $id]);
 
         $admin = Auth::guard('admin')->user();
+        $adminId = $admin?->id;
 
         try {
-            $message = DB::transaction(function () use ($id, $admin, $request) {
+            $message = DB::transaction(function () use ($id, $admin, $adminId, $request) {
                 $claim = CoinClaimRequest::with('user')->where('id', $id)->lockForUpdate()->firstOrFail();
 
                 if (! AdminCircleScope::userInScope($admin, $claim->user_id)) {
@@ -186,17 +196,25 @@ class CoinClaimsController extends Controller
                 }
 
                 $claim->status = 'rejected';
-                $claim->reviewed_by_admin_id = $admin?->id;
+                $claim->reviewed_by_admin_id = $adminId;
                 $claim->reviewed_at = now();
                 $claim->admin_note = $request->validated('admin_note');
                 $claim->save();
 
-                $claim = $claim->fresh('user');
-                if ($claim->user) {
-                    $this->userNotificationService->sendRejected($claim);
-                }
-
-                $this->emailService->sendRejected($claim);
+                DB::afterCommit(function () use ($claim) {
+                    try {
+                        $fresh = $claim->fresh('user');
+                        if ($fresh && $fresh->user) {
+                            $this->userNotificationService->sendRejected($fresh);
+                        }
+                        $this->emailService->sendRejected($fresh);
+                    } catch (\Throwable $e) {
+                        Log::error('coin_claim.reject.after_commit_failed', [
+                            'claim_id' => (string) $claim->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
 
                 return 'Coin claim rejected.';
             });
@@ -206,7 +224,7 @@ class CoinClaimsController extends Controller
             Log::error('Coin claim reject failed', [
                 'request_id' => $requestId,
                 'id' => $id,
-                'admin_id' => $admin?->id,
+                'admin_id' => $adminId,
                 'error' => $exception->getMessage(),
             ]);
 
