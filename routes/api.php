@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\V1\RazorpayWebhookController;
 use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
 use App\Http\Controllers\Api\V1\CollaborationTypeController;
 use App\Http\Controllers\Api\V1\CollaborationPostController;
+use App\Http\Controllers\Api\V1\CoinClaimController;
 use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\RequirementController as V1RequirementController;
 use App\Http\Controllers\Api\V1\RequirementInterestController;
@@ -255,6 +256,10 @@ Route::prefix('v1')->group(function () {
 
         // Files
         Route::post('/files/upload', [FileController::class, 'upload']);
+
+        // Coin Claims
+        Route::get('/coin-claims/activities', [CoinClaimController::class, 'activities']);
+        Route::post('/coin-claims', [CoinClaimController::class, 'store']);
 
         // Membership payments
         Route::post('/payments/create-order', [PaymentController::class, 'createOrder']);

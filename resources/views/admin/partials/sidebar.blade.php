@@ -14,6 +14,7 @@
             ['icon' => 'bi-people', 'label' => 'Peers', 'route' => 'admin.users.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
+            ['icon' => 'bi-patch-check', 'label' => 'Coin Claims', 'route' => 'admin.coin-claims.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
         ]
@@ -23,6 +24,7 @@
             ['icon' => 'bi-diagram-3', 'label' => 'Circles', 'route' => 'admin.circles.index'],
             ['icon' => 'bi-coin', 'label' => 'Coins', 'route' => 'admin.coins.index'],
             ['icon' => 'bi-person-rolodex', 'label' => 'Visitor Registrations', 'route' => 'admin.visitor-registrations.index'],
+            ['icon' => 'bi-patch-check', 'label' => 'Coin Claims', 'route' => 'admin.coin-claims.index'],
             ['icon' => 'bi-card-checklist', 'label' => 'Membership Plans', 'route' => 'admin.unity-peers-plans.index'],
             ...($isGlobalAdmin ? [['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index']] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
