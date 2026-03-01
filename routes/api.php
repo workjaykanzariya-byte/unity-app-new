@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Forms\PeerRecommendationController;
 use App\Http\Controllers\Api\V1\Forms\VisitorRegistrationController;
 use App\Http\Controllers\Api\V1\Profile\MyPostsController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
+use App\Http\Controllers\Api\V1\FollowController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PushTokenController;
@@ -219,6 +220,19 @@ Route::prefix('v1')->group(function () {
         // Push tokens
         Route::post('/push-tokens', [PushTokenController::class, 'store']);
         Route::delete('/push-tokens', [PushTokenController::class, 'destroy']);
+
+        // Follow system
+        Route::post('users/{user}/follow', [FollowController::class, 'requestFollow'])->whereUuid('user');
+        Route::delete('users/{user}/unfollow', [FollowController::class, 'unfollow'])->whereUuid('user');
+        Route::get('users/{user}/follow-status', [FollowController::class, 'status'])->whereUuid('user');
+
+        Route::get('me/follow-requests', [FollowController::class, 'incomingRequests']);
+        Route::get('me/following', [FollowController::class, 'myFollowing']);
+        Route::get('me/followers', [FollowController::class, 'myFollowers']);
+
+        Route::post('follows/{follow}/accept', [FollowController::class, 'accept'])->whereUuid('follow');
+        Route::post('follows/{follow}/reject', [FollowController::class, 'reject'])->whereUuid('follow');
+        Route::delete('follows/{follow}/cancel', [FollowController::class, 'cancel'])->whereUuid('follow');
 
         if (app()->environment(['local', 'staging'])) {
             Route::post('/debug/push-test', function (\Illuminate\Http\Request $request) {
