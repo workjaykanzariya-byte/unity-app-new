@@ -109,12 +109,37 @@ class CoinClaimsController extends Controller
                 $claim->save();
 
                 if ($coins > 0 && $claim->user) {
-                    $this->coinsService->reward(
-                        $claim->user,
-                        $coins,
-                        'Coin claim approved: ' . $claim->activity_code . ' #' . $claim->id,
-                        $admin?->id
-                    );
+                    $reference = 'Coin claim approved: ' . $claim->activity_code . ' #' . $claim->id
+                        . ' | admin: ' . ($admin?->id ?? 'unknown');
+
+                    Log::info('coin_claim.approve.ledger_payload', [
+                        'claim_id' => (string) $claim->id,
+                        'user_id' => (string) $claim->user_id,
+                        'amount' => $coins,
+                        'reference' => $reference,
+                        'created_by' => (string) $claim->user_id,
+                        'reviewed_by_admin_id' => $admin?->id,
+                    ]);
+
+                    try {
+                        $this->coinsService->reward(
+                            $claim->user,
+                            $coins,
+                            $reference,
+                            $claim->user_id
+                        );
+                    } catch (\Throwable $exception) {
+                        Log::error('coin_claim.approve.ledger_insert_failed', [
+                            'claim_id' => (string) $claim->id,
+                            'user_id' => (string) $claim->user_id,
+                            'amount' => $coins,
+                            'created_by' => (string) $claim->user_id,
+                            'reviewed_by_admin_id' => $admin?->id,
+                            'error' => $exception->getMessage(),
+                        ]);
+
+                        throw $exception;
+                    }
                 }
 
                 $claim = $claim->fresh('user');
