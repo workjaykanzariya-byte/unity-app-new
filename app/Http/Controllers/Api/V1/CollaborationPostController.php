@@ -7,6 +7,7 @@ use App\Http\Requests\Api\V1\StoreCollaborationPostRequest;
 use App\Http\Resources\CollaborationPostResource;
 use App\Services\Collaboration\CollaborationPostService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class CollaborationPostController extends Controller
@@ -17,6 +18,11 @@ class CollaborationPostController extends Controller
 
     public function store(StoreCollaborationPostRequest $request): JsonResponse
     {
+        Log::info('HIT collaborations.store', [
+            'user_id' => optional($request->user())->id,
+            'payload' => $request->all(),
+        ]);
+
         try {
             $post = $this->collaborationPostService->createForUser($request->user(), $request->validated());
         } catch (ValidationException $exception) {

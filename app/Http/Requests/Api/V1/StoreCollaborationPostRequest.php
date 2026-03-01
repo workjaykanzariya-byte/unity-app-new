@@ -36,7 +36,7 @@ class StoreCollaborationPostRequest extends FormRequest
             ],
             'collaboration_type' => ['nullable', 'string', 'required_without:collaboration_type_id'],
             'title' => ['required', 'string', 'max:80'],
-            'description' => ['required', 'string', 'min:500'],
+            'description' => ['required', 'string'],
             'scope' => ['required', Rule::in(self::SCOPES)],
             'countries_of_interest' => ['nullable', 'array', 'required_if:scope,international', 'min:1'],
             'countries_of_interest.*' => ['string', 'size:2', 'regex:/^[A-Z]{2}$/'],

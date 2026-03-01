@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -29,19 +30,31 @@ return Application::configure(basePath: dirname(__DIR__))
             return $request->is('api/*') || $request->expectsJson();
         });
 
-        $exceptions->render(function (Throwable $throwable, Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if (! ($request->is('api/*') || $request->expectsJson())) {
                 return null;
             }
 
-            $statusCode = 500;
-            if ($throwable instanceof HttpExceptionInterface) {
-                $statusCode = $throwable->getStatusCode();
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                    'data' => null,
+                    'meta' => null,
+                ], 422);
             }
+
+            $statusCode = method_exists($e, 'getStatusCode')
+                ? $e->getStatusCode()
+                : 500;
 
             return response()->json([
                 'status' => false,
-                'message' => $statusCode >= 500 ? 'Server error' : $throwable->getMessage(),
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'data' => null,
                 'meta' => null,
             ], $statusCode);
