@@ -8,7 +8,7 @@ use App\Models\Referral;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -32,8 +32,9 @@ class ActivitiesReferralsController extends Controller
                 'activity.address',
                 'activity.hot_value',
                 'activity.remarks',
-                'activity.media',
                 'activity.created_at',
+                DB::raw($this->hasMediaSelectExpression() . ' as has_media'),
+                DB::raw($this->mediaReferenceSelectExpression() . ' as media_reference'),
                 'actor.display_name as actor_display_name',
                 'actor.first_name as actor_first_name',
                 'actor.last_name as actor_last_name',
@@ -121,7 +122,8 @@ class ActivitiesReferralsController extends Controller
                         'peer.first_name as peer_first_name',
                         'peer.last_name as peer_last_name',
                         'peer.email as peer_email',
-                        'activity.media',
+                        DB::raw($this->hasMediaSelectExpression() . ' as has_media'),
+                        DB::raw($this->mediaReferenceSelectExpression() . ' as media_reference'),
                     ])
                     ->orderBy('activity.created_at')
                     ->orderBy('activity.id')
@@ -152,9 +154,9 @@ class ActivitiesReferralsController extends Controller
                                 $row->address ?? '',
                                 $row->hot_value ?? '',
                                 $row->remarks ?? '',
-                                $this->mediaCount($row->media ?? null),
-                                $this->mediaUrls($row->media ?? null),
-                                $this->mediaJson($row->media ?? null),
+                                (int) ($row->has_media ?? 0),
+                                $this->mediaReferenceForExport($row->media_reference ?? null),
+                                $this->mediaReferenceForExport($row->media_reference ?? null),
                                 $row->created_at ?? '',
                             ]);
                         }
@@ -291,14 +293,11 @@ class ActivitiesReferralsController extends Controller
         }
 
         if ($filters['has_media'] === '1') {
-            $query->whereNotNull('activity.media')->whereRaw("activity.media::text <> '[]'");
+            $this->applyHasMediaFilter($query, true);
         }
 
         if ($filters['has_media'] === '0') {
-            $query->where(function ($inner) {
-                $inner->whereNull('activity.media')
-                    ->orWhereRaw("activity.media::text = '[]'");
-            });
+            $this->applyHasMediaFilter($query, false);
         }
 
         $from = $filters['from_dt'] ?? null;
@@ -402,6 +401,92 @@ class ActivitiesReferralsController extends Controller
         }
     }
 
+    private function referralMediaColumn(): ?string
+    {
+        static $column;
+
+        if (func_num_args() === 0 && isset($column)) {
+            return $column;
+        }
+
+        foreach (['media_id', 'media_file_id', 'file_id', 'attachment_id', 'media_url', 'document_id', 'image_id'] as $candidate) {
+            if (Schema::hasColumn('referrals', $candidate)) {
+                $column = $candidate;
+                return $column;
+            }
+        }
+
+        $column = null;
+
+        return null;
+    }
+
+    private function hasMediaSelectExpression(): string
+    {
+        $column = $this->referralMediaColumn();
+
+        if ($column === 'media_url') {
+            return "CASE WHEN NULLIF(activity.media_url, '') IS NULL THEN 0 ELSE 1 END";
+        }
+
+        if ($column) {
+            return "CASE WHEN activity.{$column} IS NULL THEN 0 ELSE 1 END";
+        }
+
+        return '0';
+    }
+
+    private function mediaReferenceSelectExpression(): string
+    {
+        $column = $this->referralMediaColumn();
+
+        if ($column) {
+            return "activity.{$column}";
+        }
+
+        return 'NULL';
+    }
+
+    private function applyHasMediaFilter($query, bool $hasMedia): void
+    {
+        $column = $this->referralMediaColumn();
+
+        if (! $column) {
+            if ($hasMedia) {
+                $query->whereRaw('1 = 0');
+            }
+
+            return;
+        }
+
+        $qualified = "activity.{$column}";
+
+        if ($column === 'media_url') {
+            if ($hasMedia) {
+                $query->whereRaw("NULLIF({$qualified}, '') IS NOT NULL");
+            } else {
+                $query->whereRaw("NULLIF({$qualified}, '') IS NULL");
+            }
+
+            return;
+        }
+
+        if ($hasMedia) {
+            $query->whereNotNull($qualified);
+        } else {
+            $query->whereNull($qualified);
+        }
+    }
+
+    private function mediaReferenceForExport($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        return (string) $value;
+    }
+
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon
     {
         if (! is_string($value) || trim($value) === '') {
@@ -433,83 +518,5 @@ class ActivitiesReferralsController extends Controller
         return $name !== '' ? $name : '—';
     }
 
-    private function mediaCount($media): int
-    {
-        return count($this->normalizeMedia($media));
-    }
-
-    private function mediaUrls($media): string
-    {
-        $urls = [];
-
-        foreach ($this->normalizeMedia($media) as $item) {
-            $url = $this->resolveMediaUrl($item);
-            if ($url) {
-                $urls[] = $url;
-            }
-        }
-
-        return implode(',', $urls);
-    }
-
-    private function mediaJson($media): string
-    {
-        $normalized = $this->normalizeMedia($media);
-
-        return $normalized ? json_encode($normalized) : '';
-    }
-
-    private function normalizeMedia($media): array
-    {
-        if (! $media) {
-            return [];
-        }
-
-        if (is_string($media)) {
-            $decoded = json_decode($media, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return $decoded;
-            }
-
-            return [$media];
-        }
-
-        if (is_array($media)) {
-            return $media;
-        }
-
-        return [$media];
-    }
-
-    private function resolveMediaUrl($item): ?string
-    {
-        if (is_array($item)) {
-            $url = $item['url'] ?? null;
-            $id = $item['id'] ?? null;
-
-            if ($url) {
-                return $url;
-            }
-
-            if ($id && Str::isUuid($id)) {
-                return url('/api/v1/files/' . $id);
-            }
-
-            return $id ?: null;
-        }
-
-        if (is_string($item)) {
-            if (str_starts_with($item, 'http://') || str_starts_with($item, 'https://')) {
-                return $item;
-            }
-
-            if (Str::isUuid($item)) {
-                return url('/api/v1/files/' . $item);
-            }
-
-            return $item;
-        }
-
-        return null;
-    }
 }
+
