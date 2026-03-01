@@ -38,16 +38,20 @@ class ActivitiesPeerRecommendationController extends Controller
         }
 
         if ($search !== '') {
-            $like = "%{$search}%";
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
             $query->where(function ($q) use ($like) {
-                $q->where('peer_recommendations.peer_name', 'ILIKE', $like)
-                    ->orWhere('peer_mobile', 'ILIKE', $like)
-                    ->orWhere('peer.display_name', 'ILIKE', $like)
+                $q->where('peer.display_name', 'ILIKE', $like)
                     ->orWhere('peer.first_name', 'ILIKE', $like)
                     ->orWhere('peer.last_name', 'ILIKE', $like)
-                    ->orWhere('peer.phone', 'ILIKE', $like)
                     ->orWhere('peer.company_name', 'ILIKE', $like)
-                    ->orWhere('peer.city', 'ILIKE', $like);
+                    ->orWhere('peer.city', 'ILIKE', $like)
+                    ->orWhereExists(function ($sub) use ($like) {
+                        $sub->selectRaw('1')
+                            ->from('circle_members as cm_search')
+                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
+                            ->whereColumn('cm_search.user_id', 'peer.id')
+                            ->where('c_search.name', 'ILIKE', $like);
+                    });
             });
         }
 
@@ -57,6 +61,15 @@ class ActivitiesPeerRecommendationController extends Controller
 
         if ($toAt) {
             $query->where('created_at', '<=', $toAt);
+        }
+
+        if ($request->filled('circle_id')) {
+            $query->whereExists(function ($sub) use ($request) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'peer.id')
+                    ->where('cm_filter.circle_id', $request->query('circle_id'));
+            });
         }
 
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'peer_recommendations.user_id', null);
@@ -72,8 +85,15 @@ class ActivitiesPeerRecommendationController extends Controller
                 'q' => $search,
                 'from' => $from,
                 'to' => $to,
+                'circle_id' => $request->query('circle_id'),
             ],
+            'circles' => $this->circleOptions(),
         ]);
+    }
+
+    private function circleOptions()
+    {
+        return DB::table('circles')->select(['id','name'])->orderBy('name')->get();
     }
 
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon

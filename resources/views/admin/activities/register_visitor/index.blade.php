@@ -29,6 +29,14 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    @include('admin.components.activity-filter-bar-v2', [
+        'actionUrl' => route('admin.activities.register-visitor.index'),
+        'resetUrl' => route('admin.activities.register-visitor.index'),
+        'filters' => $filters,
+        'circles' => $circles ?? collect(),
+        'showExport' => false,
+    ])
+
     <div class="card shadow-sm">
         <div class="table-responsive">
             <table class="table mb-0 align-middle">
@@ -49,14 +57,6 @@
                         <th class="text-end">Actions</th>
                         <th>Created At</th>
                     </tr>
-
-                    @include('admin.components.activity-table-header-filters', [
-                        'actionUrl' => route('admin.activities.register-visitor.index'),
-                        'resetUrl' => route('admin.activities.register-visitor.index'),
-                        'filters' => $filters,
-                        'colspan' => 14,
-                        'showExport' => false,
-                    ])
                 </thead>
                 <tbody>
                     @forelse ($items as $item)

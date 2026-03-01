@@ -62,6 +62,7 @@ class CollaborationPostController extends Controller
             'filters' => $filters,
             'statuses' => $statuses,
             'types' => $types,
+            'circles' => DB::table('circles')->select(['id','name'])->orderBy('name')->get(),
             'rowsPerPage' => $rowsPerPage,
             'total' => $posts->total(),
             'from' => $posts->firstItem(),
@@ -191,6 +192,7 @@ class CollaborationPostController extends Controller
             'business_stage' => trim((string) $request->query('business_stage', '')),
             'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
             'status' => (string) $request->query('status', 'all'),
+            'circle_id' => $request->query('circle_id'),
             'from' => $from,
             'to' => $to,
             'created_from' => $from,
@@ -221,16 +223,21 @@ class CollaborationPostController extends Controller
 
         if ($filters['q'] !== '') {
             $value = $filters['q'];
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $value) . '%';
 
-            $query->where(function (Builder $inner) use ($value, $userColumns, $titleColumns, $scopeColumns) {
-                if ($userColumns !== []) {
-                    $inner->whereHas('user', function (Builder $userQuery) use ($value, $userColumns) {
-                        $this->applyLikeAny($userQuery, $userColumns, $value);
+            $query->where(function (Builder $inner) use ($like) {
+                $inner->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like)
+                    ->orWhere('peer.company_name', 'ILIKE', $like)
+                    ->orWhere('peer.city', 'ILIKE', $like)
+                    ->orWhereExists(function ($sub) use ($like) {
+                        $sub->selectRaw('1')
+                            ->from('circle_members as cm_search')
+                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
+                            ->whereColumn('cm_search.user_id', 'collaboration_posts.user_id')
+                            ->where('c_search.name', 'ILIKE', $like);
                     });
-                }
-
-                $this->applyLikeAny($inner, $titleColumns, $value, $userColumns !== []);
-                $this->applyLikeAny($inner, $scopeColumns, $value, ($userColumns !== [] || $titleColumns !== []));
             });
         }
 
@@ -278,6 +285,15 @@ class CollaborationPostController extends Controller
             } elseif (Schema::hasColumn('collaboration_posts', 'collaboration_type_id')) {
                 $query->where('collaboration_type_id', $slug);
             }
+        }
+
+        if (! empty($filters['circle_id'])) {
+            $query->whereExists(function ($sub) use ($filters) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'collaboration_posts.user_id')
+                    ->where('cm_filter.circle_id', $filters['circle_id']);
+            });
         }
 
         if ($filters['status'] !== 'all' && $filters['status'] !== '') {

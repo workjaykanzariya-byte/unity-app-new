@@ -58,6 +58,7 @@ class ActivitiesReferralsController extends Controller
             'filters' => $filters,
             'topMembers' => $topMembers,
             'total' => $total,
+            'circles' => $this->circleOptions(),
         ]);
     }
 
@@ -181,6 +182,7 @@ class ActivitiesReferralsController extends Controller
             'to_at' => $toAtRaw,
             'referral_type' => $request->get('referral_type') ?? $request->get('type'),
             'per_page' => (int) $request->get('per_page', 20),
+            'circle_id' => $request->get('circle_id'),
         ];
 
         $filters['from_dt'] = $this->parseDayBoundary($filters['from_at'], false);
@@ -212,7 +214,14 @@ class ActivitiesReferralsController extends Controller
                     ->orWhere('actor.last_name', 'ILIKE', $like)
                     ->orWhere('actor.company_name', 'ILIKE', $like)
                     ->orWhere('actor.city', 'ILIKE', $like)
-                    ->orWhere('actor_city.name', 'ILIKE', $like);
+                    ->orWhere('actor_city.name', 'ILIKE', $like)
+                    ->orWhereExists(function ($sub) use ($like) {
+                        $sub->selectRaw('1')
+                            ->from('circle_members as cm_search')
+                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
+                            ->whereColumn('cm_search.user_id', 'actor.id')
+                            ->where('c_search.name', 'ILIKE', $like);
+                    });
             });
         }
 
@@ -226,6 +235,15 @@ class ActivitiesReferralsController extends Controller
         $query->when($from, fn ($inner) => $inner->where('activity.created_at', '>=', $from))
             ->when($to, fn ($inner) => $inner->where('activity.created_at', '<=', $to));
 
+        if (! empty($filters['circle_id'])) {
+            $query->whereExists(function ($sub) use ($filters) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'actor.id')
+                    ->where('cm_filter.circle_id', $filters['circle_id']);
+            });
+        }
+
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
         return $query;
@@ -233,10 +251,21 @@ class ActivitiesReferralsController extends Controller
 
     private function topMembers(Request $request)
     {
+        $filters = $this->buildFilters($request);
+
         $query = DB::table('referrals as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.from_user_id')
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false);
+
+        if (! empty($filters['circle_id'])) {
+            $query->whereExists(function ($sub) use ($filters) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'actor.id')
+                    ->where('cm_filter.circle_id', $filters['circle_id']);
+            });
+        }
 
         $this->applyScopeToActivityQuery($query, 'activity.from_user_id', 'activity.to_user_id');
 
@@ -265,6 +294,14 @@ class ActivitiesReferralsController extends Controller
                 DB::raw("coalesce(actor.city, '') as peer_city"),
                 DB::raw('count(*) as total_count'),
             ])
+            ->get();
+    }
+
+    private function circleOptions()
+    {
+        return DB::table('circles')
+            ->select(['id', 'name'])
+            ->orderBy('name')
             ->get();
     }
 

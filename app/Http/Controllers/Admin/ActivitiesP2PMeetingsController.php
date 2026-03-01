@@ -54,6 +54,7 @@ class ActivitiesP2PMeetingsController extends Controller
             'filters' => $filters,
             'topMembers' => $topMembers,
             'total' => $total,
+            'circles' => $this->circleOptions(),
         ]);
     }
 
@@ -158,6 +159,7 @@ class ActivitiesP2PMeetingsController extends Controller
             'to' => $to,
             'from_at' => $this->parseDayBoundary($from, false),
             'to_at' => $this->parseDayBoundary($to, true),
+            'circle_id' => $request->query('circle_id'),
         ];
     }
 
@@ -178,7 +180,14 @@ class ActivitiesP2PMeetingsController extends Controller
                     ->orWhere('actor.last_name', 'ILIKE', $like)
                     ->orWhere('actor.company_name', 'ILIKE', $like)
                     ->orWhere('actor.city', 'ILIKE', $like)
-                    ->orWhere('actor_city.name', 'ILIKE', $like);
+                    ->orWhere('actor_city.name', 'ILIKE', $like)
+                    ->orWhereExists(function ($sub) use ($like) {
+                        $sub->selectRaw('1')
+                            ->from('circle_members as cm_search')
+                            ->join('circles as c_search', 'c_search.id', '=', 'cm_search.circle_id')
+                            ->whereColumn('cm_search.user_id', 'actor.id')
+                            ->where('c_search.name', 'ILIKE', $like);
+                    });
             });
         }
 
@@ -190,6 +199,15 @@ class ActivitiesP2PMeetingsController extends Controller
             $query->where('activity.created_at', '<=', $filters['to_at']);
         }
 
+        if (! empty($filters['circle_id'])) {
+            $query->whereExists(function ($sub) use ($filters) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'actor.id')
+                    ->where('cm_filter.circle_id', $filters['circle_id']);
+            });
+        }
+
         $this->applyScopeToActivityQuery($query, 'activity.initiator_user_id', 'activity.peer_user_id');
 
         return $query;
@@ -197,10 +215,21 @@ class ActivitiesP2PMeetingsController extends Controller
 
     private function topMembers(Request $request)
     {
+        $filters = $this->filters($request);
+
         $query = DB::table('p2p_meetings as activity')
             ->join('users as actor', 'actor.id', '=', 'activity.initiator_user_id')
             ->whereNull('activity.deleted_at')
             ->where('activity.is_deleted', false);
+
+        if (! empty($filters['circle_id'])) {
+            $query->whereExists(function ($sub) use ($filters) {
+                $sub->selectRaw('1')
+                    ->from('circle_members as cm_filter')
+                    ->whereColumn('cm_filter.user_id', 'actor.id')
+                    ->where('cm_filter.circle_id', $filters['circle_id']);
+            });
+        }
 
         $this->applyScopeToActivityQuery($query, 'activity.initiator_user_id', 'activity.peer_user_id');
 
@@ -229,6 +258,14 @@ class ActivitiesP2PMeetingsController extends Controller
                 DB::raw("coalesce(actor.city, '') as peer_city"),
                 DB::raw('count(*) as total_count'),
             ])
+            ->get();
+    }
+
+    private function circleOptions()
+    {
+        return DB::table('circles')
+            ->select(['id', 'name'])
+            ->orderBy('name')
             ->get();
     }
 

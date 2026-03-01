@@ -7,6 +7,15 @@
         .peer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: block; }
     </style>
 @php use App\Support\CollaborationFormatter; @endphp
+    @include('admin.components.activity-filter-bar-v2', [
+        'actionUrl' => route('admin.collaborations.index'),
+        'resetUrl' => route('admin.collaborations.index'),
+        'filters' => $filters,
+        'circles' => $circles ?? collect(),
+        'showExport' => true,
+        'exportUrl' => route('admin.collaborations.export', request()->query()),
+    ])
+
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div class="d-flex align-items-center gap-2">
@@ -46,15 +55,6 @@
                     <th>Status</th>
                     <th class="text-end">Actions</th>
                 </tr>
-
-                    @include('admin.components.activity-table-header-filters', [
-                        'actionUrl' => route('admin.collaborations.index'),
-                        'resetUrl' => route('admin.collaborations.index'),
-                        'filters' => $filters,
-                        'colspan' => 9,
-                        'showExport' => true,
-                        'exportUrl' => route('admin.collaborations.export', request()->query()),
-                    ])
             </thead>
             <tbody>
                 @forelse ($posts as $post)

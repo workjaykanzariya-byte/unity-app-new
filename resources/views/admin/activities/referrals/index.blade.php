@@ -50,6 +50,15 @@
         </div>
     </div>
 
+    @include('admin.components.activity-filter-bar-v2', [
+        'actionUrl' => route('admin.activities.referrals.index'),
+        'resetUrl' => route('admin.activities.referrals.index'),
+        'filters' => $filters,
+        'circles' => $circles ?? collect(),
+        'showExport' => true,
+        'exportUrl' => route('admin.activities.referrals.export', request()->query()),
+    ])
+
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
             <strong>Top 5 Peers</strong>
@@ -105,15 +114,6 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
-
-                    @include('admin.components.activity-table-header-filters', [
-                        'actionUrl' => route('admin.activities.referrals.index'),
-                        'resetUrl' => route('admin.activities.referrals.index'),
-                        'filters' => $filters,
-                        'colspan' => 12,
-                        'showExport' => true,
-                        'exportUrl' => route('admin.activities.referrals.export', request()->query()),
-                    ])
                 </thead>
                 <tbody>
                     @forelse ($items as $referral)
