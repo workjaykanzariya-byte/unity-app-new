@@ -48,16 +48,12 @@
             </tr></thead>
             <tbody>
             @forelse ($claims as $claim)
-                @php
-                    $fields = (array) data_get($claim->payload, 'fields', []);
-                    $keyFields = collect($fields)->except(collect($fields)->keys()->filter(fn($k) => str_ends_with($k, '_normalized'))->all())->map(fn($v,$k)=>$k.': '.$v)->take(3)->implode(', ');
-                @endphp
                 <tr>
                     <td>{{ optional($claim->created_at)->format('Y-m-d H:i') }}</td>
                     <td>{{ $displayName($claim->user) }}</td>
                     <td>{{ $claim->user->phone ?? '—' }}</td>
                     <td>{{ data_get($registry->get($claim->activity_code), 'label', $claim->activity_code) }}</td>
-                    <td>{{ $keyFields ?: '—' }}</td>
+                    <td>{{ \App\Support\CoinClaims\CoinClaimKeyFieldsFormatter::format((string) $claim->activity_code, (array) ($claim->payload ?? [])) }}</td>
                     <td>{{ ucfirst($claim->status) }}</td>
                     <td class="text-end">
                         <a href="{{ route('admin.coin-claims.show', $claim->id) }}" class="btn btn-sm btn-outline-primary">Details</a>
