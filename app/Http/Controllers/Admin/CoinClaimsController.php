@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CoinClaims\RejectCoinClaimRequest;
 use App\Models\CoinClaimRequest;
-use App\Notifications\CoinClaimReviewedNotification;
 use App\Services\CoinClaims\CoinClaimEmailService;
+use App\Services\CoinClaims\CoinClaimUserNotificationService;
 use App\Services\Coins\CoinsService;
 use App\Support\AdminCircleScope;
 use App\Support\CoinClaims\CoinClaimActivityRegistry;
@@ -24,6 +24,7 @@ class CoinClaimsController extends Controller
         private readonly CoinClaimActivityRegistry $registry,
         private readonly CoinsService $coinsService,
         private readonly CoinClaimEmailService $emailService,
+        private readonly CoinClaimUserNotificationService $userNotificationService,
     ) {
     }
 
@@ -144,12 +145,7 @@ class CoinClaimsController extends Controller
 
                 $claim = $claim->fresh('user');
                 if ($claim->user) {
-                    $claim->user->notify(new CoinClaimReviewedNotification(
-                        claim: $claim,
-                        decision: 'approved',
-                        coinsAwarded: $claim->coins_awarded !== null ? (int) $claim->coins_awarded : null,
-                        reason: null,
-                    ));
+                    $this->userNotificationService->sendApproved($claim);
                 }
 
                 $this->emailService->sendApproved($claim);
@@ -197,12 +193,7 @@ class CoinClaimsController extends Controller
 
                 $claim = $claim->fresh('user');
                 if ($claim->user) {
-                    $claim->user->notify(new CoinClaimReviewedNotification(
-                        claim: $claim,
-                        decision: 'rejected',
-                        coinsAwarded: null,
-                        reason: $claim->admin_note,
-                    ));
+                    $this->userNotificationService->sendRejected($claim);
                 }
 
                 $this->emailService->sendRejected($claim);
