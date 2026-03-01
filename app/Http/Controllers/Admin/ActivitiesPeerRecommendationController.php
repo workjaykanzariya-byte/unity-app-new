@@ -22,6 +22,13 @@ class ActivitiesPeerRecommendationController extends Controller
         $fromAt = $this->parseDayBoundary($from, false);
         $toAt = $this->parseDayBoundary($to, true);
         $known = $request->query('how_well_known', 'all');
+        $peerNameFilter = trim((string) $request->query('peer_name', ''));
+        $peerPhone = trim((string) $request->query('peer_phone', ''));
+        $recommendedName = trim((string) $request->query('recommended_name', ''));
+        $recommendedMobile = trim((string) $request->query('recommended_mobile', ''));
+        $howWellKnown = trim((string) $request->query('how_well_known_text', ''));
+        $isAwareFilter = trim((string) $request->query('is_aware', ''));
+        $coinsAwarded = trim((string) $request->query('coins_awarded', ''));
 
         $query = PeerRecommendation::query()
             ->leftJoin('users as peer', 'peer.id', '=', 'peer_recommendations.user_id')
@@ -46,6 +53,47 @@ class ActivitiesPeerRecommendationController extends Controller
                     ->orWhere('peer.company_name', 'ILIKE', $like)
                     ->orWhere('peer.city', 'ILIKE', $like);
             });
+        }
+
+
+        if ($peerNameFilter !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $peerNameFilter) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like);
+            });
+        }
+
+        if ($peerPhone !== '') {
+            $query->where('peer.phone', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $peerPhone) . '%');
+        }
+
+        if ($recommendedName !== '') {
+            $query->where('peer_recommendations.peer_name', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $recommendedName) . '%');
+        }
+
+        if ($recommendedMobile !== '') {
+            $query->where('peer_recommendations.peer_mobile', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $recommendedMobile) . '%');
+        }
+
+        if ($howWellKnown !== '') {
+            $query->where('peer_recommendations.how_well_known', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $howWellKnown) . '%');
+        }
+
+        if ($isAwareFilter === 'yes') {
+            $query->where('peer_recommendations.is_aware', true);
+        }
+
+        if ($isAwareFilter === 'no') {
+            $query->where(function ($inner) {
+                $inner->where('peer_recommendations.is_aware', false)
+                    ->orWhereNull('peer_recommendations.is_aware');
+            });
+        }
+
+        if ($coinsAwarded !== '' && is_numeric($coinsAwarded)) {
+            $query->where('peer_recommendations.coins_awarded', (int) $coinsAwarded);
         }
 
         if ($fromAt) {
@@ -79,6 +127,13 @@ class ActivitiesPeerRecommendationController extends Controller
                 'from' => $from,
                 'to' => $to,
                 'circle_id' => $request->query('circle_id'),
+                'peer_name' => $peerNameFilter,
+                'peer_phone' => $peerPhone,
+                'recommended_name' => $recommendedName,
+                'recommended_mobile' => $recommendedMobile,
+                'how_well_known_text' => $howWellKnown,
+                'is_aware' => $isAwareFilter,
+                'coins_awarded' => $coinsAwarded,
             ],
             'circles' => $this->circleOptions(),
         ]);

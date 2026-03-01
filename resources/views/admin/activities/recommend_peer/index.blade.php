@@ -25,12 +25,15 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    <form id="adminactivitiesrecommend-peerindexFiltersForm" method="GET" action="{{ route('admin.activities.recommend-peer.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.recommend-peer.index'),
         'resetUrl' => route('admin.activities.recommend-peer.index'),
         'filters' => $filters,
         'circles' => $circles ?? collect(),
         'showExport' => false,
+        'renderFormTag' => false,
+        'formId' => 'adminactivitiesrecommend-peerindexFiltersForm',
     ])
 
     <div class="card shadow-sm">
@@ -47,6 +50,28 @@
                         <th>Is Aware</th>
                         <th>Coins Awarded</th>
                         <th>Created At</th>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">—</th>
+                        <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="peer_phone" value="{{ $filters['peer_phone'] ?? '' }}" placeholder="Peer Phone" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="recommended_name" value="{{ $filters['recommended_name'] ?? '' }}" placeholder="Recommended Peer Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="recommended_mobile" value="{{ $filters['recommended_mobile'] ?? '' }}" placeholder="Recommended Peer Mobile" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="how_well_known_text" value="{{ $filters['how_well_known_text'] ?? '' }}" placeholder="How Well Known" class="form-control form-control-sm"></th>
+                        <th>
+                            <select name="is_aware" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                <option value="yes" @selected(($filters['is_aware'] ?? '')==='yes')>Yes</option>
+                                <option value="no" @selected(($filters['is_aware'] ?? '')==='no')>No</option>
+                            </select>
+                        </th>
+                        <th><input type="number" name="coins_awarded" value="{{ $filters['coins_awarded'] ?? '' }}" placeholder="Coins" class="form-control form-control-sm"></th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.recommend-peer.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,6 +105,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

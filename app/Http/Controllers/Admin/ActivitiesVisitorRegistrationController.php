@@ -21,6 +21,17 @@ class ActivitiesVisitorRegistrationController extends Controller
         $to = $request->query('to');
         $fromAt = $this->parseDayBoundary($from, false);
         $toAt = $this->parseDayBoundary($to, true);
+        $peerNameFilter = trim((string) $request->query('peer_name', ''));
+        $peerPhone = trim((string) $request->query('peer_phone', ''));
+        $eventType = trim((string) $request->query('event_type', ''));
+        $eventName = trim((string) $request->query('event_name', ''));
+        $eventDate = trim((string) $request->query('event_date', ''));
+        $visitorName = trim((string) $request->query('visitor_name', ''));
+        $visitorMobile = trim((string) $request->query('visitor_mobile', ''));
+        $visitorCity = trim((string) $request->query('visitor_city', ''));
+        $visitorBusiness = trim((string) $request->query('visitor_business', ''));
+        $statusFilter = trim((string) $request->query('status', ''));
+        $coinsAwarded = trim((string) $request->query('coins_awarded', ''));
 
         $query = VisitorRegistration::query()
             ->leftJoin('users as peer', 'peer.id', '=', 'visitor_registrations.user_id')
@@ -41,6 +52,64 @@ class ActivitiesVisitorRegistrationController extends Controller
                     ->orWhere('peer.company_name', 'ILIKE', $like)
                     ->orWhere('peer.city', 'ILIKE', $like);
             });
+        }
+
+
+        if ($peerNameFilter !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $peerNameFilter) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like);
+            });
+        }
+
+        if ($peerPhone !== '') {
+            $query->where('peer.phone', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $peerPhone) . '%');
+        }
+
+        if ($eventType !== '') {
+            $query->where('event_type', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $eventType) . '%');
+        }
+
+        if ($eventName !== '') {
+            $query->where('event_name', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $eventName) . '%');
+        }
+
+        if ($eventDate !== '') {
+            try {
+                $query->whereDate('event_date', '=', Carbon::createFromFormat('d-m-Y', $eventDate)->toDateString());
+            } catch (\Throwable $exception) {
+                try {
+                    $query->whereDate('event_date', '=', Carbon::parse($eventDate)->toDateString());
+                } catch (\Throwable $exception) {
+                    // ignore invalid date
+                }
+            }
+        }
+
+        if ($visitorName !== '') {
+            $query->where('visitor_full_name', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $visitorName) . '%');
+        }
+
+        if ($visitorMobile !== '') {
+            $query->where('visitor_mobile', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $visitorMobile) . '%');
+        }
+
+        if ($visitorCity !== '') {
+            $query->where('visitor_city', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $visitorCity) . '%');
+        }
+
+        if ($visitorBusiness !== '') {
+            $query->where('visitor_business', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $visitorBusiness) . '%');
+        }
+
+        if ($statusFilter !== '') {
+            $query->where('status', $statusFilter);
+        }
+
+        if ($coinsAwarded !== '' && is_numeric($coinsAwarded)) {
+            $query->where('coins_awarded', (int) $coinsAwarded);
         }
 
         if ($fromAt) {
@@ -74,6 +143,17 @@ class ActivitiesVisitorRegistrationController extends Controller
                 'from' => $from,
                 'to' => $to,
                 'circle_id' => $request->query('circle_id'),
+                'peer_name' => $peerNameFilter,
+                'peer_phone' => $peerPhone,
+                'event_type' => $eventType,
+                'event_name' => $eventName,
+                'event_date' => $eventDate,
+                'visitor_name' => $visitorName,
+                'visitor_mobile' => $visitorMobile,
+                'visitor_city' => $visitorCity,
+                'visitor_business' => $visitorBusiness,
+                'status' => $statusFilter,
+                'coins_awarded' => $coinsAwarded,
             ],
             'circles' => $this->circleOptions(),
         ]);

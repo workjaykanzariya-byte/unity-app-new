@@ -29,12 +29,15 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    <form id="adminactivitiesregister-visitorindexFiltersForm" method="GET" action="{{ route('admin.activities.register-visitor.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.register-visitor.index'),
         'resetUrl' => route('admin.activities.register-visitor.index'),
         'filters' => $filters,
         'circles' => $circles ?? collect(),
         'showExport' => false,
+        'renderFormTag' => false,
+        'formId' => 'adminactivitiesregister-visitorindexFiltersForm',
     ])
 
     <div class="card shadow-sm">
@@ -103,6 +106,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

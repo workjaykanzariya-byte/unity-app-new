@@ -38,12 +38,15 @@
         <span class="badge bg-light text-dark border">Total: {{ number_format($items->total()) }}</span>
     </div>
 
+    <form id="adminactivitiesbecome-a-leaderindexFiltersForm" method="GET" action="{{ route('admin.activities.become-a-leader.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.become-a-leader.index'),
         'resetUrl' => route('admin.activities.become-a-leader.index'),
         'filters' => $filters,
         'circles' => $circles ?? collect(),
         'showExport' => false,
+        'renderFormTag' => false,
+        'formId' => 'adminactivitiesbecome-a-leaderindexFiltersForm',
     ])
 
     <div class="card shadow-sm">
@@ -62,6 +65,24 @@
                         <th>Primary Domain</th>
                         <th>Why Interested</th>
                         <th>Created At</th>
+                    </tr>
+                    <tr>
+                        <th class="text-muted">—</th>
+                        <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="peer_phone" value="{{ $filters['peer_phone'] ?? '' }}" placeholder="Peer Phone" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="applying_for_text" value="{{ $filters['applying_for_text'] ?? '' }}" placeholder="Applying For" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="referred_name" value="{{ $filters['referred_name'] ?? '' }}" placeholder="Referred Name" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="referred_mobile" value="{{ $filters['referred_mobile'] ?? '' }}" placeholder="Referred Mobile" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="leadership_roles" value="{{ $filters['leadership_roles'] ?? '' }}" placeholder="Leadership Roles" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="city_region" value="{{ $filters['city_region'] ?? '' }}" placeholder="City / Region" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="primary_domain" value="{{ $filters['primary_domain'] ?? '' }}" placeholder="Primary Domain" class="form-control form-control-sm"></th>
+                        <th class="text-muted">—</th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.become-a-leader.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -97,6 +118,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

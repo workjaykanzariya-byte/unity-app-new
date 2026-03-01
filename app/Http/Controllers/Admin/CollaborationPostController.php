@@ -191,7 +191,7 @@ class CollaborationPostController extends Controller
             'preferred_mode' => trim((string) $request->query('preferred_mode', '')),
             'business_stage' => trim((string) $request->query('business_stage', '')),
             'year_in_operation' => trim((string) $request->query('year_in_operation', '')),
-            'status' => (string) $request->query('status', 'all'),
+            'status' => trim((string) $request->query('status', '')),
             'circle_id' => $request->query('circle_id'),
             'from' => $from,
             'to' => $to,
@@ -231,6 +231,15 @@ class CollaborationPostController extends Controller
                     ->orWhere('peer.last_name', 'ILIKE', $like)
                     ->orWhere('peer.company_name', 'ILIKE', $like)
                     ->orWhere('peer.city', 'ILIKE', $like);
+            });
+        }
+
+        if ($filters['peer_name'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['peer_name']) . '%';
+            $query->where(function (Builder $inner) use ($like) {
+                $inner->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like);
             });
         }
 
@@ -289,7 +298,7 @@ class CollaborationPostController extends Controller
             });
         }
 
-        if ($filters['status'] !== 'all' && $filters['status'] !== '') {
+        if ($filters['status'] !== '') {
             $query->where('status', $filters['status']);
         }
 

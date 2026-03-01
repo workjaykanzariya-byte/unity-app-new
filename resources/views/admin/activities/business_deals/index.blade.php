@@ -46,6 +46,7 @@
         </div>
     </div>
 
+    <form id="businessDealsFiltersForm" method="GET" action="{{ route('admin.activities.business-deals.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.business-deals.index'),
         'resetUrl' => route('admin.activities.business-deals.index'),
@@ -53,6 +54,8 @@
         'circles' => $circles ?? collect(),
         'showExport' => true,
         'exportUrl' => route('admin.activities.business-deals.export', request()->query()),
+        'renderFormTag' => false,
+        'formId' => 'businessDealsFiltersForm',
     ])
 
     <div class="card shadow-sm mb-3">
@@ -106,13 +109,33 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th><input type="text" name="from_user" value="{{ $filters['from_user'] ?? '' }}" placeholder="From" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="to_user" value="{{ $filters['to_user'] ?? '' }}" placeholder="To" class="form-control form-control-sm"></th>
+                        <th><input type="date" name="deal_date" value="{{ $filters['deal_date'] ?? '' }}" class="form-control form-control-sm" placeholder="dd-mm-yyyy"></th>
+                        <th><input type="number" step="0.01" name="deal_amount" value="{{ $filters['deal_amount'] ?? '' }}" placeholder="Deal Amount" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="business_type" value="{{ $filters['business_type'] ?? '' }}" placeholder="Business Type" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="comment" value="{{ $filters['comment'] ?? '' }}" placeholder="Comment" class="form-control form-control-sm"></th>
+                        <th>
+                            <select name="has_media" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                <option value="1" @selected(($filters['has_media'] ?? '') === '1')>Yes</option>
+                                <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
+                            </select>
+                        </th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.business-deals.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $deal)
                         @php
                             $actorName = $displayName($deal->actor_display_name ?? null, $deal->actor_first_name ?? null, $deal->actor_last_name ?? null);
                             $peerName = $displayName($deal->peer_display_name ?? null, $deal->peer_first_name ?? null, $deal->peer_last_name ?? null);
-                            $mediaInfo = $mediaSummary($deal->media ?? null);
                         @endphp
                         <tr>
                             <td>
@@ -153,6 +176,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

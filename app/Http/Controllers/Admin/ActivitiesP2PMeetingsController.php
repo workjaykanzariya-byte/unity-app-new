@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -27,6 +27,8 @@ class ActivitiesP2PMeetingsController extends Controller
                 'activity.meeting_place',
                 'activity.remarks',
                 'activity.created_at',
+                DB::raw($this->hasMediaSelectExpression() . ' as has_media'),
+                DB::raw($this->mediaReferenceSelectExpression() . ' as media_reference'),
                 'actor.display_name as actor_display_name',
                 'actor.first_name as actor_first_name',
                 'actor.last_name as actor_last_name',
@@ -104,7 +106,8 @@ class ActivitiesP2PMeetingsController extends Controller
                         'peer.first_name as peer_first_name',
                         'peer.last_name as peer_last_name',
                         'peer.email as peer_email',
-                        DB::raw('NULL as media'),
+                        DB::raw($this->hasMediaSelectExpression() . ' as has_media'),
+                        DB::raw($this->mediaReferenceSelectExpression() . ' as media_reference'),
                     ])
                     ->orderBy('activity.created_at')
                     ->orderBy('activity.id')
@@ -130,9 +133,9 @@ class ActivitiesP2PMeetingsController extends Controller
                                 $row->meeting_date ?? '',
                                 $row->meeting_place ?? '',
                                 $row->remarks ?? '',
-                                $this->mediaCount($row->media ?? null),
-                                $this->mediaUrls($row->media ?? null),
-                                $this->mediaJson($row->media ?? null),
+                                (int) ($row->has_media ?? 0),
+                                $this->mediaReferenceForExport($row->media_reference ?? null),
+                                $this->mediaReferenceForExport($row->media_reference ?? null),
                                 $row->created_at ?? '',
                             ]);
                         }
@@ -159,7 +162,13 @@ class ActivitiesP2PMeetingsController extends Controller
             'to' => $to,
             'from_at' => $this->parseDayBoundary($from, false),
             'to_at' => $this->parseDayBoundary($to, true),
-            'circle_id' => $request->query('circle_id'),
+            'circle_id' => (string) $request->query('circle_id', ''),
+            'from_user' => trim((string) $request->query('from_user', '')),
+            'to_user' => trim((string) $request->query('to_user', '')),
+            'meeting_date' => trim((string) $request->query('meeting_date', '')),
+            'meeting_place' => trim((string) $request->query('meeting_place', '')),
+            'remarks' => trim((string) $request->query('remarks', '')),
+            'has_media' => (string) $request->query('has_media', ''),
         ];
     }
 
@@ -262,6 +271,82 @@ class ActivitiesP2PMeetingsController extends Controller
             ->get();
     }
 
+    private function meetingMediaColumn(): ?string
+    {
+        static $column;
+        if (func_num_args() === 0 && isset($column)) {
+            return $column;
+        }
+        foreach (['media', 'media_id', 'media_file_id', 'file_id', 'attachment_id', 'media_url'] as $candidate) {
+            if (Schema::hasColumn('p2p_meetings', $candidate)) {
+                $column = $candidate;
+                return $column;
+            }
+        }
+        $column = null;
+        return null;
+    }
+
+    private function hasMediaSelectExpression(): string
+    {
+        $column = $this->meetingMediaColumn();
+        if ($column === 'media_url') {
+            return "CASE WHEN NULLIF(activity.media_url, '') IS NULL THEN 0 ELSE 1 END";
+        }
+        if ($column === 'media') {
+            return "CASE WHEN activity.media IS NULL OR activity.media::text = '[]' THEN 0 ELSE 1 END";
+        }
+        if ($column) {
+            return "CASE WHEN activity.{$column} IS NULL THEN 0 ELSE 1 END";
+        }
+        return '0';
+    }
+
+    private function mediaReferenceSelectExpression(): string
+    {
+        $column = $this->meetingMediaColumn();
+        return $column ? "activity.{$column}" : 'NULL';
+    }
+
+    private function applyHasMediaFilter($query, bool $hasMedia): void
+    {
+        $column = $this->meetingMediaColumn();
+        if (! $column) {
+            if ($hasMedia) {
+                $query->whereRaw('1 = 0');
+            }
+            return;
+        }
+        $qualified = "activity.{$column}";
+        if ($column === 'media_url') {
+            $query->whereRaw($hasMedia ? "NULLIF({$qualified}, '') IS NOT NULL" : "NULLIF({$qualified}, '') IS NULL");
+            return;
+        }
+        if ($column === 'media') {
+            $query->whereRaw($hasMedia ? "{$qualified} IS NOT NULL AND {$qualified}::text <> '[]'" : "{$qualified} IS NULL OR {$qualified}::text = '[]'");
+            return;
+        }
+        $hasMedia ? $query->whereNotNull($qualified) : $query->whereNull($qualified);
+    }
+
+    private function mediaReferenceForExport($value): string
+    {
+        return $value === null ? '' : (string) $value;
+    }
+
+    private function parseInputDate(string $value): ?Carbon
+    {
+        try {
+            return Carbon::createFromFormat('d-m-Y', $value);
+        } catch (\Throwable $exception) {
+            try {
+                return Carbon::parse($value);
+            } catch (\Throwable $exception) {
+                return null;
+            }
+        }
+    }
+
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon
     {
         if (! is_string($value) || trim($value) === '') {
@@ -293,83 +378,5 @@ class ActivitiesP2PMeetingsController extends Controller
         return $name !== '' ? $name : '—';
     }
 
-    private function mediaCount($media): int
-    {
-        return count($this->normalizeMedia($media));
-    }
-
-    private function mediaUrls($media): string
-    {
-        $urls = [];
-
-        foreach ($this->normalizeMedia($media) as $item) {
-            $url = $this->resolveMediaUrl($item);
-            if ($url) {
-                $urls[] = $url;
-            }
-        }
-
-        return implode(',', $urls);
-    }
-
-    private function mediaJson($media): string
-    {
-        $normalized = $this->normalizeMedia($media);
-
-        return $normalized ? json_encode($normalized) : '';
-    }
-
-    private function normalizeMedia($media): array
-    {
-        if (! $media) {
-            return [];
-        }
-
-        if (is_string($media)) {
-            $decoded = json_decode($media, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return $decoded;
-            }
-
-            return [$media];
-        }
-
-        if (is_array($media)) {
-            return $media;
-        }
-
-        return [$media];
-    }
-
-    private function resolveMediaUrl($item): ?string
-    {
-        if (is_array($item)) {
-            $url = $item['url'] ?? null;
-            $id = $item['id'] ?? null;
-
-            if ($url) {
-                return $url;
-            }
-
-            if ($id && Str::isUuid($id)) {
-                return url('/api/v1/files/' . $id);
-            }
-
-            return $id ?: null;
-        }
-
-        if (is_string($item)) {
-            if (str_starts_with($item, 'http://') || str_starts_with($item, 'https://')) {
-                return $item;
-            }
-
-            if (Str::isUuid($item)) {
-                return url('/api/v1/files/' . $item);
-            }
-
-            return $item;
-        }
-
-        return null;
-    }
 }
+

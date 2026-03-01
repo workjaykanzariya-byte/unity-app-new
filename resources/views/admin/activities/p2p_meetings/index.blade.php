@@ -50,6 +50,7 @@
         </div>
     </div>
 
+    <form id="p2pMeetingsFiltersForm" method="GET" action="{{ route('admin.activities.p2p-meetings.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.activities.p2p-meetings.index'),
         'resetUrl' => route('admin.activities.p2p-meetings.index'),
@@ -57,6 +58,8 @@
         'circles' => $circles ?? collect(),
         'showExport' => true,
         'exportUrl' => route('admin.activities.p2p-meetings.export', request()->query()),
+        'renderFormTag' => false,
+        'formId' => 'p2pMeetingsFiltersForm',
     ])
 
     <div class="card shadow-sm mb-3">
@@ -109,13 +112,32 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th><input type="text" name="from_user" value="{{ $filters['from_user'] ?? '' }}" placeholder="From" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="to_user" value="{{ $filters['to_user'] ?? '' }}" placeholder="To" class="form-control form-control-sm"></th>
+                        <th><input type="date" name="meeting_date" value="{{ $filters['meeting_date'] ?? '' }}" class="form-control form-control-sm" placeholder="dd-mm-yyyy"></th>
+                        <th><input type="text" name="meeting_place" value="{{ $filters['meeting_place'] ?? '' }}" placeholder="Meeting Place" class="form-control form-control-sm"></th>
+                        <th><input type="text" name="remarks" value="{{ $filters['remarks'] ?? '' }}" placeholder="Remarks" class="form-control form-control-sm"></th>
+                        <th>
+                            <select name="has_media" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                <option value="1" @selected(($filters['has_media'] ?? '') === '1')>Yes</option>
+                                <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
+                            </select>
+                        </th>
+                        <th>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                                <a href="{{ route('admin.activities.p2p-meetings.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $meeting)
                         @php
                             $actorName = $displayName($meeting->actor_display_name ?? null, $meeting->actor_first_name ?? null, $meeting->actor_last_name ?? null);
                             $peerName = $displayName($meeting->peer_display_name ?? null, $meeting->peer_first_name ?? null, $meeting->peer_last_name ?? null);
-                            $mediaInfo = $mediaSummary($meeting->media ?? null);
                         @endphp
                         <tr>
                             <td>
@@ -155,6 +177,8 @@
             </table>
         </div>
     </div>
+
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}

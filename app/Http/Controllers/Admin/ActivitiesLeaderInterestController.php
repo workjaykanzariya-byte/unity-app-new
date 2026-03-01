@@ -22,6 +22,14 @@ class ActivitiesLeaderInterestController extends Controller
         $fromAt = $this->parseDayBoundary($from, false);
         $toAt = $this->parseDayBoundary($to, true);
         $applyingFor = $request->query('applying_for', 'all');
+        $peerName = trim((string) $request->query('peer_name', ''));
+        $peerPhone = trim((string) $request->query('peer_phone', ''));
+        $applyingForText = trim((string) $request->query('applying_for_text', ''));
+        $referredName = trim((string) $request->query('referred_name', ''));
+        $referredMobile = trim((string) $request->query('referred_mobile', ''));
+        $leadershipRoles = trim((string) $request->query('leadership_roles', ''));
+        $cityRegion = trim((string) $request->query('city_region', ''));
+        $primaryDomain = trim((string) $request->query('primary_domain', ''));
 
         $query = LeaderInterestSubmission::query()
             ->leftJoin('users as peer', 'peer.id', '=', 'leader_interest_submissions.user_id')
@@ -46,6 +54,44 @@ class ActivitiesLeaderInterestController extends Controller
                     ->orWhere('peer.company_name', 'ILIKE', $like)
                     ->orWhere('peer.city', 'ILIKE', $like);
             });
+        }
+
+
+        if ($peerName !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $peerName) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('peer.display_name', 'ILIKE', $like)
+                    ->orWhere('peer.first_name', 'ILIKE', $like)
+                    ->orWhere('peer.last_name', 'ILIKE', $like);
+            });
+        }
+
+        if ($peerPhone !== '') {
+            $query->where('peer.phone', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $peerPhone) . '%');
+        }
+
+        if ($applyingForText !== '') {
+            $query->where('applying_for', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $applyingForText) . '%');
+        }
+
+        if ($referredName !== '') {
+            $query->where('referred_name', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $referredName) . '%');
+        }
+
+        if ($referredMobile !== '') {
+            $query->where('referred_mobile', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $referredMobile) . '%');
+        }
+
+        if ($leadershipRoles !== '') {
+            $query->whereRaw("COALESCE(leadership_roles::text, '') ILIKE ?", ['%' . str_replace(['%', '_'], ['\%', '\_'], $leadershipRoles) . '%']);
+        }
+
+        if ($cityRegion !== '') {
+            $query->where('contribute_city', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $cityRegion) . '%');
+        }
+
+        if ($primaryDomain !== '') {
+            $query->where('primary_domain', 'ILIKE', '%' . str_replace(['%', '_'], ['\%', '\_'], $primaryDomain) . '%');
         }
 
         if ($fromAt) {
@@ -79,6 +125,14 @@ class ActivitiesLeaderInterestController extends Controller
                 'from' => $from,
                 'to' => $to,
                 'circle_id' => $request->query('circle_id'),
+                'peer_name' => $peerName,
+                'peer_phone' => $peerPhone,
+                'applying_for_text' => $applyingForText,
+                'referred_name' => $referredName,
+                'referred_mobile' => $referredMobile,
+                'leadership_roles' => $leadershipRoles,
+                'city_region' => $cityRegion,
+                'primary_domain' => $primaryDomain,
             ],
             'circles' => $this->circleOptions(),
         ]);

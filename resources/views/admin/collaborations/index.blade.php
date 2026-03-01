@@ -7,6 +7,7 @@
         .peer-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; display: block; }
     </style>
 @php use App\Support\CollaborationFormatter; @endphp
+    <form id="collaborationsFiltersForm" method="GET" action="{{ route('admin.collaborations.index') }}">
     @include('admin.components.activity-filter-bar-v2', [
         'actionUrl' => route('admin.collaborations.index'),
         'resetUrl' => route('admin.collaborations.index'),
@@ -14,6 +15,8 @@
         'circles' => $circles ?? collect(),
         'showExport' => true,
         'exportUrl' => route('admin.collaborations.export', request()->query()),
+        'renderFormTag' => false,
+        'formId' => 'collaborationsFiltersForm',
     ])
 
 <div class="card p-3">
@@ -54,6 +57,28 @@
                     <th>Year in Operation</th>
                     <th>Status</th>
                     <th class="text-end">Actions</th>
+                </tr>
+                <tr>
+                    <th><input type="text" name="peer_name" value="{{ $filters['peer_name'] ?? '' }}" placeholder="Peer Name" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="collaboration_type" value="{{ $filters['collaboration_type'] ?? '' }}" placeholder="Collaboration Type" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="title" value="{{ $filters['title'] ?? '' }}" placeholder="Title" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="scope" value="{{ $filters['scope'] ?? '' }}" placeholder="Scope" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="preferred_mode" value="{{ $filters['preferred_mode'] ?? '' }}" placeholder="Preferred Mode" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="business_stage" value="{{ $filters['business_stage'] ?? '' }}" placeholder="Business Stage" class="form-control form-control-sm"></th>
+                    <th><input type="text" name="year_in_operation" value="{{ $filters['year_in_operation'] ?? '' }}" placeholder="Year in Operation" class="form-control form-control-sm"></th>
+                    <th>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="">Any</option>
+                            <option value="active" @selected(($filters['status'] ?? '') === 'active')>Active</option>
+                            <option value="inactive" @selected(($filters['status'] ?? '') === 'inactive')>Inactive</option>
+                        </select>
+                    </th>
+                    <th>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                            <a href="{{ route('admin.collaborations.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -135,6 +160,8 @@
         </div>
     </div>
 </div>
+
+</form>
 
 @push('scripts')
 <script>
