@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Carbon\Carbon;
 use App\Http\Controllers\Controller;
+use App\Models\Requirement;
 use App\Support\AdminCircleScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,9 @@ class ActivitiesRequirementsController extends Controller
             'topMembers' => $topMembers,
             'total' => $total,
             'circles' => $this->circleOptions(),
+            'regions' => $this->regionOptions(),
+            'categories' => $this->categoryOptions(),
+            'statuses' => $this->statusOptions(),
         ]);
     }
 
@@ -148,14 +152,19 @@ class ActivitiesRequirementsController extends Controller
 
         return [
             'q' => trim((string) $request->query('q', $request->query('search', ''))),
-            'status' => $request->query('status'),
             'from' => $from,
             'to' => $to,
             'from_at' => $fromAtRaw,
             'to_at' => $toAtRaw,
             'from_dt' => $this->parseDayBoundary($fromAtRaw, false),
             'to_dt' => $this->parseDayBoundary($toAtRaw, true),
-            'circle_id' => $request->query('circle_id'),
+            'circle_id' => (string) $request->query('circle_id', ''),
+            'from_user' => trim((string) $request->query('from_user', '')),
+            'subject' => trim((string) $request->query('subject', '')),
+            'region' => trim((string) $request->query('region', '')),
+            'category' => trim((string) $request->query('category', '')),
+            'status' => trim((string) $request->query('status', '')),
+            'has_media' => (string) $request->query('has_media', ''),
             'per_page' => (int) $request->query('per_page', 20),
         ];
     }
@@ -168,7 +177,7 @@ class ActivitiesRequirementsController extends Controller
 
         if ($filters['q'] !== '') {
             $query->leftJoin('cities as actor_city', 'actor_city.id', '=', 'actor.city_id');
-            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['q']) . '%';
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['q']) . '%';
             $query->where(function ($q) use ($like) {
                 $q->where('actor.display_name', 'ILIKE', $like)
                     ->orWhere('actor.first_name', 'ILIKE', $like)
@@ -179,8 +188,42 @@ class ActivitiesRequirementsController extends Controller
             });
         }
 
-        if (! empty($filters['status'])) {
+        if ($filters['from_user'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['from_user']) . '%';
+            $query->where(function ($inner) use ($like) {
+                $inner->where('actor.display_name', 'ILIKE', $like)
+                    ->orWhere('actor.first_name', 'ILIKE', $like)
+                    ->orWhere('actor.last_name', 'ILIKE', $like)
+                    ->orWhereRaw("concat_ws(' ', coalesce(actor.first_name, ''), coalesce(actor.last_name, '')) ILIKE ?", [$like]);
+            });
+        }
+
+        if ($filters['subject'] !== '') {
+            $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $filters['subject']) . '%';
+            $query->where('activity.subject', 'ILIKE', $like);
+        }
+
+        if ($filters['region'] !== '') {
+            $query->whereRaw("coalesce(nullif(activity.region_filter->>'region_label', ''), nullif(activity.region_filter->>'region_name', ''), nullif(activity.region_filter->>'city_name', '')) = ?", [$filters['region']]);
+        }
+
+        if ($filters['category'] !== '') {
+            $query->whereRaw("coalesce(nullif(activity.category_filter->>'category', ''), nullif(activity.category_filter->>'name', '')) = ?", [$filters['category']]);
+        }
+
+        if ($filters['status'] !== '') {
             $query->where('activity.status', $filters['status']);
+        }
+
+        if ($filters['has_media'] === '1') {
+            $query->whereNotNull('activity.media')->whereRaw("activity.media::text <> '[]'");
+        }
+
+        if ($filters['has_media'] === '0') {
+            $query->where(function ($inner) {
+                $inner->whereNull('activity.media')
+                    ->orWhereRaw("activity.media::text = '[]'");
+            });
         }
 
         $from = $filters['from_dt'] ?? null;
@@ -256,6 +299,42 @@ class ActivitiesRequirementsController extends Controller
             ->select(['id', 'name'])
             ->orderBy('name')
             ->get();
+    }
+
+    private function regionOptions()
+    {
+        return Requirement::query()
+            ->whereNotNull('region_filter')
+            ->selectRaw("distinct coalesce(nullif(region_filter->>'region_label', ''), nullif(region_filter->>'region_name', ''), nullif(region_filter->>'city_name', '')) as value")
+            ->whereRaw("coalesce(nullif(region_filter->>'region_label', ''), nullif(region_filter->>'region_name', ''), nullif(region_filter->>'city_name', '')) is not null")
+            ->orderBy('value')
+            ->pluck('value')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values();
+    }
+
+    private function categoryOptions()
+    {
+        return Requirement::query()
+            ->whereNotNull('category_filter')
+            ->selectRaw("distinct coalesce(nullif(category_filter->>'category', ''), nullif(category_filter->>'name', '')) as value")
+            ->whereRaw("coalesce(nullif(category_filter->>'category', ''), nullif(category_filter->>'name', '')) is not null")
+            ->orderBy('value')
+            ->pluck('value')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values();
+    }
+
+    private function statusOptions()
+    {
+        return Requirement::query()
+            ->whereNotNull('status')
+            ->select('status')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->values();
     }
 
     private function parseDayBoundary($value, bool $endOfDay): ?Carbon

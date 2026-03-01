@@ -83,14 +83,17 @@
         </div>
     </div>
 
-    @include('admin.components.activity-filter-bar-v2', [
-        'actionUrl' => route('admin.activities.requirements.index'),
-        'resetUrl' => route('admin.activities.requirements.index'),
-        'filters' => $filters,
-        'circles' => $circles ?? collect(),
-        'showExport' => true,
-        'exportUrl' => route('admin.activities.requirements.export', request()->query()),
-    ])
+    <form id="requirementsFiltersForm" method="GET" action="{{ route('admin.activities.requirements.index') }}">
+        @include('admin.components.activity-filter-bar-v2', [
+            'actionUrl' => route('admin.activities.requirements.index'),
+            'resetUrl' => route('admin.activities.requirements.index'),
+            'filters' => $filters,
+            'circles' => $circles ?? collect(),
+            'showExport' => true,
+            'exportUrl' => route('admin.activities.requirements.export', request()->query()),
+            'renderFormTag' => false,
+            'formId' => 'requirementsFiltersForm',
+        ])
 
     <div class="card shadow-sm mb-3">
         <div class="card-header bg-white">
@@ -143,6 +146,47 @@
                         <th>Media</th>
                         <th>Created At</th>
                     </tr>
+                    <tr>
+                        <th>
+                            <input type="text" name="from_user" value="{{ $filters['from_user'] ?? '' }}" placeholder="From" class="form-control form-control-sm" />
+                        </th>
+                        <th>
+                            <input type="text" name="subject" value="{{ $filters['subject'] ?? '' }}" placeholder="Subject" class="form-control form-control-sm" />
+                        </th>
+                        <th class="text-muted">—</th>
+                        <th>
+                            <select name="region" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                @foreach (($regions ?? collect()) as $region)
+                                    <option value="{{ $region }}" @selected(($filters['region'] ?? '') === $region)>{{ $region }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th>
+                            <select name="category" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                @foreach (($categories ?? collect()) as $category)
+                                    <option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ $category }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th>
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                @foreach (($statuses ?? collect()) as $status)
+                                    <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ ucfirst($status) }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th>
+                            <select name="has_media" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                <option value="1" @selected(($filters['has_media'] ?? '') === '1')>Yes</option>
+                                <option value="0" @selected(($filters['has_media'] ?? '') === '0')>No</option>
+                            </select>
+                        </th>
+                        <th class="text-muted">—</th>
+                    </tr>
                 </thead>
                 <tbody>
                     @forelse ($items as $requirement)
@@ -187,6 +231,7 @@
             </table>
         </div>
     </div>
+    </form>
 
     <div class="mt-3">
         {{ $items->links() }}
