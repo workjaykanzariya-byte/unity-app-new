@@ -2,9 +2,12 @@
 
 namespace App\Services\CoinClaims;
 
+use App\Events\UserNotificationCreated;
+use App\Jobs\SendFcmNotificationJob;
 use App\Models\CoinClaimRequest;
 use App\Models\Notification;
 use App\Support\CoinClaims\CoinClaimActivityRegistry;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CoinClaimUserNotificationService
@@ -22,7 +25,7 @@ class CoinClaimUserNotificationService
         $payload = [
             'notification_type' => 'coin_claim_approved',
             'title' => 'Coin claim approved',
-            'body' => 'Your coin claim for ' . $activityLabel . ' has been approved.',
+            'body' => 'Your claim for ' . $activityLabel . ' was approved. ' . ($coinsAwarded ?? 0) . ' coins added.',
             'coin_claim_id' => (string) $claim->id,
             'activity_code' => (string) $claim->activity_code,
             'coins_awarded' => $coinsAwarded,
@@ -30,18 +33,19 @@ class CoinClaimUserNotificationService
             'reviewed_at' => optional($claim->reviewed_at)->toISOString(),
         ];
 
-        return $this->store($claim, 'coin_claim_approved', $payload);
+        return $this->storeAndDispatch($claim, 'coin_claim_approved', $payload);
     }
 
     public function sendRejected(CoinClaimRequest $claim): Notification
     {
         $activity = $this->registry->get((string) $claim->activity_code) ?? [];
         $activityLabel = (string) ($activity['label'] ?? $claim->activity_code);
+        $reason = (string) ($claim->admin_note ?? 'Not provided');
 
         $payload = [
             'notification_type' => 'coin_claim_rejected',
             'title' => 'Coin claim rejected',
-            'body' => 'Your coin claim for ' . $activityLabel . ' has been rejected.',
+            'body' => 'Your claim for ' . $activityLabel . ' was rejected. Reason: ' . $reason,
             'coin_claim_id' => (string) $claim->id,
             'activity_code' => (string) $claim->activity_code,
             'coins_awarded' => null,
@@ -49,10 +53,10 @@ class CoinClaimUserNotificationService
             'reviewed_at' => optional($claim->reviewed_at)->toISOString(),
         ];
 
-        return $this->store($claim, 'coin_claim_rejected', $payload);
+        return $this->storeAndDispatch($claim, 'coin_claim_rejected', $payload);
     }
 
-    private function store(CoinClaimRequest $claim, string $type, array $payload): Notification
+    private function storeAndDispatch(CoinClaimRequest $claim, string $type, array $payload): Notification
     {
         Log::info('coin_claim.notification.store', [
             'claim_id' => (string) $claim->id,
@@ -61,7 +65,7 @@ class CoinClaimUserNotificationService
         ]);
 
         try {
-            return Notification::create([
+            $notification = Notification::create([
                 'user_id' => $claim->user_id,
                 'type' => $type,
                 'payload' => $payload,
@@ -69,6 +73,28 @@ class CoinClaimUserNotificationService
                 'created_at' => now(),
                 'read_at' => null,
             ]);
+
+            DB::afterCommit(function () use ($notification, $payload, $claim, $type): void {
+                event(new UserNotificationCreated((string) $claim->user_id, [
+                    'id' => (string) $notification->id,
+                    'type' => (string) $notification->type,
+                    'payload' => $notification->payload,
+                    'created_at' => optional($notification->created_at)->toISOString(),
+                ]));
+
+                SendFcmNotificationJob::dispatch(
+                    (string) $claim->user_id,
+                    (string) ($payload['title'] ?? 'Notification'),
+                    (string) ($payload['body'] ?? 'You have a new notification'),
+                    [
+                        'notification_type' => $type,
+                        'coin_claim_id' => (string) $claim->id,
+                        'activity_code' => (string) $claim->activity_code,
+                    ]
+                );
+            });
+
+            return $notification;
         } catch (\Throwable $exception) {
             Log::error('coin_claim.notification.store_failed', [
                 'claim_id' => (string) $claim->id,
