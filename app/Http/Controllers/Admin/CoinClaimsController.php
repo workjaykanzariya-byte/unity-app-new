@@ -146,7 +146,7 @@ class CoinClaimsController extends Controller
                 if ($claim->user) {
                     $claim->user->notify(new CoinClaimReviewedNotification(
                         claim: $claim,
-                        status: 'approved',
+                        decision: 'approved',
                         coinsAwarded: $claim->coins_awarded !== null ? (int) $claim->coins_awarded : null,
                         reason: null,
                     ));
@@ -199,7 +199,7 @@ class CoinClaimsController extends Controller
                 if ($claim->user) {
                     $claim->user->notify(new CoinClaimReviewedNotification(
                         claim: $claim,
-                        status: 'rejected',
+                        decision: 'rejected',
                         coinsAwarded: null,
                         reason: $claim->admin_note,
                     ));
