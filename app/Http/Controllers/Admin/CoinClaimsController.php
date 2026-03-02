@@ -50,7 +50,8 @@ class CoinClaimsController extends Controller
             });
         }
 
-        AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), 'coin_claim_requests.user_id', null);
+        $claimsTable = (new CoinClaimRequest)->getTable();
+        AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), $claimsTable . '.user_id', null);
 
         $claims = $query->orderByDesc('created_at')->paginate(25)->withQueryString();
 
