@@ -19,11 +19,13 @@ class ZohoBillingService
 
     public function listActivePlans(): array
     {
-        $response = $this->client->request('GET', '/plans', ['filter_by' => 'Status.ACTIVE'], true);
+        $response = $this->client->request('GET', '/plans', [
+            'page' => 1,
+            'per_page' => 200,
+        ], true);
         $plans = $response['plans'] ?? [];
 
-        return collect($plans)
-            ->filter(fn (array $plan) => strtoupper((string) ($plan['status'] ?? '')) === 'ACTIVE')
+        return collect(array_values(array_filter($plans, fn (array $plan) => strtolower((string) ($plan['status'] ?? '')) === 'active')))
             ->map(fn (array $plan) => [
                 'plan_code' => $plan['plan_code'] ?? null,
                 'name' => $plan['name'] ?? null,
