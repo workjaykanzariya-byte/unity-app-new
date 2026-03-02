@@ -34,9 +34,8 @@
         @csrf
         <input type="hidden" name="q" value="{{ $filters['search'] }}">
         <input type="hidden" name="membership_status" value="{{ $filters['membership_status'] ?? '' }}">
-        <input type="hidden" name="city_id" value="{{ $filters['city_id'] ?? '' }}">
+        <input type="hidden" name="circle_id" value="{{ $filters['circle_id'] ?? 'all' }}">
         <input type="hidden" name="phone" value="{{ $filters['phone'] ?? '' }}">
-        <input type="hidden" name="company_name" value="{{ $filters['company_name'] ?? '' }}">
         <input type="hidden" name="sort" value="{{ $filters['sort'] }}">
         <input type="hidden" name="dir" value="{{ $filters['dir'] }}">
     </form>
@@ -81,13 +80,18 @@
                 <tr class="bg-light align-middle">
                     <th></th>
                     <th>
-                        <input type="text" name="q" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Name, email, company, or city" value="{{ $filters['search'] }}">
+                        <input type="text" name="q" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Peer/Company/City" value="{{ $filters['search'] }}">
                     </th>
                     <th>
                         <input type="text" name="phone" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Phone" value="{{ $filters['phone'] }}">
                     </th>
                     <th>
-                        <input type="text" name="company_name" form="usersFiltersForm" class="form-control form-control-sm" placeholder="Company" value="{{ $filters['company_name'] }}">
+                        <select name="circle_id" form="usersFiltersForm" class="form-select form-select-sm">
+                            <option value="all">All Circles</option>
+                            @foreach ($circles as $circle)
+                                <option value="{{ $circle->id }}" @selected(($filters['circle_id'] ?? 'all') == $circle->id)>{{ $circle->name }}</option>
+                            @endforeach
+                        </select>
                     </th>
                     <th>
                         <select name="membership_status" form="usersFiltersForm" class="form-select form-select-sm">
@@ -98,12 +102,7 @@
                         </select>
                     </th>
                     <th>
-                        <select name="city_id" form="usersFiltersForm" class="form-select form-select-sm">
-                            <option value="all">All</option>
-                            @foreach ($cities as $city)
-                                <option value="{{ $city->id }}" @selected($filters['city_id'] == $city->id)>{{ $city->name }}</option>
-                            @endforeach
-                        </select>
+                        <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
                     </th>
                     <th>
                         <input type="text" name="coins_balance" class="form-control form-control-sm" placeholder="—" disabled>
@@ -127,9 +126,11 @@
             <tbody>
                 @forelse ($users as $user)
                     @php
-                        $name = $user->display_name ?? trim($user->first_name . ' ' . $user->last_name);
+                        $name = $user->name ?? trim((($user->first_name ?? '') . ' ' . ($user->last_name ?? '')));
                         $avatar = $user->profile_photo_url ?? ($user->profile_photo_file_id ? url('/api/v1/files/' . $user->profile_photo_file_id) : null);
-                        $cityName = $user->city->name ?? $user->city ?? '—';
+                        $cityName = $user->city->name ?? $user->city ?? 'No City';
+                        $company = $user->company_name ?? $user->company ?? $user->business_name ?? 'No Company';
+                        $circleName = optional($user->circleMembers->first()?->circle)->name ?? 'No Circle';
                         $statusValue = $user->status ?? 'active';
                         $isActive = $statusValue === 'active';
                         $detailsId = 'details-' . $user->id;
@@ -147,9 +148,11 @@
                                         <span class="text-muted">{{ strtoupper(substr($name, 0, 1)) }}</span>
                                     @endif
                                 </div>
-                                <div>
-                                    <div class="fw-semibold">{{ $name ?: 'Unnamed Peer' }}</div>
-                                    <div class="text-muted small">{{ $user->email }}</div>
+                                <div class="d-flex flex-column">
+                                    <div class="fw-semibold text-dark">{{ $name !== '' ? $name : '—' }}</div>
+                                    <div class="text-muted small">{{ $company }}</div>
+                                    <div class="text-muted small">{{ $cityName }}</div>
+                                    <div class="text-muted small">{{ $circleName }}</div>
                                 </div>
                             </div>
                         </td>
