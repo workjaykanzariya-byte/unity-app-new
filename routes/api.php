@@ -284,13 +284,13 @@ Route::prefix('v1')->group(function () {
         Route::get('/zoho/org', [ZohoDebugController::class, 'org']);
         Route::get('/zoho/plans', [ZohoPlansController::class, 'index']);
         Route::post('/billing/checkout', [BillingCheckoutController::class, 'checkout']);
-        Route::get('/billing/checkout/{hostedpage_id}/status', [BillingCheckoutController::class, 'status']);
         Route::get('/billing/checkout/{hostedpage_id}', [BillingCheckoutController::class, 'status']);
     });
 
     Route::get('/membership-plans', [MembershipPlanController::class, 'index']);
     Route::post('/webhooks/razorpay', [RazorpayWebhookController::class, 'handle']);
     Route::post('/zoho/webhook', [ZohoWebhookController::class, 'handle']);
+    Route::get('/billing/checkout/{hostedpage_id}/status', [BillingCheckoutController::class, 'status']);
     Route::get('/files/{id}', [FileController::class, 'show']);
     Route::get('/event-galleries', [EventGalleryApiController::class, 'index']);
     Route::get('/event-galleries/{id}', [EventGalleryApiController::class, 'show']);

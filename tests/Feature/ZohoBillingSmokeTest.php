@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -48,7 +50,7 @@ class ZohoBillingSmokeTest extends TestCase
         ]);
     }
 
-    public function test_checkout_status_endpoint_updates_membership_on_paid_status(): void
+    public function test_checkout_status_endpoint_updates_membership_using_payment_mapping_without_auth(): void
     {
         Http::fake([
             'https://accounts.zoho.in/oauth/v2/token' => Http::response([
@@ -62,9 +64,9 @@ class ZohoBillingSmokeTest extends TestCase
                     'subscription' => [
                         'subscription_id' => 'sub_001',
                         'status' => 'active',
-                        'start_date' => '2026-01-01 00:00:00',
-                        'next_billing_at' => '2026-02-01 00:00:00',
-                        'plan' => ['plan_code' => '01'],
+                        'current_term_starts_at' => '2026-01-01 00:00:00',
+                        'current_term_ends_at' => '2026-02-01 00:00:00',
+                        'plan_code' => '01',
                     ],
                 ],
             ]),
@@ -73,9 +75,19 @@ class ZohoBillingSmokeTest extends TestCase
         $user = User::factory()->create([
             'email' => 'member@example.com',
             'phone' => '9999999999',
+            'membership_status' => 'free_peer',
         ]);
 
-        Sanctum::actingAs($user);
+        $payment = new Payment();
+        $payment->id = (string) Str::uuid();
+        $payment->forceFill([
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'provider' => 'zoho',
+            'zoho_plan_code' => '01',
+            'zoho_hostedpage_id' => 'hp_123',
+        ]);
+        $payment->save();
 
         $response = $this->getJson('/api/v1/billing/checkout/hp_123/status');
 
@@ -84,7 +96,13 @@ class ZohoBillingSmokeTest extends TestCase
             'data' => [
                 'zoho_subscription_id' => 'sub_001',
                 'zoho_last_invoice_id' => 'inv_001',
+                'zoho_plan_code' => '01',
             ],
+        ]);
+
+        $this->assertDatabaseHas('payments', [
+            'zoho_hostedpage_id' => 'hp_123',
+            'status' => 'paid',
         ]);
     }
 }
