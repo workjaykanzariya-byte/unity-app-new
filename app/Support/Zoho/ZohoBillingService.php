@@ -29,7 +29,11 @@ class ZohoBillingService
             ->map(fn (array $plan) => [
                 'plan_code' => $plan['plan_code'] ?? null,
                 'name' => $plan['name'] ?? null,
-                'price' => $plan['price'] ?? null,
+                'price' => $plan['recurring_price']
+                    ?? $plan['price']
+                    ?? data_get($plan, 'plan_item.price')
+                    ?? data_get($plan, 'item.price')
+                    ?? null,
                 'interval' => $plan['interval'] ?? null,
                 'status' => $plan['status'] ?? null,
                 'description' => $plan['description'] ?? null,

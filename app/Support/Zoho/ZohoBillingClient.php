@@ -26,9 +26,10 @@ class ZohoBillingClient
                 'X-com-zoho-subscriptions-organizationid' => (string) config('zoho_billing.org_id'),
             ]);
 
-        Log::info('Zoho API request', [
+        Log::info('Zoho Billing request', [
             'method' => strtoupper($method),
             'path' => $path,
+            'final_url' => $url,
             'query_keys' => $asQuery ? array_keys($payload) : [],
             'body_keys' => $asQuery ? [] : array_keys($payload),
         ]);
