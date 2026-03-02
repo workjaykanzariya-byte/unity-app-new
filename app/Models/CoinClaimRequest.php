@@ -27,17 +27,12 @@ class CoinClaimRequest extends Model
         'reviewed_by_admin_id',
         'reviewed_at',
         'admin_note',
-        'admin_notes',
-        'approved_at',
-        'rejected_at',
     ];
 
     protected $casts = [
         'payload' => 'array',
         'reviewed_at' => 'datetime',
         'coins_awarded' => 'integer',
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

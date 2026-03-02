@@ -11,12 +11,14 @@ return new class extends Migration
         Schema::create('coin_claim_requests', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('user_id');
-            $table->string('status', 30)->default('pending');
+            $table->string('activity_code', 100);
             $table->jsonb('payload')->nullable();
-            $table->text('admin_notes')->nullable();
-            $table->timestamp('approved_at')->nullable();
-            $table->timestamp('rejected_at')->nullable();
-            $table->timestamps();
+            $table->string('status', 30)->default('pending');
+            $table->integer('coins_awarded')->nullable();
+            $table->uuid('reviewed_by_admin_id')->nullable();
+            $table->timestampTz('reviewed_at')->nullable();
+            $table->text('admin_note')->nullable();
+            $table->timestampsTz();
 
             $table->index('status');
             $table->index('user_id');
