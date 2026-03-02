@@ -132,55 +132,62 @@
 
 
 
-    <div class="row g-3 mt-1 mb-3">
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Testimonials',
-                'totalLabel' => 'Total Testimonials',
-                'rows' => $topTestimonials ?? collect(),
-            ])
+    <div class="card shadow-sm mt-1 mb-3">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <strong>Top 5 Peers</strong>
+            <select id="top5ActivitySelect" class="form-select form-select-sm" style="max-width: 240px;">
+                <option value="testimonials" selected>Testimonials</option>
+                <option value="referrals">Referrals</option>
+                <option value="business_deals">Business Deals</option>
+                <option value="p2p_meetings">P2P Meetings</option>
+                <option value="requirements">Requirements</option>
+                <option value="become_leader">Become A Leader</option>
+                <option value="recommend_peer">Recommend A Peer</option>
+            </select>
         </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Referrals',
-                'totalLabel' => 'Total Referrals',
-                'rows' => $topReferrals ?? collect(),
-            ])
-        </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Business Deals',
-                'totalLabel' => 'Total Business Deals',
-                'rows' => $topBusinessDeals ?? collect(),
-            ])
-        </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — P2P Meetings',
-                'totalLabel' => 'Total P2P Meetings',
-                'rows' => $topP2PMeetings ?? collect(),
-            ])
-        </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Requirements',
-                'totalLabel' => 'Total Requirements',
-                'rows' => $topRequirements ?? collect(),
-            ])
-        </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Become A Leader',
-                'totalLabel' => 'Total Become A Leader',
-                'rows' => $topBecomeLeader ?? collect(),
-            ])
-        </div>
-        <div class="col-12 col-lg-6">
-            @include('admin.activities._top5_table', [
-                'title' => 'Top 5 Peers — Recommend A Peer',
-                'totalLabel' => 'Total Recommend A Peer',
-                'rows' => $topRecommendPeer ?? collect(),
-            ])
+        <div class="card-body p-0">
+            <div class="top5-pane" data-pane="testimonials">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Testimonials',
+                    'rows' => $topTestimonials ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="referrals">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Referrals',
+                    'rows' => $topReferrals ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="business_deals">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Business Deals',
+                    'rows' => $topBusinessDeals ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="p2p_meetings">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total P2P Meetings',
+                    'rows' => $topP2PMeetings ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="requirements">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Requirements',
+                    'rows' => $topRequirements ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="become_leader">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Become A Leader',
+                    'rows' => $topBecomeLeader ?? collect(),
+                ])
+            </div>
+            <div class="top5-pane d-none" data-pane="recommend_peer">
+                @include('admin.activities._top5_table', [
+                    'totalLabel' => 'Total Recommend A Peer',
+                    'rows' => $topRecommendPeer ?? collect(),
+                ])
+            </div>
         </div>
     </div>
 
@@ -246,6 +253,7 @@
             });
         }
 
+
         exportForm.addEventListener('submit', (event) => {
             selectionError.classList.add('d-none');
             selectedContainer.innerHTML = '';
@@ -267,6 +275,20 @@
                 selectedContainer.appendChild(input);
             });
         });
+
+        const top5Select = document.getElementById('top5ActivitySelect');
+        const top5Panes = document.querySelectorAll('.top5-pane');
+
+        const showTop5Pane = (paneKey) => {
+            top5Panes.forEach((pane) => {
+                pane.classList.toggle('d-none', pane.getAttribute('data-pane') !== paneKey);
+            });
+        };
+
+        if (top5Select) {
+            showTop5Pane(top5Select.value || 'testimonials');
+            top5Select.addEventListener('change', () => showTop5Pane(top5Select.value));
+        }
     });
 </script>
 @endpush
