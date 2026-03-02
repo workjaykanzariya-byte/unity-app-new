@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -30,6 +31,15 @@ class CoinClaimsController extends Controller
 
     public function index(Request $request): View
     {
+        $model = new CoinClaimRequest();
+        $claimsTable = $model->getTable();
+
+        if (! Schema::hasTable($claimsTable)) {
+            return view('admin.coin_claims.missing_table', [
+                'expected_table' => $claimsTable,
+            ]);
+        }
+
         $search = trim((string) $request->query('search', ''));
         $status = (string) $request->query('status', 'pending');
 
@@ -50,7 +60,6 @@ class CoinClaimsController extends Controller
             });
         }
 
-        $claimsTable = (new CoinClaimRequest)->getTable();
         AdminCircleScope::applyToActivityQuery($query, Auth::guard('admin')->user(), $claimsTable . '.user_id', null);
 
         $claims = $query->orderByDesc('created_at')->paginate(25)->withQueryString();
