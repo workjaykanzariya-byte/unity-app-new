@@ -12,8 +12,6 @@ use RuntimeException;
 
 class ZohoBillingService
 {
-    private const TEST_CONTACT_EMAIL = 'demo@gmail.com';
-
     public function getAccessToken(): string
     {
         $cacheKey = $this->tokenCacheKey();
@@ -51,23 +49,24 @@ class ZohoBillingService
         $url = rtrim($this->billingBaseUrl(), '/').'/'.ltrim($path, '/');
         $request = Http::withToken($this->getAccessToken(), 'Zoho-oauthtoken');
 
-        if (strtoupper($method) === 'GET') {
-            return $request->get($url, $query);
+        $response = strtoupper($method) === 'GET'
+            ? $request->get($url, $query)
+            : $request->send(strtoupper($method), $url.'?'.http_build_query($query), ['json' => $json]);
+
+        if (! $response->successful()) {
+            $this->logZohoError('Zoho API request failed', $response);
+            throw new RuntimeException('Zoho API request failed: '.$response->body());
         }
 
-        return $request->send(strtoupper($method), $url.'?'.http_build_query($query), [
-            'json' => $json,
-        ]);
+        return $response;
     }
 
     public function findCustomerByEmail(string $email): ?array
     {
-        $response = $this->zohoRequest('GET', '/customers', ['email_contains' => trim($email)]);
-        $payload = $response->json();
+        $payload = $this->zohoRequest('GET', '/customers', ['email_contains' => trim($email)])->json();
 
-        if (! $response->successful() || ! is_array($payload)) {
-            $this->logZohoError('findCustomerByEmail failed', $response);
-            throw new RuntimeException(json_encode($payload));
+        if (! is_array($payload)) {
+            throw new RuntimeException('Invalid Zoho customers response.');
         }
 
         $customers = $payload['customers'] ?? [];
@@ -89,9 +88,9 @@ class ZohoBillingService
 
     public function createCustomerWithContactPerson(User $user): array
     {
-        $email = trim((string) $user->email);
+        $customerEmail = trim((string) $user->email);
 
-        if ($email === '') {
+        if ($customerEmail === '') {
             throw new RuntimeException('User email is required to create Zoho customer.');
         }
 
@@ -103,13 +102,15 @@ class ZohoBillingService
             $displayName = trim($firstName.' '.$lastName);
         }
         if ($displayName === '') {
-            $displayName = $email;
+            $displayName = $customerEmail;
         }
+
+        $contactEmail = $this->contactPersonEmailForUser($user);
 
         $payload = [
             'customer_name' => $displayName,
             'display_name' => $displayName,
-            'email' => $email,
+            'email' => $customerEmail,
             'phone' => $user->phone ?: null,
             'billing_address' => array_filter([
                 'city' => $user->city ?: null,
@@ -119,17 +120,15 @@ class ZohoBillingService
             'contact_persons' => [[
                 'first_name' => $firstName !== '' ? $firstName : $displayName,
                 'last_name' => $lastName,
-                'email' => self::TEST_CONTACT_EMAIL,
+                'email' => $contactEmail,
                 'is_primary_contact' => true,
             ]],
         ];
 
-        $response = $this->zohoRequest('POST', '/customers', [], $payload);
-        $body = $response->json();
+        $body = $this->zohoRequest('POST', '/customers', [], $payload)->json();
 
-        if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createCustomerWithContactPerson failed', $response);
-            throw new RuntimeException(json_encode($body));
+        if (! is_array($body)) {
+            throw new RuntimeException('Invalid Zoho customer create response.');
         }
 
         $customer = $body['customer'] ?? null;
@@ -143,12 +142,10 @@ class ZohoBillingService
 
     public function getCustomer(string $customerId): array
     {
-        $response = $this->zohoRequest('GET', '/customers/'.$customerId);
-        $payload = $response->json();
+        $payload = $this->zohoRequest('GET', '/customers/'.$customerId)->json();
 
-        if (! $response->successful() || ! is_array($payload)) {
-            $this->logZohoError('getCustomer failed', $response);
-            throw new RuntimeException(json_encode($payload));
+        if (! is_array($payload)) {
+            throw new RuntimeException('Invalid Zoho customer response.');
         }
 
         $customer = $payload['customer'] ?? null;
@@ -160,22 +157,32 @@ class ZohoBillingService
         return $customer;
     }
 
+    public function listContactPersons(string $customerId): array
+    {
+        $payload = $this->zohoRequest('GET', '/customers/'.$customerId.'/contactpersons')->json();
+
+        if (! is_array($payload)) {
+            throw new RuntimeException('Invalid Zoho contact persons response.');
+        }
+
+        $contacts = $payload['contact_persons'] ?? [];
+
+        return is_array($contacts) ? $contacts : [];
+    }
+
     public function createContactPerson(string $customerId, User $user): array
     {
-        $email = self::TEST_CONTACT_EMAIL;
+        $email = $this->contactPersonEmailForUser($user);
 
-        $response = $this->zohoRequest('POST', '/customers/'.$customerId.'/contactpersons', [], [
+        $body = $this->zohoRequest('POST', '/customers/'.$customerId.'/contactpersons', [], [
             'first_name' => trim((string) ($user->first_name ?? '')),
             'last_name' => trim((string) ($user->last_name ?? '')),
             'email' => $email,
             'is_primary_contact' => true,
-        ]);
+        ])->json();
 
-        $body = $response->json();
-
-        if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createContactPerson failed', $response);
-            throw new RuntimeException(json_encode($body));
+        if (! is_array($body)) {
+            throw new RuntimeException('Invalid Zoho contact person response.');
         }
 
         $contact = $body['contact_person'] ?? null;
@@ -189,79 +196,81 @@ class ZohoBillingService
 
     public function updateContactPersonPortalAndPrimary(string $customerId, string $contactPersonId): array
     {
-        $response = $this->zohoRequest('PUT', '/customers/'.$customerId.'/contactpersons/'.$contactPersonId, [], [
+        $body = $this->zohoRequest('PUT', '/customers/'.$customerId.'/contactpersons/'.$contactPersonId, [], [
             'is_primary_contact' => true,
-        ]);
+        ])->json();
 
-        $body = $response->json();
-
-        if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('updateContactPersonPortalAndPrimary failed', $response);
-            throw new RuntimeException(json_encode($body));
+        if (! is_array($body)) {
+            throw new RuntimeException('Invalid Zoho update contact person response.');
         }
 
         return $body['contact_person'] ?? $body;
     }
 
-    public function ensurePrimaryPortalContactPerson(string $customerId, User $user): array
+    public function ensureContactPerson(string $zohoCustomerId, User $user): array
     {
-        $email = $this->normalizeEmail(self::TEST_CONTACT_EMAIL);
+        $email = $this->contactPersonEmailForUser($user);
+        $normalizedEmail = $this->normalizeEmail($email);
 
-        $customer = $this->getCustomer($customerId);
-        $existing = $this->findContactPersonByEmail($customer, $email);
+        $contacts = $this->listContactPersons($zohoCustomerId);
+        $existing = $this->findContactPersonByEmailFromList($contacts, $normalizedEmail);
 
         if (is_array($existing)) {
             Log::info('Zoho contact person reused/created', [
-                'customer_id' => $customerId,
-                'email_used' => self::TEST_CONTACT_EMAIL,
+                'zoho_customer_id' => $zohoCustomerId,
+                'email_used' => $email,
                 'action' => 'reused',
             ]);
-        } else {
-            try {
-                $existing = $this->createContactPerson($customerId, $user);
 
-                Log::info('Zoho contact person reused/created', [
-                    'customer_id' => $customerId,
-                    'email_used' => self::TEST_CONTACT_EMAIL,
-                    'action' => 'created',
-                ]);
-            } catch (RuntimeException $e) {
-                $decoded = json_decode($e->getMessage(), true);
-                $errorCode = is_array($decoded) ? (string) ($decoded['code'] ?? '') : '';
+            return $this->updateContactPersonPortalAndPrimary($zohoCustomerId, (string) $existing['contact_person_id']);
+        }
 
-                Log::warning('Zoho contact person create failed', [
-                    'customer_id' => $customerId,
-                    'email_used' => self::TEST_CONTACT_EMAIL,
-                    'zoho_error_code' => $errorCode,
-                ]);
+        try {
+            $created = $this->createContactPerson($zohoCustomerId, $user);
 
-                if ($errorCode !== '31027') {
-                    throw $e;
-                }
+            Log::info('Zoho contact person reused/created', [
+                'zoho_customer_id' => $zohoCustomerId,
+                'email_used' => $email,
+                'action' => 'created',
+            ]);
 
-                $customer = $this->getCustomer($customerId);
-                $existing = $this->findContactPersonByEmail($customer, $email);
+            return $created;
+        } catch (RuntimeException $e) {
+            $decoded = json_decode($e->getMessage(), true);
+            $errorCode = is_array($decoded) ? (string) ($decoded['code'] ?? '') : '';
+            $errorMessage = is_array($decoded) ? (string) ($decoded['message'] ?? '') : $e->getMessage();
 
-                if (! is_array($existing)) {
-                    throw $e;
-                }
+            Log::info('Zoho contact person create failed', [
+                'zoho_customer_id' => $zohoCustomerId,
+                'email_used' => $email,
+                'zoho_error_code' => $errorCode,
+                'zoho_error_message' => $errorMessage,
+            ]);
 
-                Log::info('Zoho contact person reused/created', [
-                    'customer_id' => $customerId,
-                    'email_used' => self::TEST_CONTACT_EMAIL,
-                    'action' => 'reused_after_31027',
-                    'zoho_error_code' => $errorCode,
-                ]);
+            if ($errorCode !== '31027') {
+                throw $e;
             }
+
+            $contacts = $this->listContactPersons($zohoCustomerId);
+            $existing = $this->findContactPersonByEmailFromList($contacts, $normalizedEmail);
+
+            if (! is_array($existing)) {
+                throw $e;
+            }
+
+            Log::info('Zoho contact person reused/created', [
+                'zoho_customer_id' => $zohoCustomerId,
+                'email_used' => $email,
+                'action' => 'reused_after_31027',
+            ]);
+
+            return $this->updateContactPersonPortalAndPrimary($zohoCustomerId, (string) $existing['contact_person_id']);
         }
+    }
 
-        $contactId = (string) ($existing['contact_person_id'] ?? '');
-
-        if ($contactId === '') {
-            throw new RuntimeException('Unable to resolve contact_person_id for Zoho customer.');
-        }
-
-        return $this->updateContactPersonPortalAndPrimary($customerId, $contactId);
+    public function ensurePrimaryPortalContactPerson(string $customerId, User $user): array
+    {
+        return $this->ensureContactPerson($customerId, $user);
     }
 
     public function ensureZohoCustomerForUser(User $user): string
@@ -297,19 +306,25 @@ class ZohoBillingService
             $user->save();
         }
 
-        $this->ensurePrimaryPortalContactPerson($customerId, $user);
+        $contactPerson = $this->ensureContactPerson($customerId, $user);
+
+        if (Schema::hasColumn('users', 'zoho_contact_person_id')) {
+            $contactPersonId = (string) ($contactPerson['contact_person_id'] ?? '');
+            if ($contactPersonId !== '') {
+                $user->zoho_contact_person_id = $contactPersonId;
+                $user->save();
+            }
+        }
 
         return $customerId;
     }
 
     public function getPlanByCode(string $planCode): ?array
     {
-        $response = $this->zohoRequest('GET', '/plans');
-        $payload = $response->json();
+        $payload = $this->zohoRequest('GET', '/plans')->json();
 
-        if (! $response->successful() || ! is_array($payload)) {
-            $this->logZohoError('getPlanByCode failed', $response);
-            throw new RuntimeException(json_encode($payload));
+        if (! is_array($payload)) {
+            throw new RuntimeException('Invalid Zoho plans response.');
         }
 
         foreach (($payload['plans'] ?? []) as $plan) {
@@ -344,11 +359,13 @@ class ZohoBillingService
             ]],
         ];
 
-        $response = $this->zohoRequest('POST', '/invoices', [], $payload);
-        $body = $response->json();
+        $body = $this->zohoRequest('POST', '/invoices', [], $payload)->json();
 
-        if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createInvoiceForPlan failed', $response);
+        if (! is_array($body)) {
+            throw new RuntimeException('Invalid Zoho invoice create response.');
+        }
+
+        if (($body['code'] ?? null) !== 0) {
             throw new RuntimeException(json_encode($body));
         }
 
@@ -363,11 +380,13 @@ class ZohoBillingService
 
     public function createInvoicePaymentLink(string $invoiceId): array
     {
-        $response = $this->zohoRequest('POST', '/invoices/'.$invoiceId.'/paymentlink');
-        $body = $response->json();
+        $body = $this->zohoRequest('POST', '/invoices/'.$invoiceId.'/paymentlink')->json();
 
-        if (! $response->successful() || ! is_array($body)) {
-            $this->logZohoError('createInvoicePaymentLink failed', $response);
+        if (! is_array($body)) {
+            throw new RuntimeException('Invalid Zoho payment link response.');
+        }
+
+        if (($body['code'] ?? null) !== 0) {
             throw new RuntimeException(json_encode($body));
         }
 
@@ -403,15 +422,9 @@ class ZohoBillingService
         };
     }
 
-    private function findContactPersonByEmail(array $customer, string $normalizedEmail): ?array
+    private function findContactPersonByEmailFromList(array $contacts, string $normalizedEmail): ?array
     {
-        $contactPersons = $customer['contact_persons'] ?? [];
-
-        if (! is_array($contactPersons)) {
-            return null;
-        }
-
-        foreach ($contactPersons as $contact) {
+        foreach ($contacts as $contact) {
             if (is_array($contact) && $this->normalizeEmail((string) ($contact['email'] ?? '')) === $normalizedEmail) {
                 return $contact;
             }
@@ -423,6 +436,17 @@ class ZohoBillingService
     private function normalizeEmail(string $email): string
     {
         return strtolower(trim($email));
+    }
+
+    private function contactPersonEmailForUser(User $user): string
+    {
+        $userEmail = trim((string) $user->email);
+
+        if ($userEmail !== '') {
+            return $userEmail;
+        }
+
+        return 'demo+'.$user->id.'@gmail.com';
     }
 
     private function refreshAccessToken(): array
