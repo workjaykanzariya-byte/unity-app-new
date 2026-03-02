@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1\Billing;
 use App\Http\Controllers\Controller;
 use App\Support\Zoho\ZohoBillingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class BillingCheckoutController extends Controller
@@ -36,6 +38,12 @@ class BillingCheckoutController extends Controller
                     'note' => 'Open checkout_url in WebView',
                 ],
             ]);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => Arr::first(Arr::flatten($exception->errors())) ?? 'Validation failed.',
+                'data' => ['errors' => $exception->errors()],
+            ], 422);
         } catch (Throwable $throwable) {
             return response()->json([
                 'success' => false,
@@ -72,12 +80,11 @@ class BillingCheckoutController extends Controller
 }
 
 /*
-| Postman / manual verification steps for mobile autofill fix
-| 1) POST /api/v1/billing/checkout with a user that has NO phone in DB.
-|    Expect hosted page payment flow to proceed without manual mobile entry.
-| 2) POST /api/v1/billing/checkout with a user that HAS phone in DB.
-|    Ensure mobile is prefilled/accepted and payment proceeds.
-| 3) Verify in Zoho UI:
-|    - Customer has mobile number set
-|    - Contact person has mobile number set
+| Test steps
+| 1) Ensure logged-in user has valid email in users table.
+| 2) POST /api/v1/billing/checkout {"plan_code":"01"}
+|    -> should return checkout_url
+| 3) In Zoho Billing UI search by that real email -> customer must exist
+| 4) Checkout page should NOT ask to configure mobile (mobile already present)
+| 5) Complete payment.
 */
