@@ -24,6 +24,7 @@ class Circle extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'purpose',
         'announcement',
@@ -35,6 +36,7 @@ class Circle extends Model
         'status',
         'calendar',
         'city_id',
+        'city',
         'industry_tags',
         'meeting_mode',
         'meeting_frequency',
