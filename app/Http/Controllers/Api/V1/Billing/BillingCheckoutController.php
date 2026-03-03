@@ -122,9 +122,18 @@ class BillingCheckoutController extends Controller
     public function status(Request $request, string $hostedpage_id)
     {
         try {
-            $payment = Payment::query()
-                ->where('provider', 'zoho')
-                ->where('zoho_hostedpage_id', $hostedpage_id)
+            $paymentQuery = Payment::query()
+                ->whereNotNull('zoho_hostedpage_id')
+                ->where('zoho_hostedpage_id', $hostedpage_id);
+
+            if (Schema::hasColumn('payments', 'provider')) {
+                $paymentQuery->where(function ($query) {
+                    $query->where('provider', 'zoho')
+                        ->orWhereNull('provider');
+                });
+            }
+
+            $payment = $paymentQuery
                 ->latest('created_at')
                 ->first();
 
@@ -312,23 +321,36 @@ class BillingCheckoutController extends Controller
 
     private function recordPendingZohoPayment(User $user, string $planCode, string $hostedpageId): void
     {
-        $payment = Payment::query()
-            ->where('provider', 'zoho')
-            ->where('zoho_hostedpage_id', $hostedpageId)
-            ->first();
+        $paymentQuery = Payment::query()
+            ->whereNotNull('zoho_hostedpage_id')
+            ->where('zoho_hostedpage_id', $hostedpageId);
+
+        if (Schema::hasColumn('payments', 'provider')) {
+            $paymentQuery->where(function ($query) {
+                $query->where('provider', 'zoho')
+                    ->orWhereNull('provider');
+            });
+        }
+
+        $payment = $paymentQuery->first();
 
         if (! $payment) {
             $payment = new Payment();
             $payment->id = (string) Str::uuid();
         }
 
-        $payment->forceFill([
+        $payload = [
             'user_id' => $user->id,
-            'provider' => 'zoho',
             'zoho_plan_code' => $planCode,
             'zoho_hostedpage_id' => $hostedpageId,
             'status' => 'pending',
-        ]);
+        ];
+
+        if (Schema::hasColumn('payments', 'provider')) {
+            $payload['provider'] = 'zoho';
+        }
+
+        $payment->forceFill($payload);
 
         $payment->save();
     }
