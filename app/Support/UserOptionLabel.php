@@ -25,7 +25,7 @@ class UserOptionLabel
 
         $circle = self::normalize($lastCircle) ?: 'No Circle';
 
-        return "{$name}, {$company}, {$city}, {$circle};";
+        return "{$name}, {$company}, {$city}, {$circle}";
     }
 
     public static function makeFromRow(array $row): string
@@ -40,7 +40,7 @@ class UserOptionLabel
         $city = self::normalize($row['city'] ?? '') ?: 'No City';
         $circle = self::normalize($row['circle'] ?? '') ?: 'No Circle';
 
-        return "{$name}, {$company}, {$city}, {$circle};";
+        return "{$name}, {$company}, {$city}, {$circle}";
     }
 
     private static function normalize(mixed $value): string
