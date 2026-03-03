@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
@@ -186,16 +187,40 @@ class CircleController extends Controller
 
     public function store(StoreCircleRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
+        $validated = $request->validated();
 
-        if (empty($data['status'])) {
-            unset($data['status']);
+        $payload = [
+            'name' => $validated['name'] ?? null,
+            'type' => $validated['type'] ?? null,
+            'status' => $validated['status'] ?? null,
+            'city_id' => $validated['city_id'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'purpose' => $validated['purpose'] ?? null,
+            'announcement' => $validated['announcement'] ?? null,
+            'industry_tags' => $this->normalizeIndustryTags($validated['industry_tags'] ?? null),
+            'meeting_mode' => $validated['meeting_mode'] ?? null,
+            'meeting_frequency' => $validated['meeting_frequency'] ?? null,
+            'launch_date' => $validated['launch_date'] ?? null,
+            'cover_file_id' => $validated['cover_file_id'] ?? null,
+            'founder_user_id' => $validated['founder_user_id'] ?? null,
+            'director_user_id' => $validated['director_user_id'] ?? null,
+            'industry_director_user_id' => $validated['industry_director_user_id'] ?? null,
+            'ded_user_id' => $validated['ded_user_id'] ?? null,
+            'calendar' => $this->normalizeCalendarMeetings($request->input('calendar_meetings', [])),
+        ];
+
+        if (empty($payload['status'])) {
+            unset($payload['status']);
         }
 
-        $circle = new Circle($this->filterCircleDataByExistingColumns($data));
+        $circle = new Circle();
+        $circle->forceFill($this->filterCircleDataByExistingColumns($payload));
         $circle->save();
+        $circle->refresh();
+
+        Cache::forget('admin.circles.index');
+        Cache::forget('admin.circles.filters');
 
         return redirect()
             ->route('admin.circles.show', $circle)
@@ -249,19 +274,51 @@ class CircleController extends Controller
 
     public function update(UpdateCircleRequest $request, Circle $circle): RedirectResponse
     {
-        $data = $request->validated();
-        $data['industry_tags'] = $this->normalizeIndustryTags($data['industry_tags'] ?? null);
-        $data['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
+        $validated = $request->validated();
+
+        $payload = [
+            'name' => $validated['name'] ?? null,
+            'type' => $validated['type'] ?? null,
+            'status' => $validated['status'] ?? null,
+            'city_id' => $validated['city_id'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'description' => $validated['description'] ?? null,
+            'purpose' => $validated['purpose'] ?? null,
+            'announcement' => $validated['announcement'] ?? null,
+            'industry_tags' => $this->normalizeIndustryTags($validated['industry_tags'] ?? null),
+            'meeting_mode' => $validated['meeting_mode'] ?? null,
+            'meeting_frequency' => $validated['meeting_frequency'] ?? null,
+            'launch_date' => $validated['launch_date'] ?? null,
+            'cover_file_id' => $validated['cover_file_id'] ?? null,
+            'founder_user_id' => $validated['founder_user_id'] ?? null,
+            'calendar' => $this->normalizeCalendarMeetings($request->input('calendar_meetings', [])),
+        ];
+
+        if (Schema::hasColumn('circles', 'director_user_id')) {
+            $payload['director_user_id'] = $validated['director_user_id'] ?? null;
+        }
+
+        if (Schema::hasColumn('circles', 'industry_director_user_id')) {
+            $payload['industry_director_user_id'] = $validated['industry_director_user_id'] ?? null;
+        }
+
+        if (Schema::hasColumn('circles', 'ded_user_id')) {
+            $payload['ded_user_id'] = $validated['ded_user_id'] ?? null;
+        }
 
         $originalName = $circle->name;
 
-        $circle->fill($this->filterCircleDataByExistingColumns($data));
+        $circle->forceFill($this->filterCircleDataByExistingColumns($payload));
 
         if ($circle->name !== $originalName) {
             $circle->slug = Circle::generateUniqueSlug($circle->name, $circle->id);
         }
 
         $circle->save();
+        $circle->refresh();
+
+        Cache::forget('admin.circles.index');
+        Cache::forget('admin.circles.filters');
 
         return redirect()
             ->route('admin.circles.show', $circle)
