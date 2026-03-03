@@ -28,7 +28,6 @@
         $industryTagsValue = implode(', ', $industryTagsValue);
     }
     $founderId = old('founder_user_id', $defaultFounder?->id);
-    $founderLabel = old('founder_search', $defaultFounderLabel);
     $oldMeetings = old('calendar_meetings', []);
     $calendarMeetings = is_array($oldMeetings) && $oldMeetings !== []
         ? array_values($oldMeetings)
@@ -54,19 +53,48 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Circle Founder</label>
-                        <div class="position-relative">
-                            <textarea name="founder_search"
-                                      id="founderSearch"
-                                      class="form-control"
-                                      rows="4"
-                                      data-default-id="{{ $founderId }}"
-                                      data-default-label="{{ $founderLabel }}"
-                                      autocomplete="off"
-                                      placeholder="Search by name, company, or city"
-                                      style="white-space: pre-line;">{{ $founderLabel }}</textarea>
-                            <input type="hidden" name="founder_user_id" id="founderUserId" value="{{ $founderId }}">
-                            <div id="founderResults" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 1000;"></div>
-                        </div>
+                        <select name="founder_user_id" class="form-select js-founder-select" required>
+                            <option value="">Select a member</option>
+                            @foreach ($allUsers as $user)
+                                @php
+                                    $name = trim((string) ($user->display_name ?? ''));
+                                    if ($name === '') {
+                                        $name = trim(trim((string) ($user->first_name ?? '')).' '.trim((string) ($user->last_name ?? '')));
+                                    }
+                                    if ($name === '') {
+                                        $name = '—';
+                                    }
+
+                                    if (isset($user->company_name) && trim((string) $user->company_name) !== '') {
+                                        $company = trim((string) $user->company_name);
+                                    } elseif (isset($user->business_name) && trim((string) $user->business_name) !== '') {
+                                        $company = trim((string) $user->business_name);
+                                    } else {
+                                        $company = 'No Company';
+                                    }
+
+                                    $city = (isset($user->city) && trim((string) $user->city) !== '')
+                                        ? trim((string) $user->city)
+                                        : 'No City';
+
+                                    $circle = (string) (optional($user->circleMembers->first()?->circle)->name ?? 'No Circle');
+                                    $circle = trim($circle) !== '' ? trim($circle) : 'No Circle';
+
+                                    $label = $name."
+".$company."
+".$city."
+".$circle;
+                                @endphp
+                                <option
+                                    value="{{ $user->id }}"
+                                    data-name="{{ $name }}"
+                                    data-company="{{ $company }}"
+                                    data-city="{{ $city }}"
+                                    data-circle="{{ $circle }}"
+                                    @selected((string) $founderId === (string) $user->id)
+                                >{{ $label }}</option>
+                            @endforeach
+                        </select>
                         <div class="form-text">Defaults to the logged-in admin user.</div>
                     </div>
                     <div class="col-md-3">
@@ -406,85 +434,51 @@
     meetingRows?.querySelectorAll('.meeting-row').forEach((row) => bindMeetingRow(row));
     addMeetingBtn?.addEventListener('click', createMeetingRow);
 
-    (() => {
-        const input = document.getElementById('founderSearch');
-        const hidden = document.getElementById('founderUserId');
-        const results = document.getElementById('founderResults');
-        if (!input || !hidden || !results) {
-            return;
-        }
 
-        const defaultId = input.dataset.defaultId || '';
-        const defaultLabel = input.dataset.defaultLabel || '';
-        let timer = null;
 
-        const clearResults = () => {
-            results.innerHTML = '';
-            results.classList.add('d-none');
-        };
-
-        const setSelection = (id, label) => {
-            hidden.value = id || '';
-            input.value = label || '';
-        };
-
-        const restoreDefault = () => {
-            if (defaultId) {
-                setSelection(defaultId, defaultLabel);
-            } else {
-                setSelection('', '');
+    if (window.$ && $.fn.select2) {
+        const escapeHtml = (value) => $('<div>').text(value ?? '').html();
+        const renderMember = (item) => {
+            if (!item.id || !item.element) {
+                return item.text;
             }
+
+            const option = item.element;
+            const name = option.dataset.name || item.text || '—';
+            const company = option.dataset.company || 'No Company';
+            const city = option.dataset.city || 'No City';
+            const circle = option.dataset.circle || 'No Circle';
+
+            return $(
+                '<div class="d-flex flex-column">'
+                + '<div class="fw-semibold">' + escapeHtml(name) + '</div>'
+                + '<div class="text-muted small">' + escapeHtml(company) + '</div>'
+                + '<div class="text-muted small">' + escapeHtml(city) + '</div>'
+                + '<div class="text-muted small">' + escapeHtml(circle) + '</div>'
+                + '</div>'
+            );
         };
 
-        const renderResults = (items) => {
-            results.innerHTML = '';
-            if (!items.length) {
-                const empty = document.createElement('div');
-                empty.className = 'list-group-item small text-muted';
-                empty.textContent = 'No users found';
-                results.appendChild(empty);
-            } else {
-                items.forEach((item) => {
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'list-group-item list-group-item-action text-start';
-                button.style.whiteSpace = 'pre-line';
-                    button.textContent = item.label;
-                    button.addEventListener('click', () => {
-                        setSelection(item.id, item.label);
-                        clearResults();
-                    });
-                    results.appendChild(button);
-                });
-            }
-            results.classList.remove('d-none');
-        };
+        $('.js-founder-select').select2({
+            placeholder: 'Select a member',
+            allowClear: true,
+            width: '100%',
+            templateResult: renderMember,
+            templateSelection: (item) => {
+                if (!item.id || !item.element) {
+                    return item.text;
+                }
 
-        const fetchResults = (query) => {
-            fetch(`{{ route('admin.users.search') }}?q=${encodeURIComponent(query)}`, {
-                headers: { 'Accept': 'application/json' },
-            })
-                .then((response) => response.json())
-                .then((data) => renderResults(Array.isArray(data) ? data : []))
-                .catch(() => clearResults());
-        };
+                const option = item.element;
+                const name = option.dataset.name || item.text || '—';
+                const company = option.dataset.company || 'No Company';
+                const city = option.dataset.city || 'No City';
+                const circle = option.dataset.circle || 'No Circle';
 
-        input.addEventListener('input', () => {
-            const query = input.value.trim();
-            if (!query) {
-                restoreDefault();
-                clearResults();
-                return;
-            }
-            clearTimeout(timer);
-            timer = window.setTimeout(() => fetchResults(query), 300);
-        });
-
-        document.addEventListener('click', (event) => {
-            if (!results.contains(event.target) && event.target !== input) {
-                clearResults();
+                return `${name} — ${company} — ${city} — ${circle}`;
             }
         });
-    })();
+    }
+
 </script>
 @endpush
