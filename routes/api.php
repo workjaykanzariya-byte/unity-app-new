@@ -286,6 +286,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/zoho/plans', [ZohoPlansController::class, 'index']);
         Route::post('/billing/checkout', [BillingCheckoutController::class, 'checkout']);
         Route::get('/billing/checkout/{hostedpage_id}', [BillingCheckoutController::class, 'status']);
+        Route::get('/billing/hostedpages/{hostedpageId}/sync', [BillingCheckoutController::class, 'syncHostedPage']);
     });
 
     Route::get('/membership-plans', [MembershipPlanController::class, 'index']);

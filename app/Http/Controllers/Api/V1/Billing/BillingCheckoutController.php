@@ -79,6 +79,46 @@ class BillingCheckoutController extends Controller
         }
     }
 
+
+    public function syncHostedPage(Request $request, string $hostedpageId)
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        try {
+            $hostedPageResponse = $this->zohoBillingService->getHostedPage($hostedpageId);
+            $updated = $this->zohoBillingService->syncMembershipFromHostedPage($user, $hostedPageResponse);
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hosted page membership sync completed.',
+                'data' => [
+                    'handled' => $updated,
+                    'zoho_customer_id' => $user->zoho_customer_id,
+                    'zoho_subscription_id' => $user->zoho_subscription_id,
+                    'zoho_plan_code' => $user->zoho_plan_code,
+                    'zoho_last_invoice_id' => $user->zoho_last_invoice_id,
+                    'membership_starts_at' => $user->membership_starts_at,
+                    'membership_ends_at' => $user->membership_ends_at,
+                    'last_payment_at' => $user->last_payment_at,
+                ],
+            ]);
+        } catch (Throwable $throwable) {
+            Log::error('Zoho hosted page sync failed', [
+                'user_id' => $user->id,
+                'hostedpage_id' => $hostedpageId,
+                'message' => $throwable->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Hosted page sync failed.',
+                'data' => [],
+            ], 500);
+        }
+    }
+
     public function status(Request $request, string $hostedpage_id)
     {
         try {

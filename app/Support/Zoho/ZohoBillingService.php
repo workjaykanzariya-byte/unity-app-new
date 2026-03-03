@@ -271,6 +271,15 @@ class ZohoBillingService
         $eventType = strtolower((string) ($event['event_type'] ?? Arr::get($event, 'eventType', '')));
         $payload = Arr::get($event, 'payload', $event['data'] ?? []);
 
+        if (is_string($payload)) {
+            $decodedPayload = json_decode($payload, true);
+            $payload = is_array($decodedPayload) ? $decodedPayload : [];
+        }
+
+        if (! is_array($payload)) {
+            $payload = [];
+        }
+
         $customerId = Arr::get($payload, 'customer.customer_id')
             ?? Arr::get($payload, 'subscription.customer_id')
             ?? Arr::get($payload, 'invoice.customer_id')
@@ -298,14 +307,25 @@ class ZohoBillingService
             $user->forceFill(['zoho_last_invoice_id' => $invoiceId])->save();
         }
 
-        if (in_array($eventType, ['payment_thankyou', 'subscription_created', 'subscription_activation', 'subscription_activated'], true)) {
+        if (in_array($eventType, [
+            'payment_thankyou',
+            'subscription_created',
+            'subscription_activation',
+            'subscription_activated',
+            'invoice_paid',
+            'payment_success',
+        ], true)) {
             return $this->membershipUpdater->applyPaidMembership($user, [
                 'zoho_customer_id' => $customerId,
                 'zoho_subscription_id' => $subscriptionId,
-                'zoho_plan_code' => Arr::get($payload, 'subscription.plan.plan_code') ?? Arr::get($payload, 'plan.plan_code'),
+                'zoho_plan_code' => Arr::get($payload, 'subscription.plan.plan_code')
+                    ?? Arr::get($payload, 'plan.plan_code')
+                    ?? Arr::get($payload, 'plan_code'),
                 'zoho_last_invoice_id' => $invoiceId,
-                'membership_starts_at' => Arr::get($payload, 'subscription.start_date'),
-                'membership_ends_at' => Arr::get($payload, 'subscription.next_billing_at'),
+                'membership_starts_at' => Arr::get($payload, 'subscription.start_date')
+                    ?? Arr::get($payload, 'subscription.current_term_starts_at'),
+                'membership_ends_at' => Arr::get($payload, 'subscription.next_billing_at')
+                    ?? Arr::get($payload, 'subscription.current_term_ends_at'),
                 'last_payment_at' => now(),
             ]);
         }
