@@ -80,6 +80,95 @@ class Circle extends Model
         });
     }
 
+
+    public function calendarGet(string $path, $default = null)
+    {
+        $calendar = is_array($this->calendar) ? $this->calendar : [];
+
+        return data_get($calendar, $path, $default);
+    }
+
+    public function calendarSet(string $path, $value): void
+    {
+        $calendar = is_array($this->calendar) ? $this->calendar : [];
+        data_set($calendar, $path, $value);
+        $this->calendar = $calendar;
+    }
+
+    public function getMeetingModeAttribute(): ?string
+    {
+        $value = $this->calendarGet('settings.meeting_mode');
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    public function getMeetingFrequencyAttribute(): ?string
+    {
+        $value = $this->calendarGet('settings.meeting_frequency');
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    public function getLaunchDateAttribute($value): ?string
+    {
+        if ($value) {
+            return is_string($value) ? $value : (string) $value;
+        }
+
+        $calendarDate = $this->calendarGet('settings.launch_date');
+
+        return is_string($calendarDate) && trim($calendarDate) !== '' ? trim($calendarDate) : null;
+    }
+
+    public function getDirectorUserIdAttribute($value): ?string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        $calendarValue = $this->calendarGet('leadership.director_user_id');
+
+        return is_string($calendarValue) && trim($calendarValue) !== '' ? trim($calendarValue) : null;
+    }
+
+    public function getIndustryDirectorUserIdAttribute($value): ?string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        $calendarValue = $this->calendarGet('leadership.industry_director_user_id');
+
+        return is_string($calendarValue) && trim($calendarValue) !== '' ? trim($calendarValue) : null;
+    }
+
+    public function getDedUserIdAttribute($value): ?string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        $calendarValue = $this->calendarGet('leadership.ded_user_id');
+
+        return is_string($calendarValue) && trim($calendarValue) !== '' ? trim($calendarValue) : null;
+    }
+
+    public function getCoverFileIdAttribute($value): ?string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        $calendarValue = $this->calendarGet('cover.file_id');
+
+        return is_string($calendarValue) && trim($calendarValue) !== '' ? trim($calendarValue) : null;
+    }
+
+    public function getMeetingScheduleAttribute(): array
+    {
+        $value = $this->calendarGet('meeting_schedule', []);
+
+        return is_array($value) ? $value : [];
+    }
+
     public function founder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'founder_user_id');

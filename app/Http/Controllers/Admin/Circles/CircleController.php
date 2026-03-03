@@ -48,12 +48,17 @@ class CircleController extends Controller
             'type',
             'status',
             'industry_tags',
-            'meeting_mode',
-            'meeting_frequency',
-            'launch_date',
-            'cover_file_id',
+            'calendar',
             'created_at',
             'city_id',
+            'founder_user_id',
+            'director_user_id',
+            'industry_director_user_id',
+            'ded_user_id',
+            'cover_file_id',
+            'launch_date',
+            'meeting_mode',
+            'meeting_frequency',
         ];
 
         $select = [];
@@ -100,12 +105,20 @@ class CircleController extends Controller
             $query->where('type', $filters['type']);
         }
 
-        if ($filters['meeting_mode'] !== '' && Schema::hasColumn('circles', 'meeting_mode')) {
-            $query->where('meeting_mode', $filters['meeting_mode']);
+        if ($filters['meeting_mode'] !== '') {
+            if (Schema::hasColumn('circles', 'meeting_mode')) {
+                $query->where('meeting_mode', $filters['meeting_mode']);
+            } elseif (Schema::hasColumn('circles', 'calendar')) {
+                $query->whereRaw("calendar->'settings'->>'meeting_mode' = ?", [$filters['meeting_mode']]);
+            }
         }
 
-        if ($filters['meeting_frequency'] !== '' && Schema::hasColumn('circles', 'meeting_frequency')) {
-            $query->where('meeting_frequency', $filters['meeting_frequency']);
+        if ($filters['meeting_frequency'] !== '') {
+            if (Schema::hasColumn('circles', 'meeting_frequency')) {
+                $query->where('meeting_frequency', $filters['meeting_frequency']);
+            } elseif (Schema::hasColumn('circles', 'calendar')) {
+                $query->whereRaw("calendar->'settings'->>'meeting_frequency' = ?", [$filters['meeting_frequency']]);
+            }
         }
 
         if ($filters['status'] !== '' && in_array($filters['status'], Circle::STATUS_OPTIONS, true) && Schema::hasColumn('circles', 'status')) {
@@ -116,15 +129,27 @@ class CircleController extends Controller
             $query->whereRaw('CAST(industry_tags AS TEXT) ILIKE ?', ['%'.$filters['industry_tags'].'%']);
         }
 
-        if ($filters['cover'] !== '' && Schema::hasColumn('circles', 'cover_file_id')) {
-            $query->whereRaw('CAST(cover_file_id AS TEXT) ILIKE ?', ['%'.$filters['cover'].'%']);
+        if ($filters['cover'] !== '') {
+            if (Schema::hasColumn('circles', 'cover_file_id')) {
+                $query->whereRaw('CAST(cover_file_id AS TEXT) ILIKE ?', ['%'.$filters['cover'].'%']);
+            } elseif (Schema::hasColumn('circles', 'calendar')) {
+                $query->whereRaw("COALESCE(calendar->'cover'->>'file_id', calendar->'cover'->>'url', '') ILIKE ?", ['%'.$filters['cover'].'%']);
+            }
         }
 
-        if ($filters['launch_date'] !== '' && Schema::hasColumn('circles', 'launch_date')) {
-            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['launch_date'])) {
-                $query->whereDate('launch_date', $filters['launch_date']);
-            } else {
-                $query->whereRaw('CAST(launch_date AS TEXT) ILIKE ?', ['%'.$filters['launch_date'].'%']);
+        if ($filters['launch_date'] !== '') {
+            if (Schema::hasColumn('circles', 'launch_date')) {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['launch_date'])) {
+                    $query->whereDate('launch_date', $filters['launch_date']);
+                } else {
+                    $query->whereRaw('CAST(launch_date AS TEXT) ILIKE ?', ['%'.$filters['launch_date'].'%']);
+                }
+            } elseif (Schema::hasColumn('circles', 'calendar')) {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters['launch_date'])) {
+                    $query->whereRaw("(calendar->'settings'->>'launch_date')::date = ?", [$filters['launch_date']]);
+                } else {
+                    $query->whereRaw("COALESCE(calendar->'settings'->>'launch_date', '') ILIKE ?", ['%'.$filters['launch_date'].'%']);
+                }
             }
         }
 
@@ -168,13 +193,9 @@ class CircleController extends Controller
             ? Circle::query()->whereNotNull('type')->select('type')->distinct()->orderBy('type')->pluck('type')
             : collect();
 
-        $meetingModeOptions = Schema::hasColumn('circles', 'meeting_mode')
-            ? Circle::query()->whereNotNull('meeting_mode')->select('meeting_mode')->distinct()->orderBy('meeting_mode')->pluck('meeting_mode')
-            : collect();
+        $meetingModeOptions = collect(Circle::MEETING_MODE_OPTIONS);
 
-        $meetingFrequencyOptions = Schema::hasColumn('circles', 'meeting_frequency')
-            ? Circle::query()->whereNotNull('meeting_frequency')->select('meeting_frequency')->distinct()->orderBy('meeting_frequency')->pluck('meeting_frequency')
-            : collect();
+        $meetingFrequencyOptions = collect(Circle::MEETING_FREQUENCY_OPTIONS);
 
         $statusOptions = collect(Circle::STATUS_OPTIONS);
 
@@ -231,15 +252,6 @@ class CircleController extends Controller
             'purpose' => $validated['purpose'] ?? null,
             'announcement' => $validated['announcement'] ?? null,
             'industry_tags' => $this->normalizeIndustryTags($validated['industry_tags'] ?? null),
-            'meeting_mode' => $validated['meeting_mode'] ?? null,
-            'meeting_frequency' => $validated['meeting_frequency'] ?? null,
-            'launch_date' => $validated['launch_date'] ?? null,
-            'cover_file_id' => $validated['cover_file_id'] ?? null,
-            'founder_user_id' => $validated['founder_user_id'] ?? null,
-            'director_user_id' => $validated['director_user_id'] ?? null,
-            'industry_director_user_id' => $validated['industry_director_user_id'] ?? null,
-            'ded_user_id' => $validated['ded_user_id'] ?? null,
-            'calendar' => $this->normalizeCalendarMeetings($request->input('calendar_meetings', [])),
         ];
 
         if (empty($payload['status'])) {
@@ -250,6 +262,11 @@ class CircleController extends Controller
 
         $circle = new Circle();
         $circle->forceFill($this->filterCircleDataByExistingColumns($payload));
+
+        $calendar = is_array($circle->calendar) ? $circle->calendar : [];
+        $calendar = $this->mergeCalendarSettings($calendar, $validated, $request);
+        $circle->calendar = $calendar;
+
         $circle->save();
         $circle->refresh();
 
@@ -318,10 +335,6 @@ class CircleController extends Controller
             'type',
             'status',
             'industry_tags',
-            'meeting_mode',
-            'meeting_frequency',
-            'launch_date',
-            'cover_file_id',
             'founder_user_id',
             'city_id',
             'description',
@@ -333,24 +346,8 @@ class CircleController extends Controller
             }
         }
 
-        if (Schema::hasColumn('circles', 'director_user_id') && array_key_exists('director_user_id', $validated)) {
-            $allowed['director_user_id'] = $validated['director_user_id'];
-        }
-
-        if (Schema::hasColumn('circles', 'industry_director_user_id') && array_key_exists('industry_director_user_id', $validated)) {
-            $allowed['industry_director_user_id'] = $validated['industry_director_user_id'];
-        }
-
-        if (Schema::hasColumn('circles', 'ded_user_id') && array_key_exists('ded_user_id', $validated)) {
-            $allowed['ded_user_id'] = $validated['ded_user_id'];
-        }
-
         if (Schema::hasColumn('circles', 'industry_tags')) {
             $allowed['industry_tags'] = $this->normalizeIndustryTags($validated['industry_tags'] ?? null);
-        }
-
-        if (Schema::hasColumn('circles', 'calendar')) {
-            $allowed['calendar'] = $this->normalizeCalendarMeetings($request->input('calendar_meetings', []));
         }
 
         $allowed = $this->pruneEmptyPayload($allowed);
@@ -362,6 +359,10 @@ class CircleController extends Controller
         $originalName = $circle->name;
 
         $circle->fill($allowed);
+
+        $calendar = is_array($circle->calendar) ? $circle->calendar : [];
+        $calendar = $this->mergeCalendarSettings($calendar, $validated, $request);
+        $circle->calendar = $calendar;
 
         if (array_key_exists('name', $allowed) && $circle->name !== $originalName) {
             $circle->slug = Circle::generateUniqueSlug($circle->name, $circle->id);
@@ -513,6 +514,57 @@ class CircleController extends Controller
                     ->with(['circle:id,name']);
             }])
             ->first();
+    }
+
+    private function mergeCalendarSettings(array $calendar, array $validated, Request $request): array
+    {
+        $meetingMode = trim((string) ($validated['meeting_mode'] ?? ''));
+        data_set($calendar, 'settings.meeting_mode', $meetingMode !== '' ? strtolower($meetingMode) : null);
+
+        $meetingFrequency = trim((string) ($validated['meeting_frequency'] ?? ''));
+        data_set($calendar, 'settings.meeting_frequency', $meetingFrequency !== '' ? strtolower($meetingFrequency) : null);
+
+        $launchDate = trim((string) ($validated['launch_date'] ?? ''));
+        data_set($calendar, 'settings.launch_date', $launchDate !== '' ? $launchDate : null);
+
+        data_set($calendar, 'settings.meeting_repeat', $validated['meeting_repeat'] ?? null);
+
+        data_set($calendar, 'leadership.director_user_id', $validated['director_user_id'] ?? null);
+        data_set($calendar, 'leadership.industry_director_user_id', $validated['industry_director_user_id'] ?? null);
+        data_set($calendar, 'leadership.ded_user_id', $validated['ded_user_id'] ?? null);
+
+        $coverFileId = trim((string) ($validated['cover_file_id'] ?? ''));
+        data_set($calendar, 'cover.file_id', $coverFileId !== '' ? $coverFileId : null);
+
+        $freqRows = $request->input('meeting_schedule_frequency', []);
+        $timeRows = $request->input('meeting_schedule_default_meet_time', []);
+        $dayRows = $request->input('meeting_schedule_day_of_week', []);
+
+        $schedule = [];
+        $max = max(count($freqRows), count($timeRows), count($dayRows));
+        for ($i = 0; $i < $max; $i++) {
+            $freq = strtolower(trim((string) ($freqRows[$i] ?? '')));
+            $time = trim((string) ($timeRows[$i] ?? ''));
+            $day = trim((string) ($dayRows[$i] ?? ''));
+
+            if ($freq === '' && $time === '' && $day === '') {
+                continue;
+            }
+
+            if ($freq === '' || $time === '' || $day === '') {
+                continue;
+            }
+
+            $schedule[] = [
+                'frequency' => $freq,
+                'default_meet_time' => $time,
+                'day_of_week' => $day,
+            ];
+        }
+
+        data_set($calendar, 'meeting_schedule', $schedule);
+
+        return $calendar;
     }
 
     private function pruneEmptyPayload(array $payload): array

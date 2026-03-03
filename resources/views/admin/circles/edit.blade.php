@@ -28,16 +28,29 @@
         $industryTagsValue = implode(', ', $industryTagsValue);
     }
     $founderId = old('founder_user_id', $defaultFounder?->id);
-    $calendar = $circle->calendar ?? [];
-    $calendarMeetings = old('calendar_meetings');
-    if (! is_array($calendarMeetings)) {
-        $calendarMeetings = is_array(data_get($calendar, 'meetings')) && data_get($calendar, 'meetings') !== []
-            ? array_values(data_get($calendar, 'meetings'))
+    $calendar = is_array($circle->calendar) ? $circle->calendar : [];
+    $meetingScheduleFrequency = old('meeting_schedule_frequency');
+    $meetingScheduleTimes = old('meeting_schedule_default_meet_time');
+    $meetingScheduleDays = old('meeting_schedule_day_of_week');
+
+    $calendarMeetings = [];
+
+    if (is_array($meetingScheduleFrequency) || is_array($meetingScheduleTimes) || is_array($meetingScheduleDays)) {
+        $max = max(count((array) $meetingScheduleFrequency), count((array) $meetingScheduleTimes), count((array) $meetingScheduleDays));
+        for ($i = 0; $i < $max; $i++) {
+            $calendarMeetings[] = [
+                'frequency' => (string) (($meetingScheduleFrequency[$i] ?? '') ?: ''),
+                'default_meet_time' => (string) (($meetingScheduleTimes[$i] ?? '') ?: ''),
+                'day_of_week' => (string) (($meetingScheduleDays[$i] ?? '') ?: ''),
+            ];
+        }
+    } else {
+        $calendarMeetings = is_array(data_get($calendar, 'meeting_schedule')) && data_get($calendar, 'meeting_schedule') !== []
+            ? array_values(data_get($calendar, 'meeting_schedule'))
             : [[
-                'frequency' => data_get($calendar, 'frequency', ''),
-                'default_meet_day' => data_get($calendar, 'default_meet_day', ''),
-                'default_meet_time' => data_get($calendar, 'default_meet_time', ''),
-                'monthly_rule' => data_get($calendar, 'monthly_rule', ''),
+                'frequency' => '',
+                'default_meet_time' => '',
+                'day_of_week' => '',
             ]];
     }
 @endphp
@@ -128,7 +141,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Launch Date</label>
-                        <input type="date" name="launch_date" class="form-control" value="{{ old('launch_date', optional($circle->launch_date)->format('Y-m-d')) }}">
+                        <input type="date" name="launch_date" class="form-control" value="{{ old('launch_date', $circle->launch_date) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Circle Director</label>
@@ -190,15 +203,14 @@
                         @foreach ($calendarMeetings as $index => $meeting)
                             @php
                                 $rowFrequency = strtolower((string) data_get($meeting, 'frequency', ''));
-                                $rowDay = strtolower((string) data_get($meeting, 'default_meet_day', ''));
+                                $rowDay = (string) data_get($meeting, 'day_of_week', '');
                                 $rowTime = (string) data_get($meeting, 'default_meet_time', '');
-                                $rowRule = strtolower((string) data_get($meeting, 'monthly_rule', ''));
-                            @endphp
+                                                            @endphp
                             <div class="border rounded p-3 meeting-row" data-index="{{ $index }}">
                                 <div class="row g-3 align-items-end">
                                     <div class="col-md-3">
                                         <label class="form-label">Frequency</label>
-                                        <select class="form-select js-meeting-frequency" name="calendar_meetings[{{ $index }}][frequency]">
+                                        <select class="form-select js-meeting-frequency" name="meeting_schedule_frequency[]">
                                             <option value="">Select frequency</option>
                                             <option value="weekly" @selected($rowFrequency === 'weekly')>Weekly</option>
                                             <option value="monthly" @selected($rowFrequency === 'monthly')>Monthly</option>
@@ -207,23 +219,14 @@
                                     </div>
                                     <div class="col-md-3 js-meeting-time-wrap">
                                         <label class="form-label">Default Meet Time</label>
-                                        <input type="time" class="form-control js-meeting-time" name="calendar_meetings[{{ $index }}][default_meet_time]" value="{{ $rowTime }}">
+                                        <input type="time" class="form-control js-meeting-time" name="meeting_schedule_default_meet_time[]" value="{{ $rowTime }}">
                                     </div>
                                     <div class="col-md-3 js-meeting-day-wrap">
                                         <label class="form-label">Day of Week</label>
-                                        <select class="form-select js-meeting-day" name="calendar_meetings[{{ $index }}][default_meet_day]">
+                                        <select class="form-select js-meeting-day" name="meeting_schedule_day_of_week[]">
                                             <option value="">Select day</option>
-                                            @foreach (['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as $day)
-                                                <option value="{{ $day }}" @selected($rowDay === $day)>{{ ucfirst($day) }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2 js-meeting-rule-wrap">
-                                        <label class="form-label">Week Rule</label>
-                                        <select class="form-select js-meeting-rule" name="calendar_meetings[{{ $index }}][monthly_rule]">
-                                            <option value="">Select</option>
-                                            @foreach (['first','second','third','fourth','last'] as $rule)
-                                                <option value="{{ $rule }}" @selected($rowRule === $rule)>{{ ucfirst($rule) }}</option>
+                                            @foreach (['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] as $day)
+                                                <option value="{{ $day }}" @selected($rowDay === $day)>{{ $day }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -351,17 +354,12 @@
         const frequency = row.querySelector('.js-meeting-frequency')?.value || '';
         const day = row.querySelector('.js-meeting-day')?.value || '';
         const time = row.querySelector('.js-meeting-time')?.value || '';
-        const rule = row.querySelector('.js-meeting-rule')?.value || '';
-
         row.querySelector('.js-meeting-time-wrap')?.classList.toggle('d-none', !frequency);
         row.querySelector('.js-meeting-day-wrap')?.classList.toggle('d-none', !frequency);
-        row.querySelector('.js-meeting-rule-wrap')?.classList.toggle('d-none', !['monthly', 'quarterly'].includes(frequency));
 
         let preview = '—';
-        if (frequency === 'weekly' && day && time) {
-            preview = `Every ${title(day)} at ${time}`;
-        } else if ((frequency === 'monthly' || frequency === 'quarterly') && rule && day && time) {
-            preview = `${title(rule)} ${title(day)} at ${time}${frequency === 'quarterly' ? ' (Quarterly)' : ''}`;
+        if (frequency && day && time) {
+            preview = `${title(day)} at ${time} (${title(frequency)})`;
         }
 
         const previewEl = row.querySelector('.js-meeting-preview');
@@ -371,7 +369,7 @@
     };
 
     const bindMeetingRow = (row) => {
-        row.querySelectorAll('.js-meeting-frequency, .js-meeting-day, .js-meeting-time, .js-meeting-rule')
+        row.querySelectorAll('.js-meeting-frequency, .js-meeting-day, .js-meeting-time')
             .forEach((input) => input.addEventListener('change', () => updateMeetingRowState(row)));
 
         row.querySelector('.js-meeting-time')?.addEventListener('input', () => updateMeetingRowState(row));
@@ -392,7 +390,7 @@
             row.querySelectorAll('select, input').forEach((el) => {
                 const name = el.getAttribute('name');
                 if (!name) return;
-                el.setAttribute('name', name.replace(/calendar_meetings\[\d+\]/, `calendar_meetings[${index}]`));
+                el.setAttribute('name', name);
             });
 
             const removeBtn = row.querySelector('.js-remove-meeting');
@@ -412,7 +410,7 @@
         clone.querySelectorAll('select, input').forEach((el) => {
             const name = el.getAttribute('name');
             if (!name) return;
-            el.setAttribute('name', name.replace(/calendar_meetings\[\d+\]/, `calendar_meetings[${index}]`));
+            el.setAttribute('name', name);
             if (el.tagName === 'SELECT') el.value = '';
             if (el.tagName === 'INPUT' && el.type !== 'hidden') el.value = '';
         });
