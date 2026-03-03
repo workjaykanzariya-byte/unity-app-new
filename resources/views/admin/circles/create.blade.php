@@ -53,46 +53,10 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Circle Founder</label>
-                        <select name="founder_user_id" class="form-select js-founder-select" required>
+                        <select name="founder_user_id" class="form-select" required>
                             <option value="">Select a member</option>
                             @foreach ($allUsers as $user)
-                                @php
-                                    $name = trim((string) ($user->display_name ?? ''));
-                                    if ($name === '') {
-                                        $name = trim(trim((string) ($user->first_name ?? '')).' '.trim((string) ($user->last_name ?? '')));
-                                    }
-                                    if ($name === '') {
-                                        $name = '—';
-                                    }
-
-                                    if (isset($user->company_name) && trim((string) $user->company_name) !== '') {
-                                        $company = trim((string) $user->company_name);
-                                    } elseif (isset($user->business_name) && trim((string) $user->business_name) !== '') {
-                                        $company = trim((string) $user->business_name);
-                                    } else {
-                                        $company = 'No Company';
-                                    }
-
-                                    $city = (isset($user->city) && trim((string) $user->city) !== '')
-                                        ? trim((string) $user->city)
-                                        : 'No City';
-
-                                    $circle = (string) (optional($user->circleMembers->first()?->circle)->name ?? 'No Circle');
-                                    $circle = trim($circle) !== '' ? trim($circle) : 'No Circle';
-
-                                    $label = $name."
-".$company."
-".$city."
-".$circle;
-                                @endphp
-                                <option
-                                    value="{{ $user->id }}"
-                                    data-name="{{ $name }}"
-                                    data-company="{{ $company }}"
-                                    data-city="{{ $city }}"
-                                    data-circle="{{ $circle }}"
-                                    @selected((string) $founderId === (string) $user->id)
-                                >{{ $label }}</option>
+                                <option value="{{ $user->id }}" @selected((string) $founderId === (string) $user->id)>{{ $user->adminFounderOptionLabel() }}</option>
                             @endforeach
                         </select>
                         <div class="form-text">Defaults to the logged-in admin user.</div>
@@ -435,50 +399,6 @@
     addMeetingBtn?.addEventListener('click', createMeetingRow);
 
 
-
-    if (window.$ && $.fn.select2) {
-        const escapeHtml = (value) => $('<div>').text(value ?? '').html();
-        const renderMember = (item) => {
-            if (!item.id || !item.element) {
-                return item.text;
-            }
-
-            const option = item.element;
-            const name = option.dataset.name || item.text || '—';
-            const company = option.dataset.company || 'No Company';
-            const city = option.dataset.city || 'No City';
-            const circle = option.dataset.circle || 'No Circle';
-
-            return $(
-                '<div class="d-flex flex-column">'
-                + '<div class="fw-semibold">' + escapeHtml(name) + '</div>'
-                + '<div class="text-muted small">' + escapeHtml(company) + '</div>'
-                + '<div class="text-muted small">' + escapeHtml(city) + '</div>'
-                + '<div class="text-muted small">' + escapeHtml(circle) + '</div>'
-                + '</div>'
-            );
-        };
-
-        $('.js-founder-select').select2({
-            placeholder: 'Select a member',
-            allowClear: true,
-            width: '100%',
-            templateResult: renderMember,
-            templateSelection: (item) => {
-                if (!item.id || !item.element) {
-                    return item.text;
-                }
-
-                const option = item.element;
-                const name = option.dataset.name || item.text || '—';
-                const company = option.dataset.company || 'No Company';
-                const city = option.dataset.city || 'No City';
-                const circle = option.dataset.circle || 'No Circle';
-
-                return `${name} — ${company} — ${city} — ${circle}`;
-            }
-        });
-    }
 
 </script>
 @endpush

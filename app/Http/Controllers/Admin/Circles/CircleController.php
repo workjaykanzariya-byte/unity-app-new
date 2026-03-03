@@ -194,7 +194,7 @@ class CircleController extends Controller
             unset($data['status']);
         }
 
-        $circle = new Circle($data);
+        $circle = new Circle($this->filterCircleDataByExistingColumns($data));
         $circle->save();
 
         return redirect()
@@ -255,7 +255,7 @@ class CircleController extends Controller
 
         $originalName = $circle->name;
 
-        $circle->fill($data);
+        $circle->fill($this->filterCircleDataByExistingColumns($data));
 
         if ($circle->name !== $originalName) {
             $circle->slug = Circle::generateUniqueSlug($circle->name, $circle->id);
@@ -405,11 +405,24 @@ class CircleController extends Controller
             ->first();
     }
 
+    private function filterCircleDataByExistingColumns(array $data): array
+    {
+        $filtered = [];
+
+        foreach ($data as $key => $value) {
+            if (Schema::hasColumn('circles', $key)) {
+                $filtered[$key] = $value;
+            }
+        }
+
+        return $filtered;
+    }
+
     private function allUsers()
     {
-        $columns = ['id', 'display_name', 'first_name', 'last_name', 'email', 'city'];
+        $columns = ['id', 'display_name', 'first_name', 'last_name'];
 
-        foreach (['company_name', 'business_name'] as $column) {
+        foreach (['company_name', 'business_name', 'city'] as $column) {
             if (Schema::hasColumn('users', $column)) {
                 $columns[] = $column;
             }
@@ -423,7 +436,7 @@ class CircleController extends Controller
                     ->orderByDesc('joined_at')
                     ->with(['circle:id,name']);
             }])
-            ->orderByRaw("COALESCE(NULLIF(display_name,''), NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)),''), email) ASC")
+            ->orderByRaw("COALESCE(NULLIF(display_name, ''), NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)), '')) ASC")
             ->limit(2000)
             ->get($columns);
     }
@@ -434,31 +447,6 @@ class CircleController extends Controller
             return '';
         }
 
-        $peerName = trim((string) ($user->display_name ?? ''));
-
-        if ($peerName === '') {
-            $peerName = trim(trim((string) ($user->first_name ?? '')).' '.trim((string) ($user->last_name ?? '')));
-        }
-
-        if ($peerName === '') {
-            $peerName = '—';
-        }
-
-        $company = 'No Company';
-
-        if (isset($user->company_name) && trim((string) $user->company_name) !== '') {
-            $company = trim((string) $user->company_name);
-        } elseif (isset($user->business_name) && trim((string) $user->business_name) !== '') {
-            $company = trim((string) $user->business_name);
-        }
-
-        $city = (isset($user->city) && trim((string) $user->city) !== '')
-            ? trim((string) $user->city)
-            : 'No City';
-
-        $circle = (string) (optional($user->circleMembers->first()?->circle)->name ?? 'No Circle');
-        $circle = trim($circle) !== '' ? trim($circle) : 'No Circle';
-
-        return "{$peerName} — {$company} — {$city} — {$circle}";
+        return $user->adminDisplayInlineLabel();
     }
 }

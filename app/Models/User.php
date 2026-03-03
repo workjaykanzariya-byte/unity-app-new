@@ -173,6 +173,86 @@ class User extends Authenticatable
         return $this->hasMany(CircleMember::class);
     }
 
+    public function circles(): BelongsToMany
+    {
+        return $this->belongsToMany(Circle::class, 'circle_members', 'user_id', 'circle_id')
+            ->withPivot(['status', 'joined_at', 'deleted_at'])
+            ->wherePivot('status', 'approved')
+            ->wherePivotNull('deleted_at')
+            ->orderByPivot('joined_at', 'desc');
+    }
+
+    public function adminDisplayName(): string
+    {
+        $displayName = trim((string) ($this->display_name ?? ''));
+
+        if ($displayName !== '') {
+            return $displayName;
+        }
+
+        $fullName = trim(trim((string) ($this->first_name ?? '')).' '.trim((string) ($this->last_name ?? '')));
+
+        return $fullName !== '' ? $fullName : 'Unknown';
+    }
+
+    public function adminCompanyLabel(): string
+    {
+        $company = trim((string) ($this->company_name ?? ''));
+
+        if ($company !== '') {
+            return $company;
+        }
+
+        $businessName = trim((string) ($this->business_name ?? ''));
+
+        return $businessName !== '' ? $businessName : 'No Company';
+    }
+
+    public function adminCityLabel(): string
+    {
+        $city = trim((string) ($this->city ?? ''));
+
+        return $city !== '' ? $city : 'No City';
+    }
+
+    public function adminCircleLabel(): string
+    {
+        if ($this->relationLoaded('circleMembers')) {
+            $name = trim((string) optional($this->circleMembers->first()?->circle)->name);
+            return $name !== '' ? $name : 'No Circle';
+        }
+
+        if ($this->relationLoaded('circles')) {
+            $name = trim((string) optional($this->circles->first())->name);
+            return $name !== '' ? $name : 'No Circle';
+        }
+
+        try {
+            $member = $this->circleMembers()
+                ->where('status', 'approved')
+                ->whereNull('deleted_at')
+                ->with(['circle:id,name'])
+                ->orderByDesc('joined_at')
+                ->first();
+
+            $name = trim((string) optional($member?->circle)->name);
+
+            return $name !== '' ? $name : 'No Circle';
+        } catch (\Throwable $e) {
+            return 'No Circle';
+        }
+    }
+
+    public function adminFounderOptionLabel(): string
+    {
+        return implode(PHP_EOL, [
+            $this->adminDisplayName(),
+            $this->adminCompanyLabel(),
+            $this->adminCityLabel(),
+            $this->adminCircleLabel(),
+        ]);
+    }
+
     public function adminName(): string
     {
         $displayName = trim((string) ($this->display_name ?? ''));
@@ -189,70 +269,22 @@ class User extends Authenticatable
             return $fullName;
         }
 
-        return (string) ($this->email ?? '—');
+        return $this->adminDisplayName();
     }
 
     public function adminCompany(): string
     {
-        $company = $this->company_name
-            ?? $this->company
-            ?? $this->business_name
-            ?? 'No Company';
-
-        $company = trim((string) $company);
-
-        return $company !== '' ? $company : 'No Company';
+        return $this->adminCompanyLabel();
     }
 
     public function adminCity(): string
     {
-        $city = $this->city
-            ?? $this->cityRelation?->name
-            ?? 'No City';
-
-        $city = trim((string) $city);
-
-        return $city !== '' ? $city : 'No City';
+        return $this->adminCityLabel();
     }
 
     public function adminCircleName(): string
     {
-        if ($this->relationLoaded('circleMembers')) {
-            $name = optional($this->circleMembers->first()?->circle)->name;
-            $name = trim((string) ($name ?? ''));
-
-            return $name !== '' ? $name : 'No Circle';
-        }
-
-        if ($this->relationLoaded('circles')) {
-            $name = optional($this->circles->first())->name;
-            $name = trim((string) ($name ?? ''));
-
-            return $name !== '' ? $name : 'No Circle';
-        }
-
-        if (method_exists($this, 'circles')) {
-            try {
-                $name = optional($this->circles()->select('circles.name')->first())->name;
-                $name = trim((string) ($name ?? ''));
-
-                return $name !== '' ? $name : 'No Circle';
-            } catch (\Throwable $e) {
-                return 'No Circle';
-            }
-        }
-
-        $member = $this->circleMembers()
-            ->where('status', 'approved')
-            ->whereNull('deleted_at')
-            ->with(['circle:id,name'])
-            ->orderByDesc('joined_at')
-            ->first();
-
-        $name = optional($member?->circle)->name;
-        $name = trim((string) ($name ?? ''));
-
-        return $name !== '' ? $name : 'No Circle';
+        return $this->adminCircleLabel();
     }
 
     public function adminDisplayParts(): array
