@@ -142,7 +142,7 @@ class CircleController extends Controller
             : collect();
 
         $statusOptions = Schema::hasColumn('circles', 'status')
-            ? Circle::query()->select('status')->whereNotNull('status')->where('status', '!=', '')->distinct()->orderBy('status')->pluck('status')
+            ? Circle::query()->select('status')->whereNotNull('status')->distinct()->orderBy('status')->pluck('status')
             : collect();
 
         return view('admin.circles.index', [
