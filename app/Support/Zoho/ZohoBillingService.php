@@ -119,15 +119,19 @@ class ZohoBillingService
             ],
         ]);
 
-        $hostedPage = $response['hostedpage'] ?? [];
-        $hostedPageId = $hostedPage['hostedpage_id'] ?? null;
-        $checkoutUrl = $hostedPage['url'] ?? null;
+        $hostedPage = data_get($response, 'hostedpage', []);
+        $hostedPage = is_array($hostedPage) ? $hostedPage : [];
+
+        $hostedPageId = data_get($hostedPage, 'hostedpage_id');
+        $checkoutUrl = data_get($hostedPage, 'url');
 
         if (! is_string($checkoutUrl) || $checkoutUrl === '' || ! is_string($hostedPageId) || $hostedPageId === '') {
-            Log::error('Zoho hosted page response missing checkout details', [
+            Log::error('ZOHO_NEW_SUBSCRIPTION_NO_URL', [
                 'response' => $response,
                 'customer_id' => $customerId,
                 'plan_code' => $planCode,
+                'body_keys' => array_keys(is_array($response) ? $response : []),
+                'hostedpage_keys' => array_keys($hostedPage),
             ]);
 
             throw new RuntimeException('Failed to generate checkout URL.');
