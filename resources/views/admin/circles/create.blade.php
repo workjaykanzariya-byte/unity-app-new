@@ -233,7 +233,7 @@
                 <div class="card-body row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Country</label>
-                        <select name="country" id="countrySelect" class="form-select">
+                        <select name="country" id="countrySelect" class="form-select" required>
                             @foreach ($countries as $country)
                                 <option value="{{ $country }}" @selected(old('country', $selectedCountry) === $country)>{{ $country }}</option>
                             @endforeach

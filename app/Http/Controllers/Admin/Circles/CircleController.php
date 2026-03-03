@@ -214,6 +214,8 @@ class CircleController extends Controller
             unset($payload['status']);
         }
 
+        $payload = $this->pruneEmptyPayload($payload);
+
         $circle = new Circle();
         $circle->forceFill($this->filterCircleDataByExistingColumns($payload));
         $circle->save();
@@ -250,7 +252,7 @@ class CircleController extends Controller
 
         $defaultFounder = $circle->founder ?? $this->defaultFounderUser();
         $countries = $this->countriesList();
-        $selectedCountry = $request->input('country', $circle->city?->country ?? $countries->first() ?? 'India');
+        $selectedCountry = $request->input('country', $circle->country ?? $circle->city?->country ?? $countries->first() ?? 'India');
 
         $cities = City::query()
             ->when($selectedCountry, fn ($query) => $query->where('country', $selectedCountry))
@@ -304,6 +306,12 @@ class CircleController extends Controller
 
         if (Schema::hasColumn('circles', 'ded_user_id')) {
             $payload['ded_user_id'] = $validated['ded_user_id'] ?? null;
+        }
+
+        $payload = $this->pruneEmptyPayload($payload);
+
+        if (Schema::hasColumn('circles', 'country') && ! array_key_exists('country', $payload)) {
+            $payload['country'] = $circle->country;
         }
 
         $originalName = $circle->name;
@@ -460,6 +468,22 @@ class CircleController extends Controller
                     ->with(['circle:id,name']);
             }])
             ->first();
+    }
+
+    private function pruneEmptyPayload(array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if ($value === null) {
+                unset($payload[$key]);
+                continue;
+            }
+
+            if (is_string($value) && trim($value) === '') {
+                unset($payload[$key]);
+            }
+        }
+
+        return $payload;
     }
 
     private function filterCircleDataByExistingColumns(array $data): array
