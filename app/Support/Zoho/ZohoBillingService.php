@@ -86,13 +86,14 @@ class ZohoBillingService
             'email' => $email,
             'mobile' => $phone,
             'phone' => $phone,
-            'is_portal_enabled' => true,
             'contact_persons' => [$this->buildPrimaryContactPerson($user, $email, $phone)],
             'billing_address' => [
                 'city' => $user->city ?? '',
                 'state' => '',
             ],
         ];
+
+        Log::info('Zoho customer update payload keys', ['keys' => array_keys($payload)]);
 
         $response = $this->client->request('POST', '/customers', $payload);
         $customerId = (string) ($response['customer']['customer_id'] ?? '');
@@ -311,13 +312,16 @@ class ZohoBillingService
 
     private function ensurePortalEnabled(User $user, string $customerId, string $email, string $phone): void
     {
-        $this->client->request('PUT', '/customers/' . $customerId, [
-            'is_portal_enabled' => true,
+        $payload = [
             'email' => $email,
             'mobile' => $phone,
             'phone' => $phone,
             'contact_persons' => [$this->buildPrimaryContactPerson($user, $email, $phone)],
-        ]);
+        ];
+
+        Log::info('Zoho customer update payload keys', ['keys' => array_keys($payload)]);
+
+        $this->client->request('PUT', '/customers/' . $customerId, $payload);
     }
 
     private function buildPrimaryContactPerson(User $user, string $email, string $phone): array
