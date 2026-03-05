@@ -255,13 +255,23 @@
                     </div>
 
                     @if ($circleInfo)
+                        @php
+                            $cityName = optional($circleInfo->city)->name
+                                ?? (property_exists($circleInfo, 'city_name') ? $circleInfo->city_name : null)
+                                ?? null;
+
+                            $countryName = optional($circleInfo->country)->name
+                                ?? (property_exists($circleInfo, 'country_name') ? $circleInfo->country_name : null)
+                                ?? (property_exists($circleInfo, 'country') ? $circleInfo->country : null)
+                                ?? null;
+                        @endphp
                         <div class="col-12">
                             <div class="border rounded p-3 bg-light-subtle">
                                 <h6 class="mb-2">Circle Info</h6>
                                 <div class="row g-2 small">
                                     <div class="col-md-6"><strong>Circle Name:</strong> {{ $circleInfo->name ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>City:</strong> {{ $circleInfo->city ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>Country:</strong> {{ $circleInfo->country ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>City:</strong> {{ $cityName ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Country:</strong> {{ $countryName ?? '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $circleInfo->meeting_mode ?? '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $circleInfo->meeting_frequency ?? '—' }}</div>
                                 </div>

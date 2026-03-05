@@ -180,7 +180,10 @@ class UsersController extends Controller
         $membershipStatuses = $this->membershipStatuses();
         $adminRoleIds = $roles->pluck('id')->all();
         $assignedAdminRoles = $user->roles->whereIn('id', $adminRoleIds)->values();
-        $circles = Circle::query()->orderBy('name')->get(['id', 'name', 'city', 'country', 'meeting_mode', 'meeting_frequency']);
+        $circles = Circle::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         $activeCircleMemberStatus = $this->activeCircleMemberStatus();
         $selectedCircleId = CircleMember::query()
             ->where('user_id', $user->id)
@@ -189,9 +192,43 @@ class UsersController extends Controller
             ->latest('created_at')
             ->value('circle_id');
 
-        $selectedCircle = $selectedCircleId
-            ? $circles->firstWhere('id', $selectedCircleId)
-            : null;
+        $selectedCircle = null;
+        if ($selectedCircleId) {
+            $selectedCircleQuery = Circle::query()
+                ->whereKey($selectedCircleId)
+                ->select(['id', 'name']);
+
+            if (Schema::hasColumn('circles', 'meeting_mode')) {
+                $selectedCircleQuery->addSelect('meeting_mode');
+            }
+
+            if (Schema::hasColumn('circles', 'meeting_frequency')) {
+                $selectedCircleQuery->addSelect('meeting_frequency');
+            }
+
+            if (Schema::hasColumn('circles', 'city_id')) {
+                $selectedCircleQuery->addSelect('city_id');
+                $selectedCircleQuery->with(['city:id,name']);
+            }
+
+            if (Schema::hasColumn('circles', 'country_id')) {
+                $selectedCircleQuery->addSelect('country_id');
+            }
+
+            if (Schema::hasColumn('circles', 'city_name')) {
+                $selectedCircleQuery->addSelect('city_name');
+            }
+
+            if (Schema::hasColumn('circles', 'country_name')) {
+                $selectedCircleQuery->addSelect('country_name');
+            }
+
+            if (Schema::hasColumn('circles', 'country')) {
+                $selectedCircleQuery->addSelect('country');
+            }
+
+            $selectedCircle = $selectedCircleQuery->first();
+        }
 
         return view('admin.users.edit', [
             'user' => $user,
