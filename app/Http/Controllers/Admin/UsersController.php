@@ -189,27 +189,16 @@ class UsersController extends Controller
             ->get(['id', 'name']);
 
         $activeCircleMemberStatus = $this->activeCircleMemberStatus();
+        $selectedCircleStatuses = array_values(array_unique(['active', 'approved', $activeCircleMemberStatus]));
+
         $selectedCircleId = CircleMember::query()
             ->where('user_id', $user->id)
-            ->where('status', $activeCircleMemberStatus)
+            ->whereIn('status', $selectedCircleStatuses)
             ->whereNull('deleted_at')
             ->latest('created_at')
             ->value('circle_id');
 
-        $selectedCircle = null;
-        if ($selectedCircleId) {
-            $selectedCircleQuery = Circle::query()
-                ->whereKey($selectedCircleId)
-                ->select(['id', 'name']);
-
-            foreach (['city', 'country', 'meeting_mode', 'meeting_frequency'] as $column) {
-                if (Schema::hasColumn('circles', $column)) {
-                    $selectedCircleQuery->addSelect($column);
-                }
-            }
-
-            $selectedCircle = $selectedCircleQuery->first();
-        }
+        $selectedCircle = $selectedCircleId ? Circle::query()->find($selectedCircleId) : null;
 
         $meetingModes = ['Online', 'Offline', 'Hybrid'];
         $meetingFrequencies = ['Weekly', 'Monthly', 'Quarterly', 'Half Yearly', 'Yearly'];
@@ -355,10 +344,7 @@ class UsersController extends Controller
 
         $activeCircleMemberStatus = $this->activeCircleMemberStatus();
         $selectedCircleId = $validated['circle_id'] ?? null;
-        $selectedCircleCity = isset($validated['circle_city']) ? trim((string) $validated['circle_city']) : null;
-        $selectedCircleCountry = isset($validated['circle_country']) ? trim((string) $validated['circle_country']) : null;
-
-        DB::transaction(function () use ($user, $updatable, $validated, $request, $activeCircleMemberStatus, $selectedCircleId, $selectedCircleCity, $selectedCircleCountry) {
+        DB::transaction(function () use ($user, $updatable, $validated, $request, $activeCircleMemberStatus, $selectedCircleId) {
             $user->fill($updatable);
             $user->status = $validated['status'];
 
@@ -372,9 +358,11 @@ class UsersController extends Controller
 
             $user->save();
 
+            $activeMembershipStatuses = array_values(array_unique(['active', 'approved', $activeCircleMemberStatus]));
+
             $activeMembershipQuery = CircleMember::query()
                 ->where('user_id', $user->id)
-                ->where('status', $activeCircleMemberStatus)
+                ->whereIn('status', $activeMembershipStatuses)
                 ->whereNull('deleted_at');
 
             if (! $selectedCircleId) {
@@ -407,27 +395,38 @@ class UsersController extends Controller
                     );
                 }
 
-                $circle = Circle::query()->findOrFail($selectedCircleId);
+                $circle = Circle::query()->whereKey($selectedCircleId)->firstOrFail();
 
-                if (Schema::hasColumn('circles', 'city') && $selectedCircleCity !== null && $selectedCircleCity !== '') {
-                    $circle->city = $selectedCircleCity;
+                $city = trim((string) ($validated['circle_city'] ?? ''));
+                $country = trim((string) ($validated['circle_country'] ?? ''));
+                $mode = trim((string) ($validated['circle_meeting_mode'] ?? ''));
+                $frequency = trim((string) ($validated['circle_meeting_frequency'] ?? ''));
+
+                if (Schema::hasColumn('circles', 'city') && $city !== '') {
+                    $circle->city = $city;
                 }
 
-                if (Schema::hasColumn('circles', 'country') && $selectedCircleCountry !== null && $selectedCircleCountry !== '') {
-                    $circle->country = $selectedCircleCountry;
+                if (Schema::hasColumn('circles', 'country') && $country !== '') {
+                    $circle->country = $country;
                 }
 
-                if (Schema::hasColumn('circles', 'meeting_mode') && ! empty($validated['circle_meeting_mode'])) {
-                    $circle->meeting_mode = $validated['circle_meeting_mode'];
+                if (Schema::hasColumn('circles', 'meeting_mode') && $mode !== '') {
+                    $circle->meeting_mode = $mode;
                 }
 
-                if (Schema::hasColumn('circles', 'meeting_frequency') && ! empty($validated['circle_meeting_frequency'])) {
-                    $circle->meeting_frequency = $validated['circle_meeting_frequency'];
+                if (Schema::hasColumn('circles', 'meeting_frequency') && $frequency !== '') {
+                    $circle->meeting_frequency = $frequency;
                 }
 
-                if ($circle->isDirty()) {
-                    $circle->save();
-                }
+                $circle->save();
+
+                \Log::info('Circle settings save', [
+                    'circle_id' => $selectedCircleId,
+                    'circle_city' => $city,
+                    'circle_country' => $country,
+                    'circle_meeting_mode' => $mode,
+                    'circle_meeting_frequency' => $frequency,
+                ]);
             }
 
             if ($request->filled('role_ids')) {

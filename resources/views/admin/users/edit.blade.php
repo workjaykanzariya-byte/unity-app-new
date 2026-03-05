@@ -234,7 +234,6 @@
                 <div class="card-body row g-3">
                     @php
                         $selectedCircleValue = old('circle_id', $selectedCircleId);
-                        $circleInfo = $selectedCircle;
                     @endphp
                     <div class="col-md-6">
                         <label class="form-label" for="circle_id">Circle</label>
@@ -317,16 +316,16 @@
                         </div>
                     </div>
 
-                    @if ($circleInfo)
+                    @if ($selectedCircle)
                         <div class="col-12">
                             <div class="border rounded p-3 bg-light-subtle">
                                 <h6 class="mb-2">Circle Info</h6>
                                 <div class="row g-2 small">
-                                    <div class="col-md-6"><strong>Circle Name:</strong> {{ $circleInfo->name ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>City:</strong> {{ $circleInfo->city ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>Country:</strong> {{ $circleInfo->country ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $circleInfo->meeting_mode ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $circleInfo->meeting_frequency ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Circle Name:</strong> {{ $selectedCircle?->name ?: '—' }}</div>
+                                    <div class="col-md-6"><strong>City:</strong> {{ $selectedCircle?->city ?: '—' }}</div>
+                                    <div class="col-md-6"><strong>Country:</strong> {{ $selectedCircle?->country ?: '—' }}</div>
+                                    <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $selectedCircle?->meeting_mode ?: '—' }}</div>
+                                    <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $selectedCircle?->meeting_frequency ?: '—' }}</div>
                                 </div>
                             </div>
                         </div>
