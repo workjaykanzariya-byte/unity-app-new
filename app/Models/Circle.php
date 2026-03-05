@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -212,6 +213,14 @@ class Circle extends Model
     public function memberships(): HasMany
     {
         return $this->hasMany(CircleMember::class);
+    }
+
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'circle_members', 'circle_id', 'user_id')
+            ->withPivot(['role', 'status'])
+            ->withTimestamps();
     }
 
 

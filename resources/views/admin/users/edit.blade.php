@@ -230,6 +230,51 @@
 
         <div class="col-12">
             <div class="card">
+                <div class="card-header fw-semibold">Circle</div>
+                <div class="card-body row g-3">
+                    @php
+                        $selectedCircleValue = old('circle_id', $selectedCircleId);
+                        $circleInfo = $selectedCircle;
+                        if ($selectedCircleValue) {
+                            $circleInfo = $circles->firstWhere('id', $selectedCircleValue) ?? $selectedCircle;
+                        }
+                    @endphp
+                    <div class="col-md-6">
+                        <label class="form-label" for="circle_id">Circle</label>
+                        <select name="circle_id" id="circle_id" class="form-select @error('circle_id') is-invalid @enderror">
+                            <option value="">-- No Circle --</option>
+                            @foreach ($circles as $circle)
+                                <option value="{{ $circle->id }}" @selected((string) $selectedCircleValue === (string) $circle->id)>
+                                    {{ $circle->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('circle_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    @if ($circleInfo)
+                        <div class="col-12">
+                            <div class="border rounded p-3 bg-light-subtle">
+                                <h6 class="mb-2">Circle Info</h6>
+                                <div class="row g-2 small">
+                                    <div class="col-md-6"><strong>Circle Name:</strong> {{ $circleInfo->name ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>City:</strong> {{ $circleInfo->city ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Country:</strong> {{ $circleInfo->country ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $circleInfo->meeting_mode ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $circleInfo->meeting_frequency ?? '—' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-12">
+            <div class="card">
                 <div class="card-header fw-semibold">Location</div>
                 <div class="card-body row g-3">
                     <div class="col-md-12">

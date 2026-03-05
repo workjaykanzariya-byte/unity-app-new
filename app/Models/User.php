@@ -183,6 +183,11 @@ class User extends Authenticatable
         return $this->hasMany(CircleMember::class);
     }
 
+    public function circleMemberships(): HasMany
+    {
+        return $this->hasMany(CircleMember::class, 'user_id');
+    }
+
     public function circles(): BelongsToMany
     {
         return $this->belongsToMany(Circle::class, 'circle_members', 'user_id', 'circle_id')
