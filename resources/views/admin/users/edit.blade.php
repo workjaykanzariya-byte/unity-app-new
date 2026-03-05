@@ -235,9 +235,6 @@
                     @php
                         $selectedCircleValue = old('circle_id', $selectedCircleId);
                         $circleInfo = $selectedCircle;
-                        if ($selectedCircleValue) {
-                            $circleInfo = $circles->firstWhere('id', $selectedCircleValue) ?? $selectedCircle;
-                        }
                     @endphp
                     <div class="col-md-6">
                         <label class="form-label" for="circle_id">Circle</label>
@@ -254,24 +251,87 @@
                         @enderror
                     </div>
 
-                    @if ($circleInfo)
-                        @php
-                            $cityName = optional($circleInfo->city)->name
-                                ?? (property_exists($circleInfo, 'city_name') ? $circleInfo->city_name : null)
-                                ?? null;
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <h6 class="mb-3">Circle Settings</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_city">City</label>
+                                    <select name="circle_city" id="circle_city" class="form-select @error('circle_city') is-invalid @enderror">
+                                        <option value="">-- Select --</option>
+                                        @foreach ($circleCities as $city)
+                                            <option value="{{ $city }}" @selected(old('circle_city', $selectedCircle?->city ?? '') === $city)>{{ $city }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('circle_city')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_city_other">Other City</label>
+                                    <input type="text" name="circle_city_other" id="circle_city_other" class="form-control @error('circle_city_other') is-invalid @enderror" value="{{ old('circle_city_other') }}" placeholder="Optional custom city">
+                                    @error('circle_city_other')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
 
-                            $countryName = optional($circleInfo->country)->name
-                                ?? (property_exists($circleInfo, 'country_name') ? $circleInfo->country_name : null)
-                                ?? (property_exists($circleInfo, 'country') ? $circleInfo->country : null)
-                                ?? null;
-                        @endphp
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_country">Country</label>
+                                    <select name="circle_country" id="circle_country" class="form-select @error('circle_country') is-invalid @enderror">
+                                        <option value="">-- Select --</option>
+                                        @foreach ($circleCountries as $country)
+                                            <option value="{{ $country }}" @selected(old('circle_country', $selectedCircle?->country ?? '') === $country)>{{ $country }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('circle_country')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_country_other">Other Country</label>
+                                    <input type="text" name="circle_country_other" id="circle_country_other" class="form-control @error('circle_country_other') is-invalid @enderror" value="{{ old('circle_country_other') }}" placeholder="Optional custom country">
+                                    @error('circle_country_other')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_meeting_mode">Meeting Mode</label>
+                                    <select name="circle_meeting_mode" id="circle_meeting_mode" class="form-select @error('circle_meeting_mode') is-invalid @enderror">
+                                        <option value="">-- Select --</option>
+                                        @foreach ($meetingModes as $mode)
+                                            <option value="{{ $mode }}" @selected(old('circle_meeting_mode', $selectedCircle?->meeting_mode ?? '') === $mode)>{{ $mode }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('circle_meeting_mode')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label" for="circle_meeting_frequency">Meeting Frequency</label>
+                                    <select name="circle_meeting_frequency" id="circle_meeting_frequency" class="form-select @error('circle_meeting_frequency') is-invalid @enderror">
+                                        <option value="">-- Select --</option>
+                                        @foreach ($meetingFrequencies as $frequency)
+                                            <option value="{{ $frequency }}" @selected(old('circle_meeting_frequency', $selectedCircle?->meeting_frequency ?? '') === $frequency)>{{ $frequency }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('circle_meeting_frequency')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if ($circleInfo)
                         <div class="col-12">
                             <div class="border rounded p-3 bg-light-subtle">
                                 <h6 class="mb-2">Circle Info</h6>
                                 <div class="row g-2 small">
                                     <div class="col-md-6"><strong>Circle Name:</strong> {{ $circleInfo->name ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>City:</strong> {{ $cityName ?? '—' }}</div>
-                                    <div class="col-md-6"><strong>Country:</strong> {{ $countryName ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>City:</strong> {{ $circleInfo->city ?? '—' }}</div>
+                                    <div class="col-md-6"><strong>Country:</strong> {{ $circleInfo->country ?? '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $circleInfo->meeting_mode ?? '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $circleInfo->meeting_frequency ?? '—' }}</div>
                                 </div>
