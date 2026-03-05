@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -56,7 +57,7 @@ class Circle extends Model
         'launch_date' => 'date',
     ];
 
-    protected $appends = ['cover_image_url'];
+    protected $appends = ['cover_image_url', 'city_display'];
 
     protected static function booted()
     {
@@ -169,6 +170,53 @@ class Circle extends Model
         return is_array($value) ? $value : [];
     }
 
+    public function getCityDisplayAttribute(): ?string
+    {
+        if ($this->relationLoaded('cityRef') && $this->cityRef) {
+            return $this->cityRef->name ?? null;
+        }
+
+        $raw = $this->getAttribute('city');
+
+        if ($raw === null || $raw === '') {
+            if (! empty($this->getAttribute('city_id'))) {
+                $city = $this->cityRef()->first();
+
+                return $city?->name;
+            }
+
+            return null;
+        }
+
+        if (is_array($raw)) {
+            return $raw['name'] ?? $raw['district'] ?? null;
+        }
+
+        if (is_string($raw)) {
+            $trimmed = trim($raw);
+
+            if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
+                $decoded = json_decode($trimmed, true);
+
+                if (is_array($decoded)) {
+                    return $decoded['name'] ?? $decoded['district'] ?? null;
+                }
+            }
+
+            return $raw;
+        }
+
+        return null;
+    }
+
+    public static function normalizeCityPayload(string $cityName, ?array $existing = null): array
+    {
+        $existing = is_array($existing) ? $existing : [];
+        $existing['name'] = $cityName;
+
+        return $existing;
+    }
+
     public function founder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'founder_user_id');
@@ -204,6 +252,12 @@ class Circle extends Model
         return $this->belongsTo(City::class, 'city_id');
     }
 
+
+    public function cityRef(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
     public function members(): HasMany
     {
         return $this->hasMany(CircleMember::class, 'circle_id');
@@ -212,6 +266,14 @@ class Circle extends Model
     public function memberships(): HasMany
     {
         return $this->hasMany(CircleMember::class);
+    }
+
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'circle_members', 'circle_id', 'user_id')
+            ->withPivot(['role', 'status'])
+            ->withTimestamps();
     }
 
 

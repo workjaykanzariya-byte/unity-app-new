@@ -176,6 +176,10 @@
                             <div class="collapse" id="{{ $detailsId }}">
                                 <div class="p-3 bg-light border-top">
                                     @php
+                                        $joinedCircle = $user->circleMembers->first()?->circle;
+                                        $joinedCircleName = $joinedCircle?->name;
+                                        $joinedCircleId = $joinedCircle?->id;
+
                                         $fields = [
                                             ['label' => 'ID', 'value' => $user->id],
                                             ['label' => 'Email', 'value' => $user->email],
@@ -197,6 +201,14 @@
                                             ['label' => 'City (string)', 'value' => $user->city],
                                             ['label' => 'Membership Status', 'value' => $user->membership_status],
                                             ['label' => 'Membership Expiry', 'value' => $user->membership_expiry, 'type' => 'date'],
+                                            ['label' => 'Circles', 'value' => $joinedCircleName ?: 'No Circle', 'circle_id' => $joinedCircleId],
+                                            ['label' => 'Zoho Customer ID', 'value' => $user->zoho_customer_id],
+                                            ['label' => 'Zoho Subscription ID', 'value' => $user->zoho_subscription_id],
+                                            ['label' => 'Zoho Plan Code', 'value' => $user->zoho_plan_code],
+                                            ['label' => 'Zoho Last Invoice ID', 'value' => $user->zoho_last_invoice_id],
+                                            ['label' => 'Membership Starts At', 'value' => $user->membership_starts_at, 'type' => 'membership_date'],
+                                            ['label' => 'Membership Ends At', 'value' => $user->membership_ends_at, 'type' => 'membership_date'],
+                                            ['label' => 'Last Payment At', 'value' => $user->last_payment_at, 'type' => 'membership_date'],
                                             ['label' => 'Coins Balance', 'value' => $user->coins_balance],
                                             ['label' => 'Introduced By', 'value' => $user->introduced_by],
                                             ['label' => 'Members Introduced Count', 'value' => $user->members_introduced_count],
@@ -242,6 +254,14 @@
                                                 return e($formatted) . ' <span class="text-muted small">(' . e($raw) . ')</span>';
                                             }
 
+                                            if ($type === 'membership_date') {
+                                                if (! $value) {
+                                                    return '—';
+                                                }
+
+                                                return e($value instanceof \DateTimeInterface ? $value->format('d-m-Y H:i') : (string) $value);
+                                            }
+
                                             if ($type === 'json') {
                                                 if (is_null($value)) {
                                                     return '—';
@@ -274,7 +294,16 @@
                                                     @foreach ($chunk as $field)
                                                         <tr>
                                                             <th class="w-50 text-muted">{{ $field['label'] }}</th>
-                                                            <td class="text-break">{!! $renderValue($field['value'], $field['type'] ?? 'text') !!}</td>
+                                                            <td class="text-break">
+                                                                @if (($field['label'] ?? null) === 'Circles' && ! empty($field['circle_id']))
+                                                                    <div class="d-flex align-items-center gap-2">
+                                                                        <span>{{ $field['value'] }}</span>
+                                                                        <a href="{{ route('admin.circles.edit', $field['circle_id']) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                                                    </div>
+                                                                @else
+                                                                    {!! $renderValue($field['value'], $field['type'] ?? 'text') !!}
+                                                                @endif
+                                                            </td>
                                                         </tr>
                                                     @endforeach
                                                 </table>

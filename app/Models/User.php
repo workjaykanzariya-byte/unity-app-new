@@ -70,6 +70,13 @@ class User extends Authenticatable
         'last_login_at',
         'profile_photo_file_id',
         'cover_photo_file_id',
+        'zoho_customer_id',
+        'zoho_subscription_id',
+        'zoho_plan_code',
+        'zoho_last_invoice_id',
+        'membership_starts_at',
+        'membership_ends_at',
+        'last_payment_at',
     ];
 
     protected $hidden = [
@@ -89,6 +96,9 @@ class User extends Authenticatable
         'gdpr_deleted_at' => 'datetime',
         'anonymized_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'membership_starts_at' => 'datetime',
+        'membership_ends_at' => 'datetime',
+        'last_payment_at' => 'datetime',
         'dob' => 'date',
         'skills' => 'array',
         'interests' => 'array',
@@ -171,6 +181,11 @@ class User extends Authenticatable
     public function circleMembers(): HasMany
     {
         return $this->hasMany(CircleMember::class);
+    }
+
+    public function circleMemberships(): HasMany
+    {
+        return $this->hasMany(CircleMember::class, 'user_id');
     }
 
     public function circles(): BelongsToMany
