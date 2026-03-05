@@ -57,7 +57,7 @@ class Circle extends Model
         'launch_date' => 'date',
     ];
 
-    protected $appends = ['cover_image_url'];
+    protected $appends = ['cover_image_url', 'city_display'];
 
     protected static function booted()
     {
@@ -168,6 +168,43 @@ class Circle extends Model
         $value = $this->calendarGet('meeting_schedule', []);
 
         return is_array($value) ? $value : [];
+    }
+
+    public function getCityDisplayAttribute(): ?string
+    {
+        $rawCity = $this->attributes['city'] ?? null;
+
+        if ($rawCity === null || $rawCity === '') {
+            return null;
+        }
+
+        if (is_array($this->city)) {
+            return $this->city['name'] ?? $this->city['district'] ?? null;
+        }
+
+        if (is_string($rawCity)) {
+            $trimmed = trim($rawCity);
+
+            if (str_starts_with($trimmed, '{')) {
+                $decoded = json_decode($trimmed, true);
+
+                if (is_array($decoded)) {
+                    return $decoded['name'] ?? $decoded['district'] ?? null;
+                }
+            }
+
+            return $trimmed !== '' ? $trimmed : null;
+        }
+
+        return null;
+    }
+
+    public static function normalizeCityPayload(string $cityName, ?array $existing = null): array
+    {
+        $existing = is_array($existing) ? $existing : [];
+        $existing['name'] = $cityName;
+
+        return $existing;
     }
 
     public function founder(): BelongsTo

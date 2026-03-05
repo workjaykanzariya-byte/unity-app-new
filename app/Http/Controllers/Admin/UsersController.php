@@ -204,11 +204,12 @@ class UsersController extends Controller
         $citySuggestions = collect();
         if (Schema::hasColumn('circles', 'city')) {
             $citySuggestions = Circle::query()
-                ->whereNotNull('city')
-                ->where('city', '!=', '')
-                ->distinct()
-                ->orderBy('city')
-                ->pluck('city')
+                ->select(['id', 'city'])
+                ->get()
+                ->map(fn (Circle $circle) => trim((string) ($circle->city_display ?? '')))
+                ->filter(fn (string $city) => $city !== '')
+                ->unique()
+                ->sort()
                 ->values();
         }
 
@@ -399,7 +400,24 @@ class UsersController extends Controller
                 $frequency = trim((string) ($validated['circle_meeting_frequency'] ?? ''));
 
                 if (Schema::hasColumn('circles', 'city') && $city !== '') {
-                    $circle->city = $city;
+                    $currentCity = $circle->getAttribute('city');
+                    $isJsonCity = false;
+
+                    if (is_array($currentCity)) {
+                        $isJsonCity = true;
+                    } elseif (is_string($currentCity) && str_starts_with(trim($currentCity), '{')) {
+                        $isJsonCity = true;
+                    }
+
+                    if ($isJsonCity) {
+                        $existing = is_array($currentCity)
+                            ? $currentCity
+                            : (json_decode((string) $currentCity, true) ?: []);
+
+                        $circle->city = Circle::normalizeCityPayload($city, $existing);
+                    } else {
+                        $circle->city = $city;
+                    }
                 }
 
                 if (Schema::hasColumn('circles', 'country') && $country !== '') {

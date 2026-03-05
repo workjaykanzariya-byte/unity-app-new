@@ -262,7 +262,7 @@
                                         id="circle_city"
                                         class="form-control @error('circle_city') is-invalid @enderror"
                                         list="circle-city-suggestions"
-                                        value="{{ old('circle_city', $selectedCircle?->city ?? '') }}"
+                                        value="{{ old('circle_city', $selectedCircle?->city_display ?? '') }}"
                                         placeholder="Type city name..."
                                     >
                                     <datalist id="circle-city-suggestions">
@@ -322,7 +322,7 @@
                                 <h6 class="mb-2">Circle Info</h6>
                                 <div class="row g-2 small">
                                     <div class="col-md-6"><strong>Circle Name:</strong> {{ $selectedCircle?->name ?: '—' }}</div>
-                                    <div class="col-md-6"><strong>City:</strong> {{ $selectedCircle?->city ?: '—' }}</div>
+                                    <div class="col-md-6"><strong>City:</strong> {{ $selectedCircle?->city_display ?: '—' }}</div>
                                     <div class="col-md-6"><strong>Country:</strong> {{ $selectedCircle?->country ?: '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Mode:</strong> {{ $selectedCircle?->meeting_mode ?: '—' }}</div>
                                     <div class="col-md-6"><strong>Meeting Frequency:</strong> {{ $selectedCircle?->meeting_frequency ?: '—' }}</div>
