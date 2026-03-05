@@ -197,7 +197,9 @@ class UsersController extends Controller
             ->first(['circle_id']);
 
         $selectedCircleId = $membership?->circle_id;
-        $selectedCircle = $selectedCircleId ? Circle::find($selectedCircleId) : null;
+        $selectedCircle = $selectedCircleId
+            ? Circle::query()->with('cityRef:id,name')->find($selectedCircleId)
+            : null;
         $isJoinedToCircle = (bool) $selectedCircle;
 
         $meetingModes = ['Online', 'Offline', 'Hybrid'];
@@ -394,24 +396,38 @@ class UsersController extends Controller
                 $mode = trim((string) ($validated['circle_meeting_mode'] ?? ''));
                 $frequency = trim((string) ($validated['circle_meeting_frequency'] ?? ''));
 
-                if (Schema::hasColumn('circles', 'city') && $city !== '') {
-                    $currentCity = $circle->getAttribute('city');
-                    $isJsonCity = false;
+                if ($city !== '') {
+                    if (Schema::hasColumn('circles', 'city_id')) {
+                        $cityRecord = City::query()
+                            ->whereRaw('LOWER(name) = ?', [mb_strtolower($city)])
+                            ->first();
 
-                    if (is_array($currentCity)) {
-                        $isJsonCity = true;
-                    } elseif (is_string($currentCity) && str_starts_with(trim($currentCity), '{')) {
-                        $isJsonCity = true;
-                    }
+                        if (! $cityRecord) {
+                            $cityRecord = City::create([
+                                'name' => $city,
+                            ]);
+                        }
 
-                    if ($isJsonCity) {
-                        $existing = is_array($currentCity)
-                            ? $currentCity
-                            : (json_decode((string) $currentCity, true) ?: []);
+                        $circle->city_id = $cityRecord->id;
+                    } elseif (Schema::hasColumn('circles', 'city')) {
+                        $currentCity = $circle->getAttribute('city');
+                        $isJsonCity = false;
 
-                        $circle->city = Circle::normalizeCityPayload($city, $existing);
-                    } else {
-                        $circle->city = $city;
+                        if (is_array($currentCity)) {
+                            $isJsonCity = true;
+                        } elseif (is_string($currentCity) && str_starts_with(trim($currentCity), '{')) {
+                            $isJsonCity = true;
+                        }
+
+                        if ($isJsonCity) {
+                            $existing = is_array($currentCity)
+                                ? $currentCity
+                                : (json_decode((string) $currentCity, true) ?: []);
+
+                            $circle->city = Circle::normalizeCityPayload($city, $existing);
+                        } else {
+                            $circle->city = $city;
+                        }
                     }
                 }
 

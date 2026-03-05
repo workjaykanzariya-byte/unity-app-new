@@ -172,18 +172,28 @@ class Circle extends Model
 
     public function getCityDisplayAttribute(): ?string
     {
-        $rawCity = $this->getAttribute('city');
+        if ($this->relationLoaded('cityRef') && $this->cityRef) {
+            return $this->cityRef->name ?? null;
+        }
 
-        if ($rawCity === null || $rawCity === '') {
+        $raw = $this->getAttribute('city');
+
+        if ($raw === null || $raw === '') {
+            if (! empty($this->getAttribute('city_id'))) {
+                $city = $this->cityRef()->first();
+
+                return $city?->name;
+            }
+
             return null;
         }
 
-        if (is_array($rawCity)) {
-            return $rawCity['name'] ?? $rawCity['district'] ?? null;
+        if (is_array($raw)) {
+            return $raw['name'] ?? $raw['district'] ?? null;
         }
 
-        if (is_string($rawCity)) {
-            $trimmed = trim($rawCity);
+        if (is_string($raw)) {
+            $trimmed = trim($raw);
 
             if ($trimmed !== '' && ($trimmed[0] === '{' || $trimmed[0] === '[')) {
                 $decoded = json_decode($trimmed, true);
@@ -193,7 +203,7 @@ class Circle extends Model
                 }
             }
 
-            return $trimmed !== '' ? $trimmed : null;
+            return $raw;
         }
 
         return null;
@@ -238,6 +248,12 @@ class Circle extends Model
     }
 
     public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
+
+    public function cityRef(): BelongsTo
     {
         return $this->belongsTo(City::class, 'city_id');
     }
