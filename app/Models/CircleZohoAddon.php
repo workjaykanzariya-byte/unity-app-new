@@ -17,7 +17,9 @@ class CircleZohoAddon extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'price' => 'decimal:2',
+        'amount' => 'decimal:2',
         'metadata' => 'array',
+        'raw_payload' => 'array',
         'last_synced_at' => 'datetime',
     ];
 

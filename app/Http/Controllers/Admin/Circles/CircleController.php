@@ -275,16 +275,7 @@ class CircleController extends Controller
 
         $circle->save();
 
-        DB::afterCommit(function () use ($circle): void {
-            try {
-                $this->circleAddonSyncService->syncCircle($circle->fresh());
-            } catch (\Throwable $throwable) {
-                Log::error('Circle addon sync failed after create', [
-                    'circle_id' => $circle->id,
-                    'error' => $throwable->getMessage(),
-                ]);
-            }
-        });
+        $this->triggerCircleAddonSync($circle, 'create');
 
         $circle->refresh();
 
@@ -392,16 +383,7 @@ class CircleController extends Controller
 
         $circle->save();
 
-        DB::afterCommit(function () use ($circle): void {
-            try {
-                $this->circleAddonSyncService->syncCircle($circle->fresh());
-            } catch (\Throwable $throwable) {
-                Log::error('Circle addon sync failed after update', [
-                    'circle_id' => $circle->id,
-                    'error' => $throwable->getMessage(),
-                ]);
-            }
-        });
+        $this->triggerCircleAddonSync($circle, 'update');
 
         $circle->refresh();
 
@@ -420,6 +402,28 @@ class CircleController extends Controller
         return redirect()
             ->route('admin.circles.index')
             ->with('success', 'Circle deleted successfully.');
+    }
+
+
+    private function triggerCircleAddonSync(Circle $circle, string $action): void
+    {
+        $sync = function () use ($circle, $action): void {
+            try {
+                $this->circleAddonSyncService->syncCircle($circle->fresh());
+            } catch (\Throwable $throwable) {
+                Log::error('Circle addon sync failed after ' . $action, [
+                    'circle_id' => $circle->id,
+                    'error' => $throwable->getMessage(),
+                ]);
+            }
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($sync);
+            return;
+        }
+
+        $sync();
     }
 
     private function applyUserNameFilter($query, string $relation, string $search): void
