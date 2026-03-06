@@ -89,6 +89,7 @@ class CircleSubscriptionController extends BaseApiController
                 'user_id' => $user->id,
                 'circle_id' => $circle->id,
                 'zoho_customer_id' => $checkout['customer_id'] ?? $user->zoho_customer_id,
+                'zoho_subscription_id' => $checkout['subscription_id'] ?? $user->zoho_subscription_id,
                 'zoho_hosted_page_id' => $checkout['hostedpage_id'] ?? null,
                 'zoho_addon_id' => $circle->zoho_addon_id,
                 'zoho_addon_code' => $circle->zoho_addon_code,

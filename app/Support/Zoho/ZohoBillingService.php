@@ -122,33 +122,63 @@ class ZohoBillingService
         }
 
         $customerId = $this->ensureCustomerForUser($user);
-        $planCode = (string) config('zoho_billing.circle_plan_code', config('zoho_billing.default_plan_code', '013'));
+        $activeSubscription = $this->resolveActiveBaseSubscription($user, $customerId);
+
+        if (! is_array($activeSubscription)) {
+            Log::warning('existing zoho subscription not found for circle checkout', [
+                'user_id' => $user->id,
+                'circle_id' => $circle->id,
+                'customer_id' => $customerId,
+                'addon_code' => $addonCode,
+            ]);
+
+            throw ValidationException::withMessages([
+                'subscription' => 'Active Unity subscription is required before purchasing a circle package.',
+            ]);
+        }
+
+        $subscriptionId = (string) ($activeSubscription['subscription_id'] ?? '');
+
+        if ($subscriptionId === '') {
+            throw ValidationException::withMessages([
+                'subscription' => 'Active Unity subscription is required before purchasing a circle package.',
+            ]);
+        }
+
+        Log::info('existing zoho subscription found for circle checkout', [
+            'user_id' => $user->id,
+            'circle_id' => $circle->id,
+            'customer_id' => $customerId,
+            'subscription_id' => $subscriptionId,
+            'addon_code' => $addonCode,
+        ]);
+
         $referenceId = 'CIR' . now()->format('YmdHis') . random_int(100, 999);
+        $payload = [
+            'subscription_id' => $subscriptionId,
+            'addons' => [[
+                'addon_code' => $addonCode,
+                'quantity' => 1,
+            ]],
+            'reference_id' => $referenceId,
+        ];
 
         Log::info('circle hosted page request payload', [
             'user_id' => $user->id,
             'circle_id' => $circle->id,
             'addon_code' => $addonCode,
-            'plan_code' => $planCode,
+            'subscription_id' => $subscriptionId,
             'reference_id' => $referenceId,
+            'payload' => $payload,
         ]);
 
         try {
-            $response = $this->client->request('POST', '/hostedpages/newsubscription', [
-                'customer_id' => $customerId,
-                'plan' => [
-                    'plan_code' => $planCode,
-                ],
-                'addons' => [[
-                    'addon_code' => $addonCode,
-                    'quantity' => 1,
-                ]],
-                'reference_id' => $referenceId,
-            ]);
+            $response = $this->client->request('POST', '/hostedpages/updatesubscription', $payload);
 
             Log::info('circle hosted page response payload', [
                 'user_id' => $user->id,
                 'circle_id' => $circle->id,
+                'subscription_id' => $subscriptionId,
                 'reference_id' => $referenceId,
                 'response' => $response,
             ]);
@@ -157,8 +187,9 @@ class ZohoBillingService
                 'user_id' => $user->id,
                 'circle_id' => $circle->id,
                 'addon_code' => $addonCode,
-                'plan_code' => $planCode,
+                'subscription_id' => $subscriptionId,
                 'reference_id' => $referenceId,
+                'payload' => $payload,
                 'error' => $throwable->getMessage(),
             ]);
 
@@ -169,8 +200,58 @@ class ZohoBillingService
             'hostedpage_id' => (string) data_get($response, 'hostedpage.hostedpage_id', ''),
             'checkout_url' => (string) data_get($response, 'hostedpage.url', ''),
             'customer_id' => $customerId,
+            'subscription_id' => $subscriptionId,
             'raw' => $response,
         ];
+    }
+
+    private function resolveActiveBaseSubscription(User $user, string $customerId): ?array
+    {
+        $activeStatuses = ['live', 'active', 'non_renewing', 'trial'];
+
+        $candidateSubscriptionId = trim((string) ($user->zoho_subscription_id ?? ''));
+
+        if ($candidateSubscriptionId !== '') {
+            try {
+                $single = $this->getSubscription($candidateSubscriptionId);
+                $singleSubscription = is_array($single['subscription'] ?? null) ? $single['subscription'] : $single;
+                $singleStatus = strtolower((string) ($singleSubscription['status'] ?? ''));
+
+                if (in_array($singleStatus, $activeStatuses, true)) {
+                    return $singleSubscription;
+                }
+            } catch (Throwable $throwable) {
+                Log::warning('failed to fetch user zoho subscription for circle checkout', [
+                    'user_id' => $user->id,
+                    'subscription_id' => $candidateSubscriptionId,
+                    'message' => $throwable->getMessage(),
+                ]);
+            }
+        }
+
+        $list = $this->listSubscriptionsByCustomer($customerId);
+        $subscriptions = data_get($list, 'subscriptions', []);
+
+        if (! is_array($subscriptions)) {
+            return null;
+        }
+
+        return collect($subscriptions)
+            ->filter(fn ($subscription) => is_array($subscription))
+            ->first(function (array $subscription) use ($activeStatuses, $user) {
+                $status = strtolower((string) ($subscription['status'] ?? ''));
+                $planCode = (string) (data_get($subscription, 'plan.plan_code') ?? $subscription['plan_code'] ?? '');
+
+                if (! in_array($status, $activeStatuses, true)) {
+                    return false;
+                }
+
+                if ((string) ($user->zoho_plan_code ?? '') === '') {
+                    return true;
+                }
+
+                return $planCode === (string) $user->zoho_plan_code;
+            });
     }
 
 
