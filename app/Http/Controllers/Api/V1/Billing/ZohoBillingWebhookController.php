@@ -521,19 +521,29 @@ class ZohoBillingWebhookController extends Controller
 
     private function isValidWebhook(Request $request): bool
     {
-        $expected = (string) env('ZOHO_WEBHOOK_TOKEN', '');
+        $expected = (string) config('services.zoho.webhook_token', env('ZOHO_WEBHOOK_TOKEN', ''));
 
         if ($expected === '') {
+            Log::warning('Zoho webhook token missing from configuration');
+
             return false;
         }
 
-        $incoming = (string) ($request->header('X-Zoho-Webhook-Signature')
+        $incoming = (string) ($request->header('X-Webhook-Token')
+            ?? $request->header('X-Zoho-Webhook-Signature')
             ?? $request->bearerToken()
             ?? $request->query('token')
             ?? $request->input('token')
             ?? '');
 
-        return hash_equals($expected, $incoming);
+        $isValid = $incoming !== '' && hash_equals($expected, $incoming);
+
+        Log::info('Zoho webhook authentication evaluated', [
+            'token_present' => $incoming !== '',
+            'valid' => $isValid,
+        ]);
+
+        return $isValid;
     }
 
     private function maskEmail(?string $email): ?string
