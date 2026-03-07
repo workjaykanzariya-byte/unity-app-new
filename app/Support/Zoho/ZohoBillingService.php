@@ -258,12 +258,14 @@ class ZohoBillingService
 
     private function resolveAddonAmount(array $addon): mixed
     {
-        return $addon['amount']
+        return data_get($addon, 'price_brackets.0.price')
             ?? $addon['price']
+            ?? $addon['amount']
             ?? $addon['rate']
             ?? $addon['recurring_price']
             ?? data_get($addon, 'addon_price')
             ?? data_get($addon, 'price')
+            ?? data_get($addon, 'amount')
             ?? data_get($addon, 'rate')
             ?? data_get($addon, 'recurring_price');
     }
@@ -273,11 +275,12 @@ class ZohoBillingService
         $currency = $addon['currency_code']
             ?? $addon['currency']
             ?? data_get($addon, 'currency_code')
-            ?? data_get($addon, 'currency');
+            ?? data_get($addon, 'currency')
+            ?? 'INR';
 
         $currency = is_string($currency) ? trim($currency) : (string) $currency;
 
-        return $currency !== '' ? $currency : null;
+        return $currency !== '' ? $currency : 'INR';
     }
 
     public function getOrganization(): array

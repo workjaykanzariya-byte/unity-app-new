@@ -28,8 +28,20 @@ class CircleSubscriptionController extends BaseApiController
             $addon = $this->zohoBillingService->findCirclePackageAddonByCodeOrId($addonCode, false);
 
             if (is_array($addon)) {
-                $amount = $amount ?? ($addon['amount'] ?? null);
-                $currency = $currency ?: ($addon['currency_code'] ?? null);
+                $amount = $amount
+                    ?? data_get($addon, 'raw.price_brackets.0.price')
+                    ?? data_get($addon, 'price_brackets.0.price')
+                    ?? ($addon['price'] ?? null)
+                    ?? ($addon['amount'] ?? null)
+                    ?? ($addon['rate'] ?? null);
+
+                $currency = $currency
+                    ?: ($circle->circle_price_currency
+                        ?: ($addon['currency_code'] ?? null)
+                        ?: ($addon['currency'] ?? null)
+                        ?: data_get($addon, 'raw.currency_code')
+                        ?: data_get($addon, 'raw.currency')
+                        ?: 'INR');
 
                 Log::info('circle package response addon fallback applied', [
                     'circle_id' => $circle->id,
@@ -40,6 +52,8 @@ class CircleSubscriptionController extends BaseApiController
                 ]);
             }
         }
+
+        $currency = $currency ?: 'INR';
 
         return $this->success([
             'circle_id' => $circle->id,

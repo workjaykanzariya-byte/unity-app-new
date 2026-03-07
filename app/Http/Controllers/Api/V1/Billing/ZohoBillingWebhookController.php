@@ -242,6 +242,10 @@ class ZohoBillingWebhookController extends Controller
 
     private function extractCircleWebhookIdentifiers(array $payload): array
     {
+        $paymentInvoice = data_get($payload, 'payment.invoices.0')
+            ?? data_get($payload, 'data.payment.invoices.0')
+            ?? [];
+
         return [
             'customer_id' => $this->firstString($payload, [
                 'customer.customer_id', 'data.customer.customer_id',
@@ -262,15 +266,18 @@ class ZohoBillingWebhookController extends Controller
                 'payment_number',
             ]),
             'invoice_id' => $this->firstString($payload, [
+                'payment.invoices.0.invoice_id', 'data.payment.invoices.0.invoice_id',
                 'invoice.invoice_id', 'data.invoice.invoice_id',
                 'customerpayment.invoice_id', 'data.customerpayment.invoice_id',
                 'invoice_payment.invoice_id', 'data.invoice_payment.invoice_id',
                 'invoice_id',
             ]),
             'invoice_number' => $this->firstString($payload, [
+                'payment.invoices.0.invoice_number', 'data.payment.invoices.0.invoice_number',
                 'invoice.invoice_number', 'data.invoice.invoice_number', 'invoice_number',
             ]),
             'subscription_id' => $this->firstString($payload, [
+                'payment.invoices.0.subscription_ids.0', 'data.payment.invoices.0.subscription_ids.0',
                 'subscription.subscription_id', 'data.subscription.subscription_id',
                 'customerpayment.subscription_id', 'data.customerpayment.subscription_id',
                 'payment.subscription_id', 'data.payment.subscription_id',
@@ -288,9 +295,13 @@ class ZohoBillingWebhookController extends Controller
                 ?? data_get($payload, 'data.customerpayment.amount')
                 ?? data_get($payload, 'payment.amount')
                 ?? data_get($payload, 'data.payment.amount')
+                ?? data_get($payload, 'payment.invoices.0.amount_applied')
+                ?? data_get($payload, 'data.payment.invoices.0.amount_applied')
                 ?? data_get($payload, 'invoice.total')
                 ?? data_get($payload, 'data.invoice.total')
                 ?? data_get($payload, 'amount'),
+            'amount_applied' => data_get($payload, 'payment.invoices.0.amount_applied')
+                ?? data_get($payload, 'data.payment.invoices.0.amount_applied'),
             'currency_code' => $this->firstString($payload, [
                 'customerpayment.currency_code', 'data.customerpayment.currency_code',
                 'payment.currency_code', 'data.payment.currency_code',
@@ -299,12 +310,14 @@ class ZohoBillingWebhookController extends Controller
             ]),
             'payment_status' => strtolower($this->firstString($payload, [
                 'customerpayment.payment_status', 'data.customerpayment.payment_status',
+                'payment.payment_status', 'data.payment.payment_status',
                 'payment.status', 'data.payment.status',
                 'invoice_payment.status', 'data.invoice_payment.status',
                 'invoice.status', 'data.invoice.status',
                 'payment_status', 'status',
             ]) ?: ''),
             'paid_at' => $this->firstString($payload, [
+                'payment.date', 'data.payment.date',
                 'customerpayment.payment_time', 'data.customerpayment.payment_time',
                 'customerpayment.paid_time', 'data.customerpayment.paid_time',
                 'payment.payment_time', 'data.payment.payment_time',
@@ -312,6 +325,9 @@ class ZohoBillingWebhookController extends Controller
                 'invoice_payment.payment_time', 'data.invoice_payment.payment_time',
                 'paid_at', 'payment_time',
             ]),
+            'transaction_type' => is_array($paymentInvoice)
+                ? $this->firstString(['invoice' => $paymentInvoice], ['invoice.transaction_type'])
+                : null,
             'addon_code' => $this->firstString($payload, [
                 'addon.addon_code', 'data.addon.addon_code',
                 'addons.0.addon_code', 'data.addons.0.addon_code',
@@ -319,6 +335,7 @@ class ZohoBillingWebhookController extends Controller
                 'customerpayment.addon_code', 'data.customerpayment.addon_code',
             ]),
             'hostedpage_id' => $this->firstString($payload, [
+                'payment.invoices.0.hosted_page_id', 'data.payment.invoices.0.hosted_page_id',
                 'hostedpage.hostedpage_id', 'data.hostedpage.hostedpage_id',
                 'customerpayment.hostedpage_id', 'data.customerpayment.hostedpage_id',
                 'payment.hostedpage_id', 'data.payment.hostedpage_id',
@@ -332,8 +349,8 @@ class ZohoBillingWebhookController extends Controller
         $referenceId = (string) ($identifiers['reference_id'] ?? '');
         $hostedPageId = (string) ($identifiers['hostedpage_id'] ?? '');
         $subscriptionId = (string) ($identifiers['subscription_id'] ?? '');
+        $invoiceId = (string) ($identifiers['invoice_id'] ?? '');
         $customerId = (string) ($identifiers['customer_id'] ?? '');
-        $addonCode = (string) ($identifiers['addon_code'] ?? '');
 
         if ($referenceId !== '') {
             $byReference = CircleSubscription::query()
@@ -373,6 +390,22 @@ class ZohoBillingWebhookController extends Controller
             }
         }
 
+        if ($invoiceId !== '') {
+            $byInvoice = CircleSubscription::query()
+                ->latest('created_at')
+                ->get()
+                ->first(function (CircleSubscription $subscription) use ($invoiceId) {
+                    return $invoiceId === (string) data_get($subscription->raw_webhook_payload, 'invoice_id')
+                        || $invoiceId === (string) data_get($subscription->raw_webhook_payload, 'invoice.invoice_id')
+                        || $invoiceId === (string) data_get($subscription->raw_webhook_payload, 'payment.invoices.0.invoice_id')
+                        || $invoiceId === (string) data_get($subscription->raw_checkout_response, 'invoice.invoice_id');
+                });
+
+            if ($byInvoice) {
+                return $byInvoice;
+            }
+        }
+
         $user = null;
         if ($customerId !== '') {
             $user = User::query()->where('zoho_customer_id', $customerId)->first();
@@ -389,30 +422,13 @@ class ZohoBillingWebhookController extends Controller
                 return $byUserPending;
             }
 
-            if ($addonCode !== '') {
-                $byUserAddon = CircleSubscription::query()
-                    ->where('user_id', $user->id)
-                    ->where('zoho_addon_code', $addonCode)
-                    ->where('status', 'pending')
-                    ->latest('created_at')
-                    ->first();
-
-                if ($byUserAddon) {
-                    return $byUserAddon;
-                }
-            }
-        }
-
-        if ($customerId !== '' && $addonCode !== '') {
-            $byCustomerAddon = CircleSubscription::query()
-                ->where('zoho_customer_id', $customerId)
-                ->where('zoho_addon_code', $addonCode)
-                ->where('status', 'pending')
+            $byUserLatest = CircleSubscription::query()
+                ->where('user_id', $user->id)
                 ->latest('created_at')
                 ->first();
 
-            if ($byCustomerAddon) {
-                return $byCustomerAddon;
+            if ($byUserLatest) {
+                return $byUserLatest;
             }
         }
 
