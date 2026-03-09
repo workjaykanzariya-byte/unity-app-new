@@ -29,6 +29,7 @@ class CircleChatMessage extends Model
         'file_mime',
         'file_size',
         'thumbnail_path',
+        'deleted_for_users',
         'reply_to_message_id',
         'is_deleted_for_all',
         'deleted_for_all_at',
@@ -36,6 +37,7 @@ class CircleChatMessage extends Model
 
     protected $casts = [
         'file_size' => 'integer',
+        'deleted_for_users' => 'array',
         'is_deleted_for_all' => 'boolean',
         'deleted_for_all_at' => 'datetime',
         'created_at' => 'datetime',
@@ -66,10 +68,6 @@ class CircleChatMessage extends Model
         return $this->hasMany(CircleChatMessageRead::class, 'message_id');
     }
 
-    public function deletions(): HasMany
-    {
-        return $this->hasMany(CircleChatMessageDeletion::class, 'message_id');
-    }
 
     public function replyTo(): BelongsTo
     {

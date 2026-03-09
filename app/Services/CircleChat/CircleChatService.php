@@ -9,7 +9,6 @@ use App\Events\UserNotificationCreated;
 use App\Http\Resources\CircleChatMessageResource;
 use App\Models\Circle;
 use App\Models\CircleChatMessage;
-use App\Models\CircleChatMessageDeletion;
 use App\Models\CircleChatMessageRead;
 use App\Models\CircleMember;
 use App\Models\Notification;
@@ -35,7 +34,7 @@ class CircleChatService
         $query = CircleChatMessage::query()
             ->where('circle_id', $circle->id)
             ->where('is_deleted_for_all', false)
-            ->whereDoesntHave('deletions', fn ($q) => $q->where('user_id', $user->id))
+            ->whereRaw("NOT (COALESCE(deleted_for_users, '[]'::jsonb) ? ?)", [(string) $user->id])
             ->when($beforeMessageId, function ($q) use ($beforeMessageId) {
                 $before = CircleChatMessage::query()->find($beforeMessageId);
                 if ($before) {
@@ -182,12 +181,14 @@ class CircleChatService
         $this->accessService->ensureUserIsCircleMember($user, $circle->id);
         $this->ensureMessageBelongsToCircle($message, $circle);
 
-        CircleChatMessageDeletion::query()->firstOrCreate([
-            'message_id' => $message->id,
-            'user_id' => $user->id,
-        ], [
-            'deleted_at' => now(),
-        ]);
+        $deletedForUsers = is_array($message->deleted_for_users) ? $message->deleted_for_users : [];
+
+        if (! in_array((string) $user->id, $deletedForUsers, true)) {
+            $deletedForUsers[] = (string) $user->id;
+            $message->forceFill([
+                'deleted_for_users' => array_values(array_unique($deletedForUsers)),
+            ])->save();
+        }
     }
 
     public function deleteForAll(User $user, Circle $circle, CircleChatMessage $message): void

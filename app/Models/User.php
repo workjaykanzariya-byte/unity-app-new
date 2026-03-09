@@ -223,10 +223,6 @@ class User extends Authenticatable
         return $this->hasMany(CircleChatMessageRead::class, 'user_id');
     }
 
-    public function circleChatMessageDeletions(): HasMany
-    {
-        return $this->hasMany(CircleChatMessageDeletion::class, 'user_id');
-    }
 
     public function circles(): BelongsToMany
     {

@@ -72,7 +72,6 @@ Body (raw JSON):
 ```bash
 php artisan make:model CircleChatMessage -m
 php artisan make:model CircleChatMessageRead -m
-php artisan make:model CircleChatMessageDeletion -m
 php artisan make:event CircleChatMessageSent
 php artisan make:event CircleChatMessageDeletedForAll
 php artisan make:event CircleChatMessagesRead
