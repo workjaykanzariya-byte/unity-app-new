@@ -197,7 +197,6 @@ class User extends Authenticatable
         return $this->hasMany(CircleMember::class, 'user_id');
     }
 
-
     public function circleSubscriptions(): HasMany
     {
         return $this->hasMany(CircleSubscription::class, 'user_id');
@@ -439,6 +438,16 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'sender_id');
     }
 
+    public function circleChatMessagesSent(): HasMany
+    {
+        return $this->hasMany(CircleChatMessage::class, 'sender_id');
+    }
+
+    public function circleChatMessageReads(): HasMany
+    {
+        return $this->hasMany(CircleChatMessageRead::class, 'user_id');
+    }
+
     public function pushTokens(): HasMany
     {
         return $this->hasMany(UserPushToken::class);
@@ -546,5 +555,6 @@ class User extends Authenticatable
             'industry' => $industry,
         ];
     }
+}
 }
 }
