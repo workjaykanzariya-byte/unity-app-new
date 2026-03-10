@@ -59,6 +59,12 @@ class CoinsController extends Controller
 
         $filename = 'coins_index_' . now()->format('Ymd_His') . '.csv';
 
+        $selectedUserIds = array_values(array_filter(array_unique((array) $request->query('selected_user_ids', []))));
+
+        if ($selectedUserIds !== []) {
+            $query->whereIn('users.id', $selectedUserIds);
+        }
+
         return response()->streamDownload(function () use ($query): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Peer Name', 'Company', 'City', 'Circle', 'Total Coins', 'Testimonials', 'Referrals', 'Business Deals', 'P2P Meetings', 'Requirements']);
@@ -289,45 +295,10 @@ class CoinsController extends Controller
             });
         }
 
-        $totalCoinsFilter = trim((string) ($filters['total_coins'] ?? ''));
-        if ($totalCoinsFilter !== '') {
-            if (is_numeric($totalCoinsFilter)) {
-                $query->whereRaw('COALESCE(coins_totals.total_coins, 0) = ?', [(int) $totalCoinsFilter]);
-            } else {
-                $query->whereRaw('CAST(COALESCE(coins_totals.total_coins, 0) AS TEXT) ILIKE ?', ['%' . $totalCoinsFilter . '%']);
-            }
-        }
-
-        $this->applyActivityCountFilter($query, 'testimonial', trim((string) ($filters['testimonial_count'] ?? '')));
-        $this->applyActivityCountFilter($query, 'referral', trim((string) ($filters['referral_count'] ?? '')));
-        $this->applyActivityCountFilter($query, 'business_deal', trim((string) ($filters['business_deal_count'] ?? '')));
-        $this->applyActivityCountFilter($query, 'p2p_meeting', trim((string) ($filters['p2p_meeting_count'] ?? '')));
-        $this->applyActivityCountFilter($query, 'requirement', trim((string) ($filters['requirement_count'] ?? '')));
 
         return $query;
     }
 
-    private function applyActivityCountFilter(Builder $query, string $activityType, string $filterValue): void
-    {
-        if ($filterValue === '' || ! isset(self::ACTIVITY_REFERENCE_PATTERNS[$activityType])) {
-            return;
-        }
-
-        $pattern = self::ACTIVITY_REFERENCE_PATTERNS[$activityType];
-
-        $query->whereExists(function ($exists) use ($pattern, $filterValue) {
-            $exists->selectRaw('1')
-                ->from('coins_ledger as cl')
-                ->whereColumn('cl.user_id', 'users.id')
-                ->groupBy('cl.user_id');
-
-            if (is_numeric($filterValue)) {
-                $exists->havingRaw("count(case when cl.reference ilike ? then 1 end) = ?", [$pattern, (int) $filterValue]);
-            } else {
-                $exists->havingRaw("CAST(count(case when cl.reference ilike ? then 1 end) AS TEXT) ILIKE ?", [$pattern, '%' . $filterValue . '%']);
-            }
-        });
-    }
 
     private function coinStatsByUserId(array $memberIds): array
     {
@@ -427,12 +398,6 @@ class CoinsController extends Controller
             'q' => trim((string) $request->query('q', $request->query('search', ''))),
             'search' => trim((string) $request->query('q', $request->query('search', ''))),
             'circle_id' => (string) $request->query('circle_id', 'all'),
-            'total_coins' => trim((string) $request->query('total_coins', '')),
-            'testimonial_count' => trim((string) $request->query('testimonial_count', '')),
-            'referral_count' => trim((string) $request->query('referral_count', '')),
-            'business_deal_count' => trim((string) $request->query('business_deal_count', '')),
-            'p2p_meeting_count' => trim((string) $request->query('p2p_meeting_count', '')),
-            'requirement_count' => trim((string) $request->query('requirement_count', '')),
             'per_page' => $perPage,
         ];
     }

@@ -54,20 +54,19 @@
                                 </select>
                             </div>
                         </th>
-                        <th><input type="text" name="total_coins" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Total Coins" value="{{ $filters['total_coins'] ?? '' }}"></th>
-                        <th><input type="text" name="testimonial_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Testimonials" value="{{ $filters['testimonial_count'] ?? '' }}"></th>
-                        <th><input type="text" name="referral_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Referrals" value="{{ $filters['referral_count'] ?? '' }}"></th>
-                        <th><input type="text" name="business_deal_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Business Deals" value="{{ $filters['business_deal_count'] ?? '' }}"></th>
-                        <th><input type="text" name="p2p_meeting_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="P2P Meetings" value="{{ $filters['p2p_meeting_count'] ?? '' }}"></th>
-                        <th>
-                            <input type="text" name="requirement_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Requirements" value="{{ $filters['requirement_count'] ?? '' }}">
-                        </th>
+                        <th class="text-muted">—</th>
+                        <th class="text-muted">—</th>
+                        <th class="text-muted">—</th>
+                        <th class="text-muted">—</th>
+                        <th class="text-muted">—</th>
+                        <th class="text-muted">—</th>
                         <th class="text-end">
                             <form id="coinsFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
                                 <button type="submit" class="btn btn-sm btn-primary">Apply</button>
                                 <a href="{{ route('admin.coins.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                                <a href="{{ route('admin.coins.export', request()->query()) }}" class="btn btn-sm btn-outline-primary">Export</a>
+                                <button type="button" id="coinsExportBtn" class="btn btn-sm btn-outline-primary">Export</button>
                             </form>
+                            <form id="coinsExportForm" method="GET" action="{{ route('admin.coins.export') }}" class="d-none"></form>
                         </th>
                     </tr>
                 </thead>
@@ -125,8 +124,8 @@
             document.addEventListener('DOMContentLoaded', function () {
                 const perPage = document.getElementById('perPage');
                 const form = document.getElementById('coinsFiltersForm');
-                const qInput = document.getElementById('coinsQ');
-                const circleSelect = document.getElementById('coinsCircle');
+                const exportForm = document.getElementById('coinsExportForm');
+                const exportBtn = document.getElementById('coinsExportBtn');
                 const selectAll = document.getElementById('coins-select-all');
                 const rowCheckboxes = document.querySelectorAll('.coins-row-checkbox');
 
@@ -159,11 +158,50 @@
 
                 rowCheckboxes.forEach(function (checkbox) {
                     checkbox.addEventListener('change', function () {
-                        if (!selectAll) return;
-                        const allChecked = Array.from(rowCheckboxes).every(function (row) { return row.checked; });
+                        if (!selectAll) {
+                            return;
+                        }
+
+                        const allChecked = Array.from(rowCheckboxes).every(function (row) {
+                            return row.checked;
+                        });
+
                         selectAll.checked = allChecked;
                     });
                 });
+
+                if (exportBtn && form && exportForm) {
+                    exportBtn.addEventListener('click', function () {
+                        exportForm.innerHTML = '';
+
+                        const fields = form.querySelectorAll('input[name], select[name]');
+                        fields.forEach(function (field) {
+                            if (field.name === '' || field.disabled || field.type === 'button' || field.type === 'submit') {
+                                return;
+                            }
+
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = field.name;
+                            input.value = field.value;
+                            exportForm.appendChild(input);
+                        });
+
+                        rowCheckboxes.forEach(function (checkbox) {
+                            if (!checkbox.checked) {
+                                return;
+                            }
+
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'selected_user_ids[]';
+                            input.value = checkbox.value;
+                            exportForm.appendChild(input);
+                        });
+
+                        exportForm.submit();
+                    });
+                }
             });
         </script>
     @endpush
