@@ -23,6 +23,7 @@
             <table class="table mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
+                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" id="coins-select-all"></th>
                         <th>Peer Name</th>
                         <th>Total Coins</th>
                         <th>Testimonials</th>
@@ -30,8 +31,10 @@
                         <th>Business Deals</th>
                         <th>P2P Meetings</th>
                         <th>Requirements</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                     <tr class="bg-light align-middle">
+                        <th></th>
                         <th>
                             <div class="d-flex flex-column gap-2">
                                 <input
@@ -51,11 +54,14 @@
                                 </select>
                             </div>
                         </th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
-                        <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
+                        <th><input type="text" name="total_coins" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Total Coins" value="{{ $filters['total_coins'] ?? '' }}"></th>
+                        <th><input type="text" name="testimonial_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Testimonials" value="{{ $filters['testimonial_count'] ?? '' }}"></th>
+                        <th><input type="text" name="referral_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Referrals" value="{{ $filters['referral_count'] ?? '' }}"></th>
+                        <th><input type="text" name="business_deal_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Business Deals" value="{{ $filters['business_deal_count'] ?? '' }}"></th>
+                        <th><input type="text" name="p2p_meeting_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="P2P Meetings" value="{{ $filters['p2p_meeting_count'] ?? '' }}"></th>
+                        <th>
+                            <input type="text" name="requirement_count" form="coinsFiltersForm" class="form-control form-control-sm" placeholder="Requirements" value="{{ $filters['requirement_count'] ?? '' }}">
+                        </th>
                         <th class="text-end">
                             <form id="coinsFiltersForm" method="GET" class="d-flex justify-content-end gap-2">
                                 <button type="submit" class="btn btn-sm btn-primary">Apply</button>
@@ -77,6 +83,7 @@
                             $requirementCount = (int) ($stats->requirement_count ?? 0);
                         @endphp
                         <tr>
+                            <td><input type="checkbox" class="form-check-input coins-row-checkbox" value="{{ $member->id }}"></td>
                             <td>
                                 @include('admin.shared.peer_card', ['user' => $member])
                             </td>
@@ -98,10 +105,11 @@
                             <td>
                                 <a href="{{ route('admin.coins.ledger.type', [$member, 'requirement']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
                             </td>
+                            <td class="text-end text-muted">—</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No members found.</td>
+                            <td colspan="9" class="text-center text-muted py-4">No members found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -119,6 +127,8 @@
                 const form = document.getElementById('coinsFiltersForm');
                 const qInput = document.getElementById('coinsQ');
                 const circleSelect = document.getElementById('coinsCircle');
+                const selectAll = document.getElementById('coins-select-all');
+                const rowCheckboxes = document.querySelectorAll('.coins-row-checkbox');
 
                 if (perPage && form) {
                     perPage.addEventListener('change', function () {
@@ -133,13 +143,27 @@
                     }
                 };
 
-                if (qInput) {
-                    qInput.addEventListener('keydown', submitOnEnter);
+                if (form) {
+                    form.querySelectorAll('input, select').forEach(function (field) {
+                        field.addEventListener('keydown', submitOnEnter);
+                    });
                 }
 
-                if (circleSelect) {
-                    circleSelect.addEventListener('keydown', submitOnEnter);
+                if (selectAll) {
+                    selectAll.addEventListener('change', function () {
+                        rowCheckboxes.forEach(function (checkbox) {
+                            checkbox.checked = selectAll.checked;
+                        });
+                    });
                 }
+
+                rowCheckboxes.forEach(function (checkbox) {
+                    checkbox.addEventListener('change', function () {
+                        if (!selectAll) return;
+                        const allChecked = Array.from(rowCheckboxes).every(function (row) { return row.checked; });
+                        selectAll.checked = allChecked;
+                    });
+                });
             });
         </script>
     @endpush
