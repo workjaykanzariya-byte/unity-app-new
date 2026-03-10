@@ -59,12 +59,7 @@ class CoinsController extends Controller
 
         $filename = 'coins_index_' . now()->format('Ymd_His') . '.csv';
 
-        $selectedUserIds = collect((array) $request->input('selected_user_ids', []))
-            ->map(fn ($id) => trim((string) $id))
-            ->filter(fn ($id) => $id !== '')
-            ->unique()
-            ->values()
-            ->all();
+        $selectedUserIds = array_values(array_filter(array_unique((array) $request->input('selected_user_ids', []))));
 
         if ($selectedUserIds !== []) {
             $query->whereIn('users.id', $selectedUserIds);

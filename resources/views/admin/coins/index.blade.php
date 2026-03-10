@@ -100,7 +100,6 @@
                         <th class="text-center text-muted small">—</th>
                         <th class="text-center text-muted small">—</th>
                         <th class="text-end">
-                            <div class="text-muted small mb-2 text-center">—</div>
                             <form id="coinsFiltersForm" method="GET" class="coins-filter-actions justify-content-end">
                                 <button type="submit" class="btn btn-sm btn-primary">Apply</button>
                                 <a href="{{ route('admin.coins.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
