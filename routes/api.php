@@ -122,6 +122,13 @@ Route::prefix('v1')->group(function () {
         // Collaborations
         Route::post('/collaborations', [CollaborationPostController::class, 'store']);
 
+        // Collaborations
+        Route::post('/collaborations', [CollaborationPostController::class, 'store']);
+
+
+        // Collaborations
+        Route::post('/collaborations', [CollaborationPostController::class, 'store']);
+
         // Circles
         Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
