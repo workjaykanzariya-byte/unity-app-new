@@ -21,20 +21,19 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table mb-0 align-middle table-hover" style="table-layout: fixed; width: 100%;">
+            <table class="table mb-0 align-middle table-hover" style="width: 100%;">
                 <thead class="table-light">
                     <tr>
                         <th class="text-center" style="width: 44px;">
                             <input type="checkbox" class="form-check-input" id="coins-select-all">
                         </th>
                         <th style="width: 28%;">Peer Name</th>
-                        <th class="text-center" style="width: 10%;">Total Coins</th>
-                        <th class="text-center" style="width: 10%;">Testimonials</th>
-                        <th class="text-center" style="width: 10%;">Referrals</th>
-                        <th class="text-center" style="width: 10%;">Business Deals</th>
-                        <th class="text-center" style="width: 10%;">P2P Meetings</th>
-                        <th class="text-center" style="width: 10%;">Requirements</th>
-                        <th class="text-end" style="width: 220px;">Actions</th>
+                        <th class="text-center" style="width: 11%;"><span class="d-inline-block">Total<br>Coins</span></th>
+                        <th class="text-center text-nowrap" style="width: 11%;">Testimonials</th>
+                        <th class="text-center text-nowrap" style="width: 10%;">Referrals</th>
+                        <th class="text-center" style="width: 11%;"><span class="d-inline-block">Business<br>Deals</span></th>
+                        <th class="text-center" style="width: 11%;"><span class="d-inline-block">P2P<br>Meetings</span></th>
+                        <th class="text-center text-nowrap" style="width: 11%;">Requirements</th>
                     </tr>
 
                     <tr class="align-middle">
@@ -63,8 +62,8 @@
                         <th class="text-center text-muted small">—</th>
                         <th class="text-center text-muted small">—</th>
                         <th class="text-center text-muted small">—</th>
-                        <th class="text-center text-muted small">—</th>
                         <th class="text-end">
+                            <div class="text-muted small mb-2 text-center">—</div>
                             <form id="coinsFiltersForm" method="GET" class="d-inline-flex flex-wrap justify-content-end gap-2">
                                 <button type="submit" class="btn btn-sm btn-primary">Apply</button>
                                 <a href="{{ route('admin.coins.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
@@ -111,11 +110,10 @@
                             <td class="text-center">
                                 <a href="{{ route('admin.coins.ledger.type', [$member, 'requirement']) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">{{ $requirementCount }}</a>
                             </td>
-                            <td class="text-end text-muted">—</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">No members found.</td>
+                            <td colspan="8" class="text-center text-muted py-4">No members found.</td>
                         </tr>
                     @endforelse
                 </tbody>
