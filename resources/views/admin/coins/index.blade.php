@@ -123,7 +123,7 @@
                         @endphp
                         <tr>
                             <td class="text-center">
-                                <input type="checkbox" name="selected_user_ids[]" class="form-check-input coins-row-checkbox" value="{{ $member->id }}">
+                                <input type="checkbox" class="coins-row-checkbox" value="{{ $member->id }}">
                             </td>
                             <td>
                                 @include('admin.shared.peer_card', ['user' => $member])
@@ -213,33 +213,34 @@
                     });
                 });
 
-                if (exportBtn && form && exportForm) {
-                    exportBtn.addEventListener('click', function () {
+                const appendHiddenInput = function (targetForm, name, value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    targetForm.appendChild(input);
+                };
+
+                if (exportBtn && exportForm) {
+                    exportBtn.addEventListener('click', function (event) {
+                        event.preventDefault();
+
                         exportForm.innerHTML = '';
 
-                        const fields = form.querySelectorAll('input[name], select[name]');
-                        fields.forEach(function (field) {
-                            if (field.name === '' || field.disabled || field.type === 'button' || field.type === 'submit') {
-                                return;
-                            }
+                        const searchValue = document.getElementById('coinsQ')?.value ?? '';
+                        const circleValue = document.getElementById('coinsCircle')?.value ?? 'all';
+                        const perPageValue = document.getElementById('perPage')?.value ?? '20';
 
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = field.name;
-                            input.value = field.value;
-                            exportForm.appendChild(input);
-                        });
+                        appendHiddenInput(exportForm, 'search', searchValue);
+                        appendHiddenInput(exportForm, 'circle_id', circleValue);
+                        appendHiddenInput(exportForm, 'per_page', perPageValue);
 
                         rowCheckboxes.forEach(function (checkbox) {
                             if (!checkbox.checked) {
                                 return;
                             }
 
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'selected_user_ids[]';
-                            input.value = checkbox.value;
-                            exportForm.appendChild(input);
+                            appendHiddenInput(exportForm, 'selected_user_ids[]', checkbox.value);
                         });
 
                         exportForm.submit();
