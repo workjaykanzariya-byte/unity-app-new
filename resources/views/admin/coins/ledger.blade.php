@@ -22,7 +22,7 @@
 
     <div class="card shadow-sm">
         <div class="border-bottom p-3">
-            <form method="GET" class="d-flex flex-wrap gap-2 align-items-end" id="ledgerFiltersForm">
+            <form method="GET" class="d-flex flex-wrap gap-2 align-items-end" id="ledgerFilterForm">
                 @if ($activeType)
                     <input type="hidden" name="active_type" value="{{ $activeType }}">
                 @endif
@@ -44,7 +44,7 @@
                     </select>
                 </div>
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                    <button type="submit" class="btn btn-primary">Apply</button>
                     <a href="{{ $resetUrl }}" class="btn btn-sm btn-outline-secondary">Reset</a>
                     <a href="{{ route('admin.coins.ledger.export', array_merge(['member' => $member->id], request()->query(), ['type' => $activeType])) }}" class="btn btn-sm btn-outline-primary">Export</a>
                 </div>
@@ -68,7 +68,7 @@
                             <input
                                 type="date"
                                 name="date"
-                                form="ledgerFiltersForm"
+                                form="ledgerFilterForm"
                                 value="{{ $filters['date'] ?? '' }}"
                                 class="form-control form-control-sm"
                                 placeholder="Date"
@@ -78,7 +78,7 @@
                             <input
                                 type="text"
                                 name="coins"
-                                form="ledgerFiltersForm"
+                                form="ledgerFilterForm"
                                 value="{{ $filters['coins'] ?? '' }}"
                                 class="form-control form-control-sm"
                                 placeholder="Coins"
@@ -89,7 +89,7 @@
                             <input
                                 type="text"
                                 name="why"
-                                form="ledgerFiltersForm"
+                                form="ledgerFilterForm"
                                 value="{{ $filters['why'] ?? '' }}"
                                 class="form-control form-control-sm"
                                 placeholder="Reason"
@@ -99,7 +99,7 @@
                             <input
                                 type="text"
                                 name="created_by"
-                                form="ledgerFiltersForm"
+                                form="ledgerFilterForm"
                                 value="{{ $filters['created_by'] ?? '' }}"
                                 class="form-control form-control-sm"
                                 placeholder="Peer/Company/City/Circle"
@@ -139,3 +139,27 @@
         {{ $items->links() }}
     </div>
 @endsection
+
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('ledgerFilterForm');
+
+            if (!form) {
+                return;
+            }
+
+            const inputs = form.querySelectorAll('input, select');
+
+            inputs.forEach(function (input) {
+                input.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        form.submit();
+                    }
+                });
+            });
+        });
+    </script>
+@endpush
