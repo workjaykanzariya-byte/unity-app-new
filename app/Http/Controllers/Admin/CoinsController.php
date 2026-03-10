@@ -42,13 +42,8 @@ class CoinsController extends Controller
         return view('admin.coins.index', [
             'members' => $members,
             'filters' => $filters,
-            'membershipStatuses' => User::query()->whereNotNull('membership_status')->distinct()->pluck('membership_status')->sort()->values(),
             'circles' => Circle::query()->orderBy('name')->get(['id', 'name']),
             'activityStats' => $activityStats,
-            'activityFilterOptions' => collect(self::ACTIVITY_REFERENCE_PATTERNS)
-                ->keys()
-                ->mapWithKeys(fn (string $type) => [$type => CoinLedgerFormatter::why($type)])
-                ->all(),
         ]);
     }
 
@@ -243,7 +238,6 @@ class CoinsController extends Controller
                 'users.first_name',
                 'users.last_name',
                 'users.display_name',
-                'users.membership_status',
                 'users.company_name',
                 'users.city',
             ])
@@ -287,20 +281,6 @@ class CoinsController extends Controller
                 $circleMembersQuery->where('circle_id', $filters['circle_id'])
                     ->where('status', 'approved')
                     ->whereNull('deleted_at');
-            });
-        }
-
-        if ($filters['membership_status'] && $filters['membership_status'] !== 'all') {
-            $query->where('users.membership_status', $filters['membership_status']);
-        }
-
-        if ($filters['activity_type'] !== '' && isset(self::ACTIVITY_REFERENCE_PATTERNS[$filters['activity_type']])) {
-            $pattern = self::ACTIVITY_REFERENCE_PATTERNS[$filters['activity_type']];
-            $query->whereExists(function ($exists) use ($pattern) {
-                $exists->selectRaw('1')
-                    ->from('coins_ledger as cl')
-                    ->whereColumn('cl.user_id', 'users.id')
-                    ->where('cl.reference', 'ILIKE', $pattern);
             });
         }
 
@@ -349,49 +329,9 @@ class CoinsController extends Controller
             })
             ->when($filters['from'], fn (Builder $q) => $q->whereDate('created_at', '>=', $filters['from']))
             ->when($filters['to'], fn (Builder $q) => $q->whereDate('created_at', '<=', $filters['to']))
-            ->when($filters['coins'] !== '', function (Builder $q) use ($filters) {
-                if (is_numeric($filters['coins'])) {
-                    $q->where('amount', (int) $filters['coins']);
-                } else {
-                    $q->whereRaw('CAST(amount AS TEXT) ILIKE ?', ['%' . $filters['coins'] . '%']);
-                }
-            })
-            ->when($filters['created_by'] !== '', function (Builder $q) use ($filters) {
-                $like = '%' . $filters['created_by'] . '%';
-
-                $q->whereHas('createdBy', function (Builder $createdByQuery) use ($like) {
-                    $createdByQuery->where(function (Builder $nested) use ($like) {
-                        $nested->where('display_name', 'ILIKE', $like)
-                            ->orWhere('first_name', 'ILIKE', $like)
-                            ->orWhere('last_name', 'ILIKE', $like)
-                            ->orWhere('company_name', 'ILIKE', $like)
-                            ->orWhere('business_name', 'ILIKE', $like)
-                            ->orWhere('city', 'ILIKE', $like)
-                            ->orWhereHas('circleMembers.circle', fn (Builder $circleQuery) => $circleQuery->where('name', 'ILIKE', $like));
-                    });
-                });
-            })
             ->orderByDesc('created_at');
 
-        if ($filters['why'] !== '') {
-            $this->applyWhyFilter($query, $filters['why']);
-        }
-
         return $query;
-    }
-
-    private function applyWhyFilter(Builder $query, string $whyFilter): void
-    {
-        $value = strtolower(trim($whyFilter));
-        $query->where(function (Builder $nested) use ($value) {
-            $nested->whereRaw('LOWER(reference) LIKE ?', ['%' . $value . '%']);
-
-            foreach (self::ACTIVITY_REFERENCE_PATTERNS as $type => $pattern) {
-                if (str_contains(strtolower(CoinLedgerFormatter::why($type)), $value) || str_contains($type, $value)) {
-                    $nested->orWhere('reference', 'ILIKE', $pattern);
-                }
-            }
-        });
     }
 
     private function ledgerViewData(User $member, LengthAwarePaginator $items, array $filters): array
@@ -413,8 +353,6 @@ class CoinsController extends Controller
             'q' => trim((string) $request->query('q', $request->query('search', ''))),
             'search' => trim((string) $request->query('q', $request->query('search', ''))),
             'circle_id' => (string) $request->query('circle_id', 'all'),
-            'membership_status' => $request->query('membership_status'),
-            'activity_type' => trim((string) $request->query('activity_type', '')),
             'per_page' => $perPage,
         ];
     }
@@ -424,9 +362,6 @@ class CoinsController extends Controller
         return [
             'from' => trim((string) $request->query('from', '')),
             'to' => trim((string) $request->query('to', '')),
-            'coins' => trim((string) $request->query('coins', '')),
-            'why' => trim((string) $request->query('why', '')),
-            'created_by' => trim((string) $request->query('created_by', '')),
             'active_type' => $request->query('active_type'),
         ];
     }

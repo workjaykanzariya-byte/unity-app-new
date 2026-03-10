@@ -34,18 +34,6 @@
                     <label class="form-label small text-muted mb-1">To</label>
                     <input type="date" name="to" value="{{ $filters['to'] ?? '' }}" class="form-control form-control-sm">
                 </div>
-                <div>
-                    <label class="form-label small text-muted mb-1">Coins</label>
-                    <input type="text" name="coins" value="{{ $filters['coins'] ?? '' }}" class="form-control form-control-sm" placeholder="Coins">
-                </div>
-                <div>
-                    <label class="form-label small text-muted mb-1">Why</label>
-                    <input type="text" name="why" value="{{ $filters['why'] ?? '' }}" class="form-control form-control-sm" placeholder="Reason">
-                </div>
-                <div>
-                    <label class="form-label small text-muted mb-1">Created By</label>
-                    <input type="text" name="created_by" value="{{ $filters['created_by'] ?? '' }}" class="form-control form-control-sm" placeholder="Peer/Company/City/Circle">
-                </div>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-sm btn-primary">Apply</button>
                     <a href="{{ $resetUrl }}" class="btn btn-sm btn-outline-secondary">Reset</a>

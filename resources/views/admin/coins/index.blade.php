@@ -49,18 +49,6 @@
                                         <option value="{{ $circle->id }}" @selected(($filters['circle_id'] ?? 'all') == $circle->id)>{{ $circle->name }}</option>
                                     @endforeach
                                 </select>
-                                <select name="membership_status" form="coinsFiltersForm" class="form-select form-select-sm">
-                                    <option value="">Any Membership</option>
-                                    @foreach ($membershipStatuses as $status)
-                                        <option value="{{ $status }}" @selected($filters['membership_status'] === $status)>{{ ucfirst($status) }}</option>
-                                    @endforeach
-                                </select>
-                                <select name="activity_type" form="coinsFiltersForm" class="form-select form-select-sm">
-                                    <option value="">All Activities</option>
-                                    @foreach ($activityFilterOptions as $activityType => $activityLabel)
-                                        <option value="{{ $activityType }}" @selected(($filters['activity_type'] ?? '') === $activityType)>{{ $activityLabel }}</option>
-                                    @endforeach
-                                </select>
                             </div>
                         </th>
                         <th><input type="text" class="form-control form-control-sm" placeholder="—" disabled></th>
