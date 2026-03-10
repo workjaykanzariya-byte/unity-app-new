@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\V1\Connections\MyConnectionsController;
+use App\Http\Controllers\Api\V1\P2PMeetingRequestController;
 use App\Http\Controllers\Api\V1\PostReportController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\V1\CoinsController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\Api\V1\Billing\ZohoBillingWebhookController;
 use App\Http\Controllers\Api\V1\Zoho\ZohoDebugController;
 use App\Http\Controllers\Api\V1\Zoho\ZohoPlansController;
 use App\Http\Controllers\Api\V1\Zoho\ZohoWebhookController;
+use App\Http\Controllers\Api\V1\FollowController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -104,9 +106,22 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/connections', [MemberController::class, 'myConnections']);
         Route::get('/me/connection-requests', [MemberController::class, 'myConnectionRequests']);
 
+        // Follow system
+        Route::post('users/{user}/follow', [FollowController::class, 'requestFollow'])->whereUuid('user');
+        Route::delete('users/{user}/unfollow', [FollowController::class, 'unfollow'])->whereUuid('user');
+        Route::get('users/{user}/follow-status', [FollowController::class, 'status'])->whereUuid('user');
+
+        Route::get('me/follow-requests', [FollowController::class, 'incomingRequests']);
+        Route::get('me/following', [FollowController::class, 'myFollowing']);
+        Route::get('me/followers', [FollowController::class, 'myFollowers']);
+
+        Route::post('follows/{follow}/accept', [FollowController::class, 'accept'])->whereUuid('follow');
+        Route::post('follows/{follow}/reject', [FollowController::class, 'reject'])->whereUuid('follow');
+        Route::delete('follows/{follow}/cancel', [FollowController::class, 'cancel'])->whereUuid('follow');
 
         // Collaborations
         Route::post('/collaborations', [CollaborationPostController::class, 'store']);
+
         // Circles
         Route::get('/circles', [CircleController::class, 'index']);
         Route::get('/circles/{id}', [CircleController::class, 'show']);
@@ -118,6 +133,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/circles/{circle}/members', [V1CircleMemberController::class, 'index']);
         Route::put('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
         Route::patch('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
+
+        // Circle Chat
+        Route::get('/circles/{circle}/chat/messages', [CircleChatController::class, 'index']);
+        Route::post('/circles/{circle}/chat/messages', [CircleChatController::class, 'store']);
+        Route::post('/circles/{circle}/chat/messages/read', [CircleChatController::class, 'markRead']);
+        Route::get('/circles/{circle}/chat/messages/{message}/reads', [CircleChatController::class, 'readDetails']);
+        Route::post('/circles/{circle}/chat/messages/{message}/delete-for-me', [CircleChatController::class, 'deleteForMe']);
+        Route::delete('/circles/{circle}/chat/messages/{message}', [CircleChatController::class, 'destroy']);
 
         // Posts & feed
         Route::post('/posts/{post}/report', [PostReportController::class, 'store']);
@@ -150,7 +173,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/activities/my/coins-ledger', [ActivityController::class, 'myCoinsLedger']);
         Route::get('/me/coins', [CoinsController::class, 'balance']);
         Route::get('/me/coins/ledger', [CoinsController::class, 'ledger']);
-        // If routes are cached, run `php artisan route:clear` and `php artisan optimize:clear` to load this route.
         Route::get('/coins/history', [CoinHistoryController::class, 'index']);
 
         Route::prefix('activities')->group(function () {
@@ -180,6 +202,15 @@ Route::prefix('v1')->group(function () {
             Route::get('testimonials/{id}', [TestimonialHistoryController::class, 'show']);
         });
 
+        // P2P Meeting Requests
+        Route::post('/p2p-meeting-requests', [P2PMeetingRequestController::class, 'store']);
+        Route::get('/p2p-meeting-requests/inbox', [P2PMeetingRequestController::class, 'inbox']);
+        Route::get('/p2p-meeting-requests/sent', [P2PMeetingRequestController::class, 'sent']);
+        Route::get('/p2p-meeting-requests/{id}', [P2PMeetingRequestController::class, 'show']);
+        Route::post('/p2p-meeting-requests/{id}/accept', [P2PMeetingRequestController::class, 'accept']);
+        Route::post('/p2p-meeting-requests/{id}/reject', [P2PMeetingRequestController::class, 'reject']);
+        Route::post('/p2p-meeting-requests/{id}/cancel', [P2PMeetingRequestController::class, 'cancel']);
+
         // Admin Activities
         Route::get('/admin/activities', [AdminActivityController::class, 'index']);
         Route::get('/admin/activities/{activity}', [AdminActivityController::class, 'show']);
@@ -206,14 +237,6 @@ Route::prefix('v1')->group(function () {
         // Support - admin-facing
         Route::get('/support/admin', [SupportController::class, 'adminIndex']);
         Route::patch('/support/admin/{id}', [SupportController::class, 'adminUpdate']);
-
-
-        Route::get('/circles/{circle}/chat/messages', [CircleChatController::class, 'index']);
-        Route::post('/circles/{circle}/chat/messages', [CircleChatController::class, 'store']);
-        Route::post('/circles/{circle}/chat/messages/read', [CircleChatController::class, 'markRead']);
-        Route::get('/circles/{circle}/chat/messages/{message}/reads', [CircleChatController::class, 'readDetails']);
-        Route::post('/circles/{circle}/chat/messages/{message}/delete-for-me', [CircleChatController::class, 'deleteForMe']);
-        Route::delete('/circles/{circle}/chat/messages/{message}', [CircleChatController::class, 'destroy']);
 
         // Chats & Messages
         Route::get('/chats', [ChatController::class, 'index']);
@@ -289,7 +312,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/forms/register-visitor', [VisitorRegistrationController::class, 'store']);
         Route::get('/forms/register-visitor/my', [VisitorRegistrationController::class, 'myIndex']);
         Route::get('/forms/visitor-registrations/my', [VisitorRegistrationController::class, 'myIndex']);
-
 
         Route::get('/zoho/test-token', [ZohoDebugController::class, 'testToken']);
         Route::get('/zoho/org', [ZohoDebugController::class, 'org']);
