@@ -176,12 +176,18 @@
                     }
                 };
 
-                if (form) {
-                    form.querySelectorAll('input, select').forEach(function (field) {
-                        field.addEventListener('keydown', submitOnEnter);
-                    });
-                }
+                const enterSubmitFields = [
+                    document.getElementById('coinsQ'),
+                    document.getElementById('coinsCircle'),
+                ];
 
+                enterSubmitFields.forEach(function (field) {
+                    if (!field) {
+                        return;
+                    }
+
+                    field.addEventListener('keydown', submitOnEnter);
+                });
 
                 const appendHiddenInput = function (targetForm, name, value) {
                     if (value === null || value === undefined || value === '') {
