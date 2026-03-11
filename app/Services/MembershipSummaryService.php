@@ -36,10 +36,17 @@ class MembershipSummaryService
         ]);
 
         return [
+            'user_id' => (string) $user->id,
             'user_name' => $this->resolveUserName($user),
+            'email' => $user->email,
+            'phone' => $this->firstFilledValue($user, ['phone', 'mobile']),
+            'designation' => $user->designation,
+            'profile_photo' => $this->resolveProfilePhoto($user),
             'company_name' => $user->company_name,
+            'business_type' => $this->firstFilledValue($user, ['business_type', 'industry', 'business_category']),
             'city' => $this->resolveCityName($user),
             'circle' => $this->resolvePrimaryCircleName($user),
+            'status' => $this->resolveAccountStatus($user),
             'membership_status' => $this->firstFilledValue($user, ['membership_status', 'membership_type', 'membership']),
             'membership_expiry' => $this->formatDate($this->resolveDateByPriority($user, [
                 'membership_expires_at',
@@ -54,6 +61,32 @@ class MembershipSummaryService
             'peer_payment_details' => $this->getPeerPayments($user),
             'circle_wise_details' => $this->getCircleWiseDetails($user),
         ];
+    }
+
+    private function resolveProfilePhoto(User $user): ?string
+    {
+        if (! empty($user->profile_photo_file_id)) {
+            return url('/api/v1/files/' . $user->profile_photo_file_id);
+        }
+
+        $photoUrl = trim((string) ($this->firstFilledValue($user, ['profile_photo_url', 'profile_photo']) ?? ''));
+
+        return $photoUrl !== '' ? $photoUrl : null;
+    }
+
+    private function resolveAccountStatus(User $user): ?string
+    {
+        $status = $this->firstFilledValue($user, ['status', 'account_status']);
+
+        if (is_string($status) && trim($status) !== '') {
+            return trim($status);
+        }
+
+        if (Schema::hasColumn('users', 'is_active')) {
+            return (bool) $user->getAttribute('is_active') ? 'active' : 'inactive';
+        }
+
+        return null;
     }
 
     private function resolveUserName(User $user): ?string
