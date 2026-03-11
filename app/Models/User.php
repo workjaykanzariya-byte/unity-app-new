@@ -230,7 +230,6 @@ class User extends Authenticatable
         }
 
         $fullName = trim(trim((string) ($this->first_name ?? '')) . ' ' . trim((string) ($this->last_name ?? '')));
-        $fullName = trim(trim((string) ($this->first_name ?? '')).' '.trim((string) ($this->last_name ?? '')));
 
         return $fullName !== '' ? $fullName : 'Unknown';
     }
