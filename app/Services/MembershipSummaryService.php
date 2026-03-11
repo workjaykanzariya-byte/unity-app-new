@@ -35,8 +35,13 @@ class MembershipSummaryService
             'membership_expiry',
         ]);
 
+        $firstName = $user->first_name;
+        $lastName = $user->last_name;
+
         return [
             'user_id' => (string) $user->id,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'user_name' => $this->resolveUserName($user),
             'email' => $user->email,
             'phone' => $this->firstFilledValue($user, ['phone', 'mobile']),
