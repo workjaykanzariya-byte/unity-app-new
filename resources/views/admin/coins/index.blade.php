@@ -61,9 +61,6 @@
             <table class="table mb-0 align-middle table-hover coins-table">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center" style="width: 50px; min-width: 50px;">
-                            <input type="checkbox" class="form-check-input" id="coins-select-all">
-                        </th>
                         <th style="width: 300px; min-width: 300px;">Peer Name</th>
                         <th class="text-center" style="width: 120px; min-width: 120px;"><span class="d-inline-block">Total<br>Coins</span></th>
                         <th class="text-center text-nowrap" style="width: 120px; min-width: 120px;">Testimonials</th>
@@ -74,7 +71,6 @@
                     </tr>
 
                     <tr class="align-middle">
-                        <th></th>
                         <th>
                             <div class="d-flex flex-column gap-2">
                                 <input
@@ -122,9 +118,6 @@
                             $requirementCount = (int) ($stats->requirement_count ?? 0);
                         @endphp
                         <tr>
-                            <td class="text-center">
-                                <input type="checkbox" class="coins-row-checkbox" value="{{ $member->id }}">
-                            </td>
                             <td>
                                 @include('admin.shared.peer_card', ['user' => $member])
                             </td>
@@ -149,7 +142,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No members found.</td>
+                            <td colspan="7" class="text-center text-muted py-4">No members found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -169,8 +162,6 @@
                 const form = document.getElementById('coinsFiltersForm');
                 const exportForm = document.getElementById('coinsExportForm');
                 const exportBtn = document.getElementById('coinsExportBtn');
-                const selectAll = document.getElementById('coins-select-all');
-                const rowCheckboxes = document.querySelectorAll('.coins-row-checkbox');
 
                 if (perPage && form) {
                     perPage.addEventListener('change', function () {
@@ -191,27 +182,6 @@
                     });
                 }
 
-                if (selectAll) {
-                    selectAll.addEventListener('change', function () {
-                        rowCheckboxes.forEach(function (checkbox) {
-                            checkbox.checked = selectAll.checked;
-                        });
-                    });
-                }
-
-                rowCheckboxes.forEach(function (checkbox) {
-                    checkbox.addEventListener('change', function () {
-                        if (!selectAll) {
-                            return;
-                        }
-
-                        const allChecked = Array.from(rowCheckboxes).every(function (row) {
-                            return row.checked;
-                        });
-
-                        selectAll.checked = allChecked;
-                    });
-                });
 
                 const appendHiddenInput = function (targetForm, name, value) {
                     if (value === null || value === undefined || value === '') {
@@ -238,14 +208,6 @@
                         appendHiddenInput(exportForm, 'q', searchValue);
                         appendHiddenInput(exportForm, 'circle_id', circleValue);
                         appendHiddenInput(exportForm, 'per_page', perPageValue);
-
-                        rowCheckboxes.forEach(function (checkbox) {
-                            if (!checkbox.checked) {
-                                return;
-                            }
-
-                            appendHiddenInput(exportForm, 'selected_user_ids[]', checkbox.value);
-                        });
 
                         exportForm.submit();
                     });

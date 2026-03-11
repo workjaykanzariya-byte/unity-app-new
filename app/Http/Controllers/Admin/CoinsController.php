@@ -59,12 +59,6 @@ class CoinsController extends Controller
 
         $filename = 'coins_index_' . now()->format('Ymd_His') . '.csv';
 
-        $selectedUserIds = array_values(array_filter(array_unique((array) $request->input('selected_user_ids', []))));
-
-        if ($selectedUserIds !== []) {
-            $query->whereIn('users.id', $selectedUserIds);
-        }
-
         return response()->streamDownload(function () use ($query): void {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Peer Name', 'Company', 'City', 'Circle', 'Total Coins', 'Testimonials', 'Referrals', 'Business Deals', 'P2P Meetings', 'Requirements']);
@@ -93,7 +87,7 @@ class CoinsController extends Controller
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Cache-Control' => 'no-store, no-cache',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
         ]);
     }
 
