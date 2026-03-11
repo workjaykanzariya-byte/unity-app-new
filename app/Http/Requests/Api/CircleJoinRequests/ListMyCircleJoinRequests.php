@@ -21,6 +21,7 @@ class ListMyCircleJoinRequests extends FormRequest
                 CircleJoinRequest::STATUS_PENDING_ID_APPROVAL,
                 CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE,
                 CircleJoinRequest::STATUS_CIRCLE_MEMBER,
+                CircleJoinRequest::STATUS_PAID,
                 CircleJoinRequest::STATUS_REJECTED_BY_CD,
                 CircleJoinRequest::STATUS_REJECTED_BY_ID,
                 CircleJoinRequest::STATUS_CANCELLED,

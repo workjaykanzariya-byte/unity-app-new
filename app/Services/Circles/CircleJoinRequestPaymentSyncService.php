@@ -2,7 +2,6 @@
 
 namespace App\Services\Circles;
 
-use App\Models\Circle;
 use App\Models\CircleJoinRequest;
 use App\Models\CircleSubscription;
 use App\Models\User;
@@ -11,40 +10,50 @@ use Throwable;
 
 class CircleJoinRequestPaymentSyncService
 {
-    public function __construct(private readonly CircleJoinRequestService $circleJoinRequestService)
+    public function __construct(private readonly CircleJoinRequestNotificationService $notificationService)
     {
     }
 
-    public function syncSuccessfulPayment(User $user, Circle $circle, array $context = []): ?CircleJoinRequest
+    public function markRequestPaidFromUserCircle(User $user): void
     {
-        $pendingJoinRequest = CircleJoinRequest::query()
+        $activeCircleId = (string) ($user->active_circle_id ?? '');
+
+        if ($activeCircleId === '') {
+            return;
+        }
+
+        $joinRequest = CircleJoinRequest::query()
             ->where('user_id', $user->id)
-            ->where('circle_id', $circle->id)
+            ->where('circle_id', $activeCircleId)
             ->where('status', CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE)
             ->latest('created_at')
             ->first();
 
-        if (! $pendingJoinRequest) {
-            Log::info('circle payment succeeded without pending join request', [
+        if (! $joinRequest) {
+            Log::info('No pending circle join request found for successful payment sync', [
                 'user_id' => $user->id,
-                'circle_id' => $circle->id,
-                'context' => $context,
+                'active_circle_id' => $activeCircleId,
             ]);
 
-            $this->updateUserCircleMembershipTier($user);
-
-            return null;
+            return;
         }
 
-        $updated = $this->circleJoinRequestService->markPaidAndConvertToMember($pendingJoinRequest, $context);
+        $joinRequest->forceFill([
+            'status' => CircleJoinRequest::STATUS_PAID,
+            'fee_marked_at' => $joinRequest->fee_marked_at ?: now(),
+            'fee_paid_at' => $joinRequest->fee_paid_at ?: now(),
+            'updated_at' => now(),
+        ])->save();
 
-        if (! $updated->fee_marked_at) {
-            $updated->forceFill(['fee_marked_at' => now()])->save();
+        try {
+            $this->notificationService->sendCircleMemberConfirmedToUser($joinRequest->fresh(['user', 'circle']));
+        } catch (Throwable $exception) {
+            Log::warning('Circle join request paid notification failed after payment sync', [
+                'circle_join_request_id' => $joinRequest->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
         }
-
-        $this->updateUserCircleMembershipTier($user);
-
-        return $updated->fresh(['circle', 'user']);
     }
 
     public function updateUserCircleMembershipTier(User $user): void

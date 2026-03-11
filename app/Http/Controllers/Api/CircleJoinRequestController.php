@@ -83,7 +83,7 @@ class CircleJoinRequestController extends BaseApiController
     private function transformJoinRequest(CircleJoinRequest $request): array
     {
         $status = (string) $request->status;
-        $isPaid = $request->fee_paid_at !== null || $status === CircleJoinRequest::STATUS_CIRCLE_MEMBER;
+        $isPaid = in_array($status, [CircleJoinRequest::STATUS_PAID, CircleJoinRequest::STATUS_CIRCLE_MEMBER], true) || $request->fee_paid_at !== null;
 
         return array_merge($request->toArray(), [
             'status_label' => $isPaid ? 'Paid' : $this->statusLabel($status),
@@ -99,6 +99,7 @@ class CircleJoinRequestController extends BaseApiController
             CircleJoinRequest::STATUS_PENDING_ID_APPROVAL => 'Pending for ID Approval',
             CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE => 'Pending for Circle Fee',
             CircleJoinRequest::STATUS_CIRCLE_MEMBER => 'Circle Member',
+            CircleJoinRequest::STATUS_PAID => 'Paid',
             CircleJoinRequest::STATUS_REJECTED_BY_CD => 'Rejected by CD',
             CircleJoinRequest::STATUS_REJECTED_BY_ID => 'Rejected by ID',
             CircleJoinRequest::STATUS_CANCELLED => 'Cancelled',

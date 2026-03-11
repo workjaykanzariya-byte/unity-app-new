@@ -8,6 +8,7 @@
         'pending_id_approval' => 'Pending for ID Approval',
         'pending_circle_fee' => 'Pending for Circle Fee',
         'circle_member' => 'Paid',
+        'paid' => 'Paid',
         'rejected_by_cd' => 'Rejected by CD',
         'rejected_by_id' => 'Rejected by ID',
         'cancelled' => 'Cancelled',

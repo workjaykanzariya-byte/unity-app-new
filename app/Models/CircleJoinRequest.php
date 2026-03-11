@@ -17,6 +17,7 @@ class CircleJoinRequest extends Model
     public const STATUS_PENDING_ID_APPROVAL = 'pending_id_approval';
     public const STATUS_PENDING_CIRCLE_FEE = 'pending_circle_fee';
     public const STATUS_CIRCLE_MEMBER = 'circle_member';
+    public const STATUS_PAID = 'paid';
     public const STATUS_REJECTED_BY_CD = 'rejected_by_cd';
     public const STATUS_REJECTED_BY_ID = 'rejected_by_id';
     public const STATUS_CANCELLED = 'cancelled';
@@ -26,6 +27,7 @@ class CircleJoinRequest extends Model
         self::STATUS_PENDING_ID_APPROVAL,
         self::STATUS_PENDING_CIRCLE_FEE,
         self::STATUS_CIRCLE_MEMBER,
+        self::STATUS_PAID,
     ];
 
     protected $keyType = 'string';
