@@ -63,7 +63,7 @@ class CoinsController extends Controller
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Peer Name', 'Company', 'City', 'Circle', 'Total Coins', 'Testimonials', 'Referrals', 'Business Deals', 'P2P Meetings', 'Requirements']);
 
-            $query->chunkById(500, function ($chunk) use ($handle): void {
+            $query->chunk(500, function ($chunk) use ($handle): void {
                 $stats = $this->coinStatsByUserId($chunk->pluck('id')->all());
 
                 foreach ($chunk as $member) {
@@ -82,7 +82,7 @@ class CoinsController extends Controller
                         (int) ($item->requirement_count ?? 0),
                     ]);
                 }
-            }, 'users.id');
+            });
 
             fclose($handle);
         }, $filename, [
