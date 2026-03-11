@@ -206,6 +206,7 @@ class CircleJoinRequestService
 
             $locked->forceFill([
                 'status' => CircleJoinRequest::STATUS_CIRCLE_MEMBER,
+                'fee_marked_at' => $locked->fee_marked_at ?: now(),
                 'fee_paid_at' => now(),
                 'notes' => array_merge((array) $locked->notes, $context),
             ])->save();

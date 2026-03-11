@@ -28,7 +28,7 @@ class CircleJoinRequestController extends BaseApiController
         try {
             $record = $this->service->submitRequest($request->user(), $circle, $request->validated('reason_for_joining'));
 
-            return $this->success($record->load(['circle:id,name', 'user:id,display_name,email,phone,company_name,city']), 'Circle join request submitted successfully.', 201);
+            return $this->success($this->transformJoinRequest($record->load(['circle:id,name', 'user:id,display_name,email,phone,company_name,city'])), 'Circle join request submitted successfully.', 201);
         } catch (ValidationException $exception) {
             return $this->error('Validation failed.', 422, $exception->errors());
         }
@@ -46,7 +46,7 @@ class CircleJoinRequestController extends BaseApiController
             ->paginate(20);
 
         return $this->success([
-            'items' => $items->items(),
+            'items' => collect($items->items())->map(fn (CircleJoinRequest $joinRequest) => $this->transformJoinRequest($joinRequest))->values(),
             'pagination' => [
                 'current_page' => $items->currentPage(),
                 'last_page' => $items->lastPage(),
@@ -64,7 +64,7 @@ class CircleJoinRequestController extends BaseApiController
             return $this->error('Forbidden.', 403);
         }
 
-        return $this->success($record);
+        return $this->success($this->transformJoinRequest($record));
     }
 
     public function cancel(Request $request, string $id): JsonResponse
@@ -74,9 +74,35 @@ class CircleJoinRequestController extends BaseApiController
         try {
             $updated = $this->service->cancelByUser($record, $request->user());
 
-            return $this->success($updated, 'Circle join request cancelled successfully.');
+            return $this->success($this->transformJoinRequest($updated), 'Circle join request cancelled successfully.');
         } catch (ValidationException $exception) {
             return $this->error('Validation failed.', 422, $exception->errors());
         }
+    }
+
+    private function transformJoinRequest(CircleJoinRequest $request): array
+    {
+        $status = (string) $request->status;
+        $isPaid = $request->fee_paid_at !== null || $status === CircleJoinRequest::STATUS_CIRCLE_MEMBER;
+
+        return array_merge($request->toArray(), [
+            'status_label' => $isPaid ? 'Paid' : $this->statusLabel($status),
+            'payment_status' => $isPaid ? 'paid' : 'unpaid',
+            'display_status' => $isPaid ? 'Paid' : $this->statusLabel($status),
+        ]);
+    }
+
+    private function statusLabel(string $status): string
+    {
+        return match ($status) {
+            CircleJoinRequest::STATUS_PENDING_CD_APPROVAL => 'Pending for CD Approval',
+            CircleJoinRequest::STATUS_PENDING_ID_APPROVAL => 'Pending for ID Approval',
+            CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE => 'Pending for Circle Fee',
+            CircleJoinRequest::STATUS_CIRCLE_MEMBER => 'Circle Member',
+            CircleJoinRequest::STATUS_REJECTED_BY_CD => 'Rejected by CD',
+            CircleJoinRequest::STATUS_REJECTED_BY_ID => 'Rejected by ID',
+            CircleJoinRequest::STATUS_CANCELLED => 'Cancelled',
+            default => $status,
+        };
     }
 }

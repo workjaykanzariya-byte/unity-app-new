@@ -7,7 +7,7 @@ use App\Models\CircleMember;
 use App\Models\CircleSubscription;
 use App\Models\User;
 use App\Services\Billing\MembershipSyncService;
-use App\Services\Circles\CircleJoinRequestService;
+use App\Services\Circles\CircleJoinRequestPaymentSyncService;
 use App\Support\Zoho\ZohoBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -21,7 +21,7 @@ class ZohoBillingWebhookController extends Controller
     public function __construct(
         private readonly ZohoBillingService $zohoBillingService,
         private readonly MembershipSyncService $membershipSyncService,
-        private readonly CircleJoinRequestService $circleJoinRequestService,
+        private readonly CircleJoinRequestPaymentSyncService $circleJoinRequestPaymentSyncService,
     ) {
     }
 
@@ -201,9 +201,11 @@ class ZohoBillingWebhookController extends Controller
                 'circle_id' => $subscription->circle_id,
             ]);
 
+            $this->circleJoinRequestPaymentSyncService->updateUserCircleMembershipTier($user);
+
             $this->upsertPaidCircleMember($subscription, $paidAt, $startedAt, $expiresAt);
 
-            $this->markJoinRequestPaidIfExists($subscription, $startedAt);
+            $this->safeSyncJoinRequestPayment($subscription, $startedAt);
 
             return response()->json(['success' => true]);
         } catch (Throwable $throwable) {
@@ -508,30 +510,29 @@ class ZohoBillingWebhookController extends Controller
     }
 
 
-    private function markJoinRequestPaidIfExists(CircleSubscription $subscription, Carbon $startedAt): void
+    private function safeSyncJoinRequestPayment(CircleSubscription $subscription, Carbon $startedAt): void
     {
-        $pendingJoinRequest = \App\Models\CircleJoinRequest::query()
-            ->where('user_id', $subscription->user_id)
-            ->where('circle_id', $subscription->circle_id)
-            ->where('status', \App\Models\CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE)
-            ->latest('created_at')
-            ->first();
+        try {
+            $user = $subscription->user;
+            $circle = $subscription->circle;
 
-        if (! $pendingJoinRequest) {
-            Log::info('circle payment succeeded without pending join request', [
+            if (! $user || ! $circle) {
+                return;
+            }
+
+            $this->circleJoinRequestPaymentSyncService->syncSuccessfulPayment($user, $circle, [
+                'circle_subscription_id' => $subscription->id,
+                'started_at' => $startedAt,
+                'source' => 'zoho_circle_webhook',
+            ]);
+        } catch (Throwable $exception) {
+            Log::warning('circle join request payment sync failed', [
+                'circle_subscription_id' => $subscription->id,
                 'user_id' => $subscription->user_id,
                 'circle_id' => $subscription->circle_id,
-                'circle_subscription_id' => $subscription->id,
+                'error' => $exception->getMessage(),
             ]);
-
-            return;
         }
-
-        $this->circleJoinRequestService->markPaidAndConvertToMember($pendingJoinRequest, [
-            'circle_subscription_id' => $subscription->id,
-            'started_at' => $startedAt,
-            'source' => 'zoho_circle_webhook',
-        ]);
     }
 
     private function firstString(array $payload, array $keys): ?string
