@@ -205,6 +205,7 @@ class ZohoBillingWebhookController extends Controller
 
             $this->upsertPaidCircleMember($subscription, $paidAt, $startedAt, $expiresAt);
 
+            $user->refresh();
             $this->safeSyncJoinRequestPayment($user);
 
             return response()->json(['success' => true]);
