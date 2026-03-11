@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\BusinessDealController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ChatTypingController;
 use App\Http\Controllers\Api\CircleController;
+use App\Http\Controllers\Api\CircleJoinRequestController;
+use App\Http\Controllers\Api\Admin\CircleJoinRequestAdminController;
 use App\Http\Controllers\Api\CircleChatController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
@@ -181,6 +183,20 @@ Route::prefix('v1')->group(function () {
         Route::get('/me/coins', [CoinsController::class, 'balance']);
         Route::get('/me/coins/ledger', [CoinsController::class, 'ledger']);
         Route::get('/coins/history', [CoinHistoryController::class, 'index']);
+
+        Route::post('/circle-join-requests', [CircleJoinRequestController::class, 'store']);
+        Route::get('/circle-join-requests/my', [CircleJoinRequestController::class, 'myRequests']);
+        Route::get('/circle-join-requests/{id}', [CircleJoinRequestController::class, 'show'])->whereUuid('id');
+        Route::delete('/circle-join-requests/{id}', [CircleJoinRequestController::class, 'cancel'])->whereUuid('id');
+
+        Route::prefix('admin')->group(function () {
+            Route::get('/circle-join-requests', [CircleJoinRequestAdminController::class, 'index']);
+            Route::get('/circle-join-requests/{id}', [CircleJoinRequestAdminController::class, 'show'])->whereUuid('id');
+            Route::post('/circle-join-requests/{id}/approve-cd', [CircleJoinRequestAdminController::class, 'approveCd'])->whereUuid('id');
+            Route::post('/circle-join-requests/{id}/reject-cd', [CircleJoinRequestAdminController::class, 'rejectCd'])->whereUuid('id');
+            Route::post('/circle-join-requests/{id}/approve-id', [CircleJoinRequestAdminController::class, 'approveId'])->whereUuid('id');
+            Route::post('/circle-join-requests/{id}/reject-id', [CircleJoinRequestAdminController::class, 'rejectId'])->whereUuid('id');
+        });
 
         Route::prefix('activities')->group(function () {
             // P2P Meetings

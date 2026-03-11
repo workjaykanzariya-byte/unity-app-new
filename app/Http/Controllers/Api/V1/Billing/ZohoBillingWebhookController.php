@@ -7,6 +7,7 @@ use App\Models\CircleMember;
 use App\Models\CircleSubscription;
 use App\Models\User;
 use App\Services\Billing\MembershipSyncService;
+use App\Services\Circles\CircleJoinRequestService;
 use App\Support\Zoho\ZohoBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class ZohoBillingWebhookController extends Controller
     public function __construct(
         private readonly ZohoBillingService $zohoBillingService,
         private readonly MembershipSyncService $membershipSyncService,
+        private readonly CircleJoinRequestService $circleJoinRequestService,
     ) {
     }
 
@@ -200,6 +202,8 @@ class ZohoBillingWebhookController extends Controller
             ]);
 
             $this->upsertPaidCircleMember($subscription, $paidAt, $startedAt, $expiresAt);
+
+            $this->markJoinRequestPaidIfExists($subscription, $startedAt);
 
             return response()->json(['success' => true]);
         } catch (Throwable $throwable) {
@@ -500,6 +504,33 @@ class ZohoBillingWebhookController extends Controller
         Log::info('circle member updated', [
             'circle_id' => $subscription->circle_id,
             'user_id' => $subscription->user_id,
+        ]);
+    }
+
+
+    private function markJoinRequestPaidIfExists(CircleSubscription $subscription, Carbon $startedAt): void
+    {
+        $pendingJoinRequest = \App\Models\CircleJoinRequest::query()
+            ->where('user_id', $subscription->user_id)
+            ->where('circle_id', $subscription->circle_id)
+            ->where('status', \App\Models\CircleJoinRequest::STATUS_PENDING_CIRCLE_FEE)
+            ->latest('created_at')
+            ->first();
+
+        if (! $pendingJoinRequest) {
+            Log::info('circle payment succeeded without pending join request', [
+                'user_id' => $subscription->user_id,
+                'circle_id' => $subscription->circle_id,
+                'circle_subscription_id' => $subscription->id,
+            ]);
+
+            return;
+        }
+
+        $this->circleJoinRequestService->markPaidAndConvertToMember($pendingJoinRequest, [
+            'circle_subscription_id' => $subscription->id,
+            'started_at' => $startedAt,
+            'source' => 'zoho_circle_webhook',
         ]);
     }
 
