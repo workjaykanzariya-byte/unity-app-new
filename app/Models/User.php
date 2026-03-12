@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CoinMilestoneResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -49,6 +50,9 @@ class User extends Authenticatable
         'membership_status',
         'membership_expiry',
         'coins_balance',
+        'coin_medal_rank',
+        'coin_milestone_title',
+        'coin_milestone_meaning',
         'profile_photo_url',
         'short_bio',
         'long_bio_html',
@@ -123,6 +127,10 @@ class User extends Authenticatable
 
     protected static function booted(): void
     {
+        static::saving(function (self $user): void {
+            $user->syncCoinMilestoneAttributes();
+        });
+
         static::creating(function (self $user): void {
             if (empty($user->id)) {
                 $user->id = Str::uuid()->toString();
@@ -155,6 +163,28 @@ class User extends Authenticatable
                 $user->public_profile_slug = $slug;
             }
         });
+    }
+
+    public function syncCoinMilestoneAttributes(): bool
+    {
+        $resolved = CoinMilestoneResolver::resolve($this->coins_balance);
+
+        $changes = [
+            'coin_medal_rank' => $resolved['medal_rank'],
+            'coin_milestone_title' => $resolved['title'],
+            'coin_milestone_meaning' => $resolved['meaning'],
+        ];
+
+        $dirty = false;
+
+        foreach ($changes as $attribute => $value) {
+            if ($this->{$attribute} !== $value) {
+                $this->{$attribute} = $value;
+                $dirty = true;
+            }
+        }
+
+        return $dirty;
     }
 
     public function links(): HasMany
