@@ -28,6 +28,17 @@ class Circle extends Model
         'High-Impact Circle',
     ];
 
+    public const RANK_OPTIONS = [
+        'Bronze',
+        'Silver',
+        'Gold',
+        'Platinum',
+        'Titanium',
+        'Diamond',
+        'Royal',
+        'Global Elite',
+    ];
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -78,35 +89,63 @@ class Circle extends Model
 
     public function getCircleRanking(): array
     {
-        $totalMembers = $this->relationLoaded('members')
-            ? $this->members->count()
-            : $this->members()->count();
+        $totalMembers = 0;
+
+        if ($this->relationLoaded('members')) {
+            $totalMembers = $this->members->count();
+        } elseif ($this->getAttribute('members_count') !== null) {
+            $totalMembers = (int) $this->getAttribute('members_count');
+        } else {
+            $totalMembers = $this->members()->count();
+        }
+
+        return self::buildCircleRankingData($totalMembers);
+    }
+
+    public static function buildCircleRankingData(int $totalMembers): array
+    {
+        $totalMembers = max(0, $totalMembers);
 
         return [
             'total_members' => $totalMembers,
-            'rank' => $this->resolveCircleRank($totalMembers),
-            'title' => $this->resolveCircleTitle($totalMembers),
+            'rank' => self::resolveCircleRank($totalMembers),
+            'title' => self::resolveCircleTitle($totalMembers),
         ];
     }
 
-    private function resolveCircleRank(int $totalMembers): string
+    public static function rankRange(string $rank): ?array
     {
-        if ($totalMembers >= 100) {
-            return '🌍 Global Elite';
-        }
-
-        return match (true) {
-            $totalMembers >= 75 => '👑 Royal',
-            $totalMembers >= 60 => '🔱 Diamond',
-            $totalMembers >= 50 => '🔷 Titanium',
-            $totalMembers >= 40 => '💎 Platinum',
-            $totalMembers >= 30 => '🟡 Gold',
-            $totalMembers >= 20 => '⚪ Silver',
-            default => '🟤 Bronze',
+        return match ($rank) {
+            'Bronze' => ['min' => 0, 'max' => 19],
+            'Silver' => ['min' => 20, 'max' => 29],
+            'Gold' => ['min' => 30, 'max' => 39],
+            'Platinum' => ['min' => 40, 'max' => 49],
+            'Titanium' => ['min' => 50, 'max' => 59],
+            'Diamond' => ['min' => 60, 'max' => 74],
+            'Royal' => ['min' => 75, 'max' => 99],
+            'Global Elite' => ['min' => 100, 'max' => null],
+            default => null,
         };
     }
 
-    private function resolveCircleTitle(int $totalMembers): string
+    private static function resolveCircleRank(int $totalMembers): string
+    {
+        if ($totalMembers >= 100) {
+            return 'Global Elite';
+        }
+
+        return match (true) {
+            $totalMembers >= 75 => 'Royal',
+            $totalMembers >= 60 => 'Diamond',
+            $totalMembers >= 50 => 'Titanium',
+            $totalMembers >= 40 => 'Platinum',
+            $totalMembers >= 30 => 'Gold',
+            $totalMembers >= 20 => 'Silver',
+            default => 'Bronze',
+        };
+    }
+
+    private static function resolveCircleTitle(int $totalMembers): string
     {
         if ($totalMembers >= 100) {
             return 'Flagship Circle';

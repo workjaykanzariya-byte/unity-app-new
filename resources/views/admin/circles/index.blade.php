@@ -36,6 +36,7 @@
                         <th>Industry Director</th>
                         <th>DED</th>
                         <th>Peers</th>
+                        <th>Rank</th>
                         <th>Status</th>
                         <th>Created</th>
                         <th></th>
@@ -120,6 +121,14 @@
                             <input type="text" class="form-control form-control-sm" placeholder="—" disabled>
                         </th>
                         <th>
+                            <select name="rank" class="form-select form-select-sm">
+                                <option value="">Any</option>
+                                @foreach ($rankOptions as $rank)
+                                    <option value="{{ $rank }}" @selected(($filters['rank'] ?? '') === $rank)>{{ $rank }}</option>
+                                @endforeach
+                            </select>
+                        </th>
+                        <th>
                             <select name="status" class="form-select form-select-sm">
                                 <option value="">Any</option>
                                 @foreach ($statusOptions as $status)
@@ -188,6 +197,11 @@
                             <td>{{ $circle->industryDirector?->display_name ?? '—' }}</td>
                             <td>{{ $circle->ded?->display_name ?? '—' }}</td>
                             <td>{{ $circle->members_count ?? 0 }}</td>
+                            @php($rankingData = $circle->getCircleRanking())
+                            <td>
+                                <div class="fw-semibold">{{ $rankingData['rank'] }}</div>
+                                <div class="small text-muted">{{ $rankingData['title'] }}</div>
+                            </td>
                             <td>
                                 <span class="badge badge-soft-secondary text-uppercase">
                                     {{ !empty($circle->status) ? ucfirst(strtolower($circle->status)) : '—' }}
@@ -207,7 +221,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="19" class="text-center text-muted py-4">No circles found.</td>
+                            <td colspan="20" class="text-center text-muted py-4">No circles found.</td>
                         </tr>
                     @endforelse
                 </tbody>

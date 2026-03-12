@@ -33,6 +33,7 @@ class CircleController extends Controller
         $type = trim((string) $request->query('type', ''));
         $status = trim((string) $request->query('status', ''));
         $circleStage = trim((string) $request->query('circle_stage', ''));
+        $rank = trim((string) $request->query('rank', ''));
 
         $filters = [
             'circle_name' => trim((string) $request->query('circle_name', '')),
@@ -51,6 +52,7 @@ class CircleController extends Controller
             'ded' => trim((string) $request->query('ded', '')),
             'status' => $status,
             'circle_stage' => $circleStage,
+            'rank' => $rank,
         ];
 
         $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
@@ -124,6 +126,21 @@ class CircleController extends Controller
 
         if ($circleStage !== '' && $circleStage !== 'any' && in_array($circleStage, Circle::STAGE_OPTIONS, true) && Schema::hasColumn('circles', 'circle_stage')) {
             $query->where('circles.circle_stage', $circleStage);
+        }
+
+        if ($rank !== '' && $rank !== 'any' && in_array($rank, Circle::RANK_OPTIONS, true)) {
+            $rankRange = Circle::rankRange($rank);
+
+            if (is_array($rankRange)) {
+                $max = $rankRange['max'];
+
+                if ($max === null) {
+                    $query->has('members', '>=', (int) $rankRange['min']);
+                } else {
+                    $query->has('members', '>=', (int) $rankRange['min'])
+                        ->has('members', '<=', (int) $max);
+                }
+            }
         }
 
         if ($status !== '' && $status !== 'any' && in_array($status, Circle::STATUS_OPTIONS, true) && Schema::hasColumn('circles', 'status')) {
@@ -200,6 +217,7 @@ class CircleController extends Controller
         $statusOptions = collect(Circle::STATUS_OPTIONS);
 
         $circleStageOptions = collect(Circle::STAGE_OPTIONS);
+        $rankOptions = collect(Circle::RANK_OPTIONS);
 
         return view('admin.circles.index', [
             'circles' => $circles,
@@ -212,6 +230,7 @@ class CircleController extends Controller
             'meetingFrequencyOptions' => $meetingFrequencyOptions,
             'statusOptions' => $statusOptions,
             'circleStageOptions' => $circleStageOptions,
+            'rankOptions' => $rankOptions,
         ]);
     }
 
