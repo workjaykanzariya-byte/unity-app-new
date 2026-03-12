@@ -761,6 +761,8 @@ class UsersController extends Controller
                 'membership_expiry',
                 'introduced_by',
                 'members_introduced_count',
+                'contribution_award_name',
+                'contribution_award_recognition',
                 'target_regions',
                 'target_business_categories',
                 'hobbies_interests',

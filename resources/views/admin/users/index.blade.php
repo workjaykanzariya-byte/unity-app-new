@@ -214,6 +214,8 @@
                                             ['label' => 'Meaning & Vibe', 'value' => $user->coin_milestone_meaning],
                                             ['label' => 'Introduced By', 'value' => $user->introduced_by],
                                             ['label' => 'Members Introduced Count', 'value' => $user->members_introduced_count],
+                                            ['label' => 'Contribution Award Name', 'value' => $user->contribution_award_name],
+                                            ['label' => 'Contribution Recognition', 'value' => $user->contribution_award_recognition],
                                             ['label' => 'Influencer Stars', 'value' => $user->influencer_stars],
                                             ['label' => 'Target Regions', 'value' => $user->target_regions, 'type' => 'json'],
                                             ['label' => 'Target Business Categories', 'value' => $user->target_business_categories, 'type' => 'json'],

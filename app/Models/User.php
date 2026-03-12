@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\CoinMilestoneResolver;
+use App\Support\ContributionMilestoneResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -53,6 +54,8 @@ class User extends Authenticatable
         'coin_medal_rank',
         'coin_milestone_title',
         'coin_milestone_meaning',
+        'contribution_award_name',
+        'contribution_award_recognition',
         'profile_photo_url',
         'short_bio',
         'long_bio_html',
@@ -129,6 +132,7 @@ class User extends Authenticatable
     {
         static::saving(function (self $user): void {
             $user->syncCoinMilestoneAttributes();
+            $user->syncContributionMilestoneAttributes();
         });
 
         static::creating(function (self $user): void {
@@ -173,6 +177,27 @@ class User extends Authenticatable
             'coin_medal_rank' => $resolved['medal_rank'],
             'coin_milestone_title' => $resolved['title'],
             'coin_milestone_meaning' => $resolved['meaning'],
+        ];
+
+        $dirty = false;
+
+        foreach ($changes as $attribute => $value) {
+            if ($this->{$attribute} !== $value) {
+                $this->{$attribute} = $value;
+                $dirty = true;
+            }
+        }
+
+        return $dirty;
+    }
+
+    public function syncContributionMilestoneAttributes(): bool
+    {
+        $resolved = ContributionMilestoneResolver::resolve($this->members_introduced_count);
+
+        $changes = [
+            'contribution_award_name' => $resolved['award_name'],
+            'contribution_award_recognition' => $resolved['recognition'],
         ];
 
         $dirty = false;
