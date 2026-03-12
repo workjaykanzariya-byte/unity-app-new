@@ -243,17 +243,22 @@
             return;
         }
 
-        const autoSubmitFields = [
+        const enterSubmitFields = [
             document.getElementById('circleStageFilter'),
             document.getElementById('circleRankFilter'),
         ];
 
-        autoSubmitFields.forEach(function (field) {
+        enterSubmitFields.forEach(function (field) {
             if (!field) {
                 return;
             }
 
-            field.addEventListener('change', function () {
+            field.addEventListener('keydown', function (event) {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
                 form.submit();
             });
         });
