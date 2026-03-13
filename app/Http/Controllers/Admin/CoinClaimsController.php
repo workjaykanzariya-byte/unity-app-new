@@ -226,7 +226,11 @@ class CoinClaimsController extends Controller
                     } else {
                         $oldIntroducedCount = (int) ($claimant->members_introduced_count ?? 0);
                         $claimant->members_introduced_count = $oldIntroducedCount + 1;
-                        $claimant->syncContributionMilestoneAttributes();
+
+                        if (method_exists($claimant, 'syncContributionMilestoneAttributes')) {
+                            $claimant->syncContributionMilestoneAttributes();
+                        }
+
                         $claimant->save();
 
                         Log::info('coin_claim.new_member_addition.approved', [
@@ -245,7 +249,13 @@ class CoinClaimsController extends Controller
                         $claim->user,
                         $coins,
                         'Coin claim approved: ' . $claim->activity_code . ' #' . $claim->id,
-                        $admin?->id
+                        [
+                            'source' => 'coin_claim_approved',
+                            'claim_id' => (string) $claim->id,
+                            'activity_code' => (string) $claim->activity_code,
+                            'approved_by_admin_id' => (string) ($admin?->id ?? ''),
+                            'request_id' => $requestId,
+                        ]
                     );
                 }
 
@@ -261,6 +271,7 @@ class CoinClaimsController extends Controller
                 'id' => $id,
                 'admin_id' => $admin?->id,
                 'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
             ]);
 
             return redirect()->back()->with('error', $exception->getMessage());
