@@ -14,7 +14,7 @@
     @php
         $owner = $post->user;
         $ownerName = $owner?->display_name ?: trim(($owner?->first_name ?? '') . ' ' . ($owner?->last_name ?? ''));
-        $isActive = ! $post->is_deleted && ! $post->deleted_at;
+        $isActive = $post->deleted_at === null;
         $mediaItems = is_array($post->media) ? $post->media : [];
     @endphp
 
@@ -82,15 +82,13 @@
         <div class="card-header bg-white fw-semibold">Actions</div>
         <div class="card-body d-flex flex-wrap gap-3">
             @if ($isActive)
-                <form method="POST" action="{{ route('admin.posts.deactivate', $post) }}">
+                <form method="POST" action="{{ route('admin.posts.destroy', $post) }}">
                     @csrf
-                    <button type="submit" class="btn btn-outline-danger">Deactivate</button>
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to remove this post?')">Deactivate</button>
                 </form>
             @else
-                <form method="POST" action="{{ route('admin.posts.restore', $post) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-success">Restore / Activate Again</button>
-                </form>
+                <span class="text-muted">This post has been removed.</span>
             @endif
         </div>
     </div>

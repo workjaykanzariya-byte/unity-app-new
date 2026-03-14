@@ -36,26 +36,15 @@ class PostModerationController extends Controller
             'search' => $request->input('search'),
         ];
 
-        $postId = $request->query('post_id');
         $peer = $request->query('peer');
         $inlineVisibility = $request->query('inline_visibility', 'any');
         $inlineModerationStatus = $request->query('inline_moderation_status', 'any');
         $inlineActive = $request->query('inline_active', 'any');
         $media = $request->query('media', 'any');
-
         $query = Post::query()
             ->with(['user', 'circle'])
             ->when($circleId !== 'all' && filled($circleId), fn ($q) => $q->where('circle_id', $circleId));
 
-        if ($filters['active'] === 'active') {
-            $query->where('posts.is_deleted', false)->whereNull('posts.deleted_at');
-        }
-
-        if ($filters['active'] === 'deactivated') {
-            $query->where(function ($subQuery) {
-                $subQuery->where('posts.is_deleted', true)->orWhereNotNull('posts.deleted_at');
-            });
-        }
 
         if (filled($filters['visibility']) && $filters['visibility'] !== 'any') {
             $query->where('posts.visibility', $filters['visibility']);
@@ -73,15 +62,6 @@ class PostModerationController extends Controller
             $query->where('posts.moderation_status', $inlineModerationStatus);
         }
 
-        if ($inlineActive === 'yes') {
-            $query->where('posts.is_deleted', false)->whereNull('posts.deleted_at');
-        }
-
-        if ($inlineActive === 'no') {
-            $query->where(function ($subQuery) {
-                $subQuery->where('posts.is_deleted', true)->orWhereNotNull('posts.deleted_at');
-            });
-        }
 
         if ($filters['search']) {
             $search = '%' . $filters['search'] . '%';
@@ -96,9 +76,6 @@ class PostModerationController extends Controller
             });
         }
 
-        if (filled($postId)) {
-            $query->where('posts.id', 'ILIKE', '%' . $postId . '%');
-        }
 
         if (filled($peer)) {
             $peerQuery = '%' . $peer . '%';
@@ -156,7 +133,6 @@ class PostModerationController extends Controller
             'moderationOptions' => $moderationOptions,
             'circles' => $circles,
             'circleId' => $circleId,
-            'postId' => $postId,
             'peer' => $peer,
             'inlineVisibility' => $inlineVisibility,
             'inlineModerationStatus' => $inlineModerationStatus,
@@ -181,20 +157,27 @@ class PostModerationController extends Controller
         ]);
     }
 
-    public function deactivate(string $postId): RedirectResponse
+    public function destroy(Post $post): RedirectResponse
     {
         $this->ensureGlobalAdmin();
 
-        $post = Post::withTrashed()->findOrFail($postId);
-
         DB::transaction(function () use ($post): void {
-            $post->is_deleted = true;
-            $post->deleted_at = now();
-            $post->save();
+            if (array_key_exists('is_deleted', $post->getAttributes())) {
+                $post->is_deleted = true;
+                $post->save();
+            }
+
+            $post->delete();
         });
 
-        return redirect()->back()->with('success', 'Post deactivated.');
+        return redirect()->back()->with('success', 'Post removed successfully.');
     }
+
+    public function deactivate(Post $post): RedirectResponse
+    {
+        return $this->destroy($post);
+    }
+
 
     public function restore(string $postId): RedirectResponse
     {
@@ -203,11 +186,16 @@ class PostModerationController extends Controller
         $post = Post::withTrashed()->findOrFail($postId);
 
         DB::transaction(function () use ($post): void {
-            $post->is_deleted = false;
-            $post->deleted_at = null;
-            $post->save();
+            if (method_exists($post, 'restore')) {
+                $post->restore();
+            }
+
+            if (array_key_exists('is_deleted', $post->getAttributes())) {
+                $post->is_deleted = false;
+                $post->save();
+            }
         });
 
-        return redirect()->back()->with('success', 'Post restored.');
+        return redirect()->back()->with('success', 'Post restored successfully.');
     }
 }
