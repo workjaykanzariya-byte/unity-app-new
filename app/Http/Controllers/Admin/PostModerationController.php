@@ -41,12 +41,8 @@ class PostModerationController extends Controller
         $inlineModerationStatus = $request->query('inline_moderation_status', 'any');
         $inlineActive = $request->query('inline_active', 'any');
         $media = $request->query('media', 'any');
-
-        $showDeactivated = $filters['active'] === 'deactivated' || $inlineActive === 'no';
-
-        $query = $showDeactivated ? Post::onlyTrashed() : Post::query();
-
-        $query->with(['user', 'circle'])
+        $query = Post::query()
+            ->with(['user', 'circle'])
             ->when($circleId !== 'all' && filled($circleId), fn ($q) => $q->where('circle_id', $circleId));
 
 
@@ -161,18 +157,27 @@ class PostModerationController extends Controller
         ]);
     }
 
-    public function deactivate(string $postId): RedirectResponse
+    public function destroy(Post $post): RedirectResponse
     {
         $this->ensureGlobalAdmin();
 
-        $post = Post::query()->findOrFail($postId);
-
         DB::transaction(function () use ($post): void {
+            if (array_key_exists('is_deleted', $post->getAttributes())) {
+                $post->is_deleted = true;
+                $post->save();
+            }
+
             $post->delete();
         });
 
         return redirect()->back()->with('success', 'Post removed successfully.');
     }
+
+    public function deactivate(Post $post): RedirectResponse
+    {
+        return $this->destroy($post);
+    }
+
 
     public function restore(string $postId): RedirectResponse
     {
@@ -181,11 +186,16 @@ class PostModerationController extends Controller
         $post = Post::withTrashed()->findOrFail($postId);
 
         DB::transaction(function () use ($post): void {
-            $post->is_deleted = false;
-            $post->deleted_at = null;
-            $post->save();
+            if (method_exists($post, 'restore')) {
+                $post->restore();
+            }
+
+            if (array_key_exists('is_deleted', $post->getAttributes())) {
+                $post->is_deleted = false;
+                $post->save();
+            }
         });
 
-        return redirect()->back()->with('success', 'Post activated.');
+        return redirect()->back()->with('success', 'Post restored successfully.');
     }
 }

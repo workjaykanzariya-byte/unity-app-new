@@ -174,8 +174,9 @@
                                 <td class="text-end" style="white-space:nowrap;">
                                     <div class="d-inline-flex align-items-center gap-2" style="flex-wrap:nowrap;">
                                         <a href="{{ route('admin.posts.show', $post) }}" class="btn btn-sm btn-outline-primary">View</a>
-                                        <form method="POST" action="{{ route('admin.posts.deactivate', $post) }}" class="m-0 p-0 d-inline">
+                                        <form method="POST" action="{{ route('admin.posts.destroy', $post) }}" class="m-0 p-0 d-inline">
                                             @csrf
+                                            @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to remove this post?')">Deactivate</button>
                                         </form>
                                     </div>

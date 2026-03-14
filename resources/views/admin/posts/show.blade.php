@@ -82,8 +82,9 @@
         <div class="card-header bg-white fw-semibold">Actions</div>
         <div class="card-body d-flex flex-wrap gap-3">
             @if ($isActive)
-                <form method="POST" action="{{ route('admin.posts.deactivate', $post) }}">
+                <form method="POST" action="{{ route('admin.posts.destroy', $post) }}">
                     @csrf
+                    @method('DELETE')
                     <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to remove this post?')">Deactivate</button>
                 </form>
             @else

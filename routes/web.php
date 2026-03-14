@@ -121,6 +121,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/post-reports/{report}/mark-reviewed', [PostReportsController::class, 'markReviewed'])->name('post-reports.mark-reviewed');
         Route::post('/post-reports/{report}/dismiss', [PostReportsController::class, 'dismiss'])->name('post-reports.dismiss');
         Route::post('/post-reports/{report}/resolve', [PostReportsController::class, 'resolve'])->name('post-reports.resolve');
+        Route::delete('/posts/{post}', [PostModerationController::class, 'destroy'])->name('posts.destroy');
         Route::post('/posts/{post}/deactivate', [PostModerationController::class, 'deactivate'])->name('posts.deactivate');
         Route::post('/posts/{post}/restore', [PostModerationController::class, 'restore'])->name('posts.restore');
         Route::get('/visitor-registrations', [VisitorRegistrationsController::class, 'index'])->name('visitor-registrations.index');
