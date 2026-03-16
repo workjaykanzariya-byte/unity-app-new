@@ -102,7 +102,7 @@ class Circular extends Model
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', 'active');
+        return $query->where('status', 'ILIKE', 'active');
     }
 
     public function scopePublished(Builder $query): Builder
