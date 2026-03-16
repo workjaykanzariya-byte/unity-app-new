@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ChatTypingController;
 use App\Http\Controllers\Api\CircleChatController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\CircleJoinRequestController;
+use App\Http\Controllers\Api\CircularController as ApiCircularController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\FileController;
@@ -183,6 +184,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/events', [EventController::class, 'store']);
         Route::post('/events/{id}/rsvp', [EventController::class, 'rsvp']);
         Route::post('/events/{id}/checkin', [EventController::class, 'checkin']);
+
+        Route::get('/circulars', [ApiCircularController::class, 'index']);
+        Route::get('/circulars/{slug}', [ApiCircularController::class, 'show']);
 
         // User Activities & Coins
         Route::post('/activities', [ActivityController::class, 'store']);
