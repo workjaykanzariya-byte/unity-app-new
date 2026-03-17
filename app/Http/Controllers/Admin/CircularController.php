@@ -16,10 +16,6 @@ use Illuminate\View\View;
 
 class CircularController extends Controller
 {
-    public function __construct(private readonly CircularNotificationService $notificationService)
-    {
-    }
-
     public function index(Request $request): View
     {
         $filters = [
@@ -83,7 +79,7 @@ class CircularController extends Controller
         $payload['updated_by'] = (string) Auth::guard('admin')->id();
 
         $circular = Circular::create($payload);
-        $this->notificationService->dispatchForCircular($circular);
+        app(CircularNotificationService::class)->send($circular);
 
         return redirect()->route('admin.circulars.index')->with('success', 'Circular created successfully.');
     }
@@ -110,7 +106,7 @@ class CircularController extends Controller
         }
 
         $circular->save();
-        $this->notificationService->dispatchForCircular($circular);
+        app(CircularNotificationService::class)->send($circular);
 
         return redirect()->route('admin.circulars.show', $circular)->with('success', 'Circular updated successfully.');
     }

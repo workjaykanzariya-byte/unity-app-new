@@ -2,16 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Circular extends Model
 {
-    use HasFactory;
     use SoftDeletes;
 
     public const CATEGORY_OPTIONS = [
@@ -46,14 +42,10 @@ class Circular extends Model
         'summary',
         'category',
         'priority',
-        'publish_date',
-        'expiry_date',
         'featured_image_url',
         'content',
         'attachment_url',
         'video_url',
-        'cta_label',
-        'cta_url',
         'audience_type',
         'city_id',
         'circle_id',
@@ -61,9 +53,13 @@ class Circular extends Model
         'allow_comments',
         'is_pinned',
         'status',
+        'publish_date',
+        'expiry_date',
+        'cta_label',
+        'cta_url',
+        'notification_sent_at',
         'created_by',
         'updated_by',
-        'notification_sent_at',
     ];
 
     protected $casts = [
@@ -82,40 +78,5 @@ class Circular extends Model
                 $circular->id = Str::uuid()->toString();
             }
         });
-    }
-
-    public function city(): BelongsTo
-    {
-        return $this->belongsTo(City::class);
-    }
-
-    public function circle(): BelongsTo
-    {
-        return $this->belongsTo(Circle::class);
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function updater(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function reads(): HasMany
-    {
-        return $this->hasMany(CircularRead::class);
-    }
-
-    public function bookmarks(): HasMany
-    {
-        return $this->hasMany(CircularBookmark::class);
-    }
-
-    public function reactions(): HasMany
-    {
-        return $this->hasMany(CircularReaction::class);
     }
 }

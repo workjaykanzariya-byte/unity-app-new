@@ -264,11 +264,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/chats/{id}/typing', [ChatController::class, 'typing']);
 
 
-        Route::post('/circulars/{circular}/read', [CircularController::class, 'markRead']);
-        Route::post('/circulars/{circular}/bookmark', [CircularController::class, 'bookmark']);
-        Route::delete('/circulars/{circular}/bookmark', [CircularController::class, 'removeBookmark']);
-        Route::post('/circulars/{circular}/reaction', [CircularController::class, 'reaction']);
-
         // Notifications
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
@@ -361,7 +356,7 @@ Route::prefix('v1')->group(function () {
 
 
     Route::get('/circulars', [CircularController::class, 'index']);
-    Route::get('/circulars/{circular}', [CircularController::class, 'show']);
+    Route::get('/circulars/{id}', [CircularController::class, 'show']);
 
 
     // Other module routes (members, circles, posts, etc.) will be added here later.
