@@ -9,7 +9,7 @@
                 'ID'=>$circular->id,'Title'=>$circular->title,'Summary'=>$circular->summary,'Category'=>$circular->category,'Priority'=>$circular->priority,
                 'Publish Date'=>optional($circular->publish_date)?->format('Y-m-d H:i'),'Expiry Date'=>optional($circular->expiry_date)?->format('Y-m-d H:i'),'Audience Type'=>$circular->audience_type,
                 'Status'=>$circular->status,'Allow Comments'=>$circular->allow_comments ? 'Yes':'No','Pinned'=>$circular->is_pinned ? 'Yes':'No','Send Push'=>$circular->send_push_notification ? 'Yes':'No',
-                'City'=>$circular->city?->name,'Circle'=>$circular->circle?->name,'Video URL'=>$circular->video_url,'CTA Label'=>$circular->cta_label,'CTA URL'=>$circular->cta_url,
+                'City'=>optional($circular->city)->name ?? '-', 'Circle'=>optional($circular->circle)->name ?? '-','Video URL'=>$circular->video_url,'CTA Label'=>$circular->cta_label,'CTA URL'=>$circular->cta_url,
                 'Featured Image URL'=>$circular->featured_image_url,'Attachment URL'=>$circular->attachment_url
             ] as $label => $value)
             <dt class="col-sm-3">{{ $label }}</dt><dd class="col-sm-9">{{ $value ?: '—' }}</dd>

@@ -30,7 +30,7 @@ class CircularController extends Controller
             'publish_date_to' => (string) $request->query('publish_date_to', ''),
         ];
 
-        $query = Circular::query()->with(['city', 'circle', 'creator']);
+        $query = Circular::query()->with(['city', 'circle', 'creator', 'updater']);
 
         if ($filters['search'] !== '') {
             $like = '%'.$filters['search'].'%';

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -38,6 +39,7 @@ class Circular extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'id',
         'title',
         'summary',
         'category',
@@ -69,6 +71,9 @@ class Circular extends Model
         'publish_date' => 'datetime',
         'expiry_date' => 'datetime',
         'notification_sent_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -78,5 +83,25 @@ class Circular extends Model
                 $circular->id = Str::uuid()->toString();
             }
         });
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
+    public function circle(): BelongsTo
+    {
+        return $this->belongsTo(Circle::class, 'circle_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }
