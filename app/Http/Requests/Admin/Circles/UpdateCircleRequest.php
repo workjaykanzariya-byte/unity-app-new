@@ -44,6 +44,8 @@ class UpdateCircleRequest extends FormRequest
             'calendar_meetings.*.default_meet_time' => ['nullable', 'date_format:H:i'],
             'calendar_meetings.*.monthly_rule' => ['nullable', Rule::in(['first', 'second', 'third', 'fourth', 'last'])],
             'circle_package' => ['nullable', 'string', 'max:120'],
+            'categories' => ['nullable', 'array'],
+            'categories.*' => ['integer', 'exists:categories,id'],
         ];
     }
 
@@ -60,6 +62,10 @@ class UpdateCircleRequest extends FormRequest
             if (json_last_error() === JSON_ERROR_NONE) {
                 $payload['meeting_repeat'] = $decoded;
             }
+        }
+
+        if ($this->has('category_ids') && ! $this->has('categories')) {
+            $payload['categories'] = $this->input('category_ids');
         }
 
         if ($payload !== []) {

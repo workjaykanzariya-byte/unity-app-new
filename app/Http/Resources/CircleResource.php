@@ -51,6 +51,20 @@ class CircleResource extends JsonResource
             ];
         };
 
+        $categories = $this->relationLoaded('categories')
+            ? $this->categories
+                ->map(static function ($category): array {
+                    return [
+                        'id' => $category->id,
+                        'category_name' => $category->category_name,
+                        'sector' => $category->sector,
+                        'remarks' => $category->remarks,
+                    ];
+                })
+                ->values()
+                ->all()
+            : [];
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -98,6 +112,7 @@ class CircleResource extends JsonResource
             'director' => $userMini($director),
             'industry_director' => $userMini($industryDirector),
             'ded' => $userMini($ded),
+            'categories' => $categories,
             'cover_file_id' => $this->cover_file_id,
             'cover_image_url' => $this->cover_file_id
                 ? url("/api/v1/files/{$this->cover_file_id}")
