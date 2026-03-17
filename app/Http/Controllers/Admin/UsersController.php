@@ -63,7 +63,7 @@ class UsersController extends Controller
         $user = new User();
         $cities = City::query()->orderBy('name')->get();
         $membershipStatuses = $this->membershipStatuses();
-        $circles = Circle::query()->where('status', 'active')->orderBy('name')->get(['id', 'name', 'zoho_addon_code', 'zoho_addon_name']);
+        $circles = Circle::query()->orderBy('name')->get(['id', 'name', 'zoho_addon_code', 'zoho_addon_name']);
 
         return view('admin.users.create', [
             'user' => $user,
@@ -203,7 +203,6 @@ class UsersController extends Controller
         $adminRoleIds = $roles->pluck('id')->all();
         $assignedAdminRoles = $user->roles->whereIn('id', $adminRoleIds)->values();
         $circles = Circle::query()
-            ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'zoho_addon_code', 'zoho_addon_name']);
 
