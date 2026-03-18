@@ -306,6 +306,9 @@
     <div class="card-body">
         <form action="{{ route('admin.circles.members.store', $circle) }}" method="POST" class="row g-2 align-items-end mb-4">
             @csrf
+            <input type="hidden" name="peer_name" value="{{ $peerFilters['peer_name'] ?? '' }}">
+            <input type="hidden" name="peer_email" value="{{ $peerFilters['peer_email'] ?? '' }}">
+            <input type="hidden" name="page" value="{{ $peerMembers->currentPage() }}">
             <div class="col-md-6">
                 <label class="form-label">Select Peer</label>
                 <select id="peer_select" name="user_id" class="form-select" required></select>
@@ -323,6 +326,23 @@
             </div>
         </form>
 
+        <form method="GET" action="{{ route('admin.circles.show', $circle) }}" class="row g-2 align-items-end mb-3">
+            <div class="col-12 col-md-5">
+                <label class="form-label mb-1" for="peer_name">Peer name</label>
+                <input id="peer_name" type="text" name="peer_name" value="{{ $peerFilters['peer_name'] ?? '' }}" class="form-control form-control-sm" placeholder="Search peer name">
+            </div>
+            <div class="col-12 col-md-5">
+                <label class="form-label mb-1" for="peer_email">Email</label>
+                <input id="peer_email" type="text" name="peer_email" value="{{ $peerFilters['peer_email'] ?? '' }}" class="form-control form-control-sm" placeholder="Search email">
+            </div>
+            <div class="col-6 col-md-1 d-grid">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+            </div>
+            <div class="col-6 col-md-1 d-grid">
+                <a href="{{ route('admin.circles.show', $circle) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+
         <div class="table-responsive" style="overflow-x: auto;">
             <table class="table align-middle" style="white-space: nowrap;">
                 <thead class="table-light">
@@ -336,7 +356,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($circle->members as $membership)
+                    @forelse ($peerMembers as $membership)
                         @php
                             $member = $membership->user;
                             $memberName = trim((string) ($member?->first_name ?? '') . ' ' . (string) ($member?->last_name ?? ''));
@@ -362,6 +382,9 @@
                                 <form method="POST" action="{{ route('admin.circles.members.update', [$circle, $membership]) }}" class="d-flex gap-2 align-items-center">
                                     @csrf
                                     @method('PUT')
+                                    <input type="hidden" name="peer_name" value="{{ $peerFilters['peer_name'] ?? '' }}">
+                                    <input type="hidden" name="peer_email" value="{{ $peerFilters['peer_email'] ?? '' }}">
+                                    <input type="hidden" name="page" value="{{ $peerMembers->currentPage() }}">
                                     <select name="role" class="form-select form-select-sm">
                                         @foreach ($roles as $role)
                                             <option value="{{ $role }}" @selected($membership->role === $role)>{{ ucwords(str_replace('_', ' ', $role)) }}</option>
@@ -388,6 +411,9 @@
                                 <form method="POST" action="{{ route('admin.circles.members.destroy', [$circle, $membership]) }}" onsubmit="return confirm('Remove this peer from the circle?');">
                                     @csrf
                                     @method('DELETE')
+                                    <input type="hidden" name="peer_name" value="{{ $peerFilters['peer_name'] ?? '' }}">
+                                    <input type="hidden" name="peer_email" value="{{ $peerFilters['peer_email'] ?? '' }}">
+                                    <input type="hidden" name="page" value="{{ $peerMembers->currentPage() }}">
                                     <button class="btn btn-sm btn-outline-danger">Remove</button>
                                 </form>
                             </td>
@@ -399,6 +425,9 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+        <div class="mt-3">
+            {{ $peerMembers->links() }}
         </div>
     </div>
 </div>
