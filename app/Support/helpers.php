@@ -3,18 +3,20 @@
 if (! function_exists('normalize_mobile_number')) {
     function normalize_mobile_number(?string $mobile): string
     {
-        if ($mobile === null) {
+        if (! is_string($mobile) || $mobile === '') {
             return '';
         }
 
-        $normalized = preg_replace('/\D+/', '', $mobile) ?? '';
+        $digits = preg_replace('/\D+/', '', $mobile) ?? '';
 
-        if (str_starts_with($normalized, '91') && strlen($normalized) > 10) {
-            $normalized = substr($normalized, 2);
+        if ($digits === '') {
+            return '';
         }
 
-        return strlen($normalized) > 10
-            ? substr($normalized, -10)
-            : $normalized;
+        if (strlen($digits) > 10) {
+            $digits = substr($digits, -10);
+        }
+
+        return strlen($digits) === 10 ? $digits : '';
     }
 }

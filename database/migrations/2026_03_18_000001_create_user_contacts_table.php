@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('user_contacts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->index();
-            $table->string('name')->nullable();
-            $table->string('mobile')->index();
-            $table->string('mobile_normalized')->index();
-            $table->string('device')->nullable();
-            $table->string('app_version')->nullable();
+            $table->bigInteger('user_id')->index();
+            $table->string('name', 255);
+            $table->string('mobile', 20);
+            $table->string('mobile_normalized', 20)->index();
+            $table->string('device', 50)->nullable();
+            $table->string('app_version', 20)->nullable();
             $table->timestamps();
 
             $table->unique(['user_id', 'mobile_normalized']);
