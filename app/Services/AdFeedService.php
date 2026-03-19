@@ -8,7 +8,9 @@ use Illuminate\Support\Collection;
 
 class AdFeedService
 {
-    private const AUTO_AD_INTERVAL = 5;
+    private const MIN_AUTO_AD_GAP = 6;
+
+    private const MAX_AUTO_AD_GAP = 12;
 
     public function timelineAds(?int $limit = null): Collection
     {
@@ -39,7 +41,7 @@ class AdFeedService
         return $query->get();
     }
 
-    public function mergeTimelineFeed(Collection $posts, Collection $ads): Collection
+    public function mergeTimelineFeed(Collection $posts, Collection $ads, int $page = 1): Collection
     {
         if ($ads->isEmpty()) {
             return $posts->values();
@@ -71,7 +73,7 @@ class AdFeedService
 
         $manualMerged = $this->mergeManualPositionAds($postItems, $manualPositionAds);
 
-        return $this->distributeAutomaticAds($manualMerged, $automaticAds);
+        return $this->distributeAutomaticAds($manualMerged, $automaticAds, $page);
     }
 
     private function mergeManualPositionAds(array $postItems, Collection $manualPositionAds): array
@@ -110,15 +112,17 @@ class AdFeedService
         return $result;
     }
 
-    private function distributeAutomaticAds(array $items, array $automaticAds): Collection
+    private function distributeAutomaticAds(array $items, array $automaticAds, int $page): Collection
     {
         if (empty($automaticAds)) {
             return collect($items)->values();
         }
 
         $result = [];
-        $postCount = 0;
+        $postCountSinceLastAuto = 0;
         $autoAdIndex = 0;
+        $seed = $this->buildSeed($automaticAds, $page, count($items));
+        $nextGap = $this->nextGap($seed);
 
         foreach ($items as $item) {
             $result[] = $item;
@@ -127,15 +131,33 @@ class AdFeedService
                 continue;
             }
 
-            $postCount++;
+            $postCountSinceLastAuto++;
 
-            if ($postCount % self::AUTO_AD_INTERVAL === 0 && isset($automaticAds[$autoAdIndex])) {
+            if ($postCountSinceLastAuto >= $nextGap && isset($automaticAds[$autoAdIndex])) {
                 $result[] = $this->transformAd($automaticAds[$autoAdIndex]);
                 $autoAdIndex++;
+                $postCountSinceLastAuto = 0;
+                $nextGap = $this->nextGap($seed);
             }
         }
 
         return collect($result)->values();
+    }
+
+    private function buildSeed(array $automaticAds, int $page, int $itemCount): int
+    {
+        $adIds = collect($automaticAds)->pluck('id')->implode('|');
+        $seedBase = sprintf('page:%d|items:%d|ads:%s', $page, $itemCount, $adIds);
+
+        return (int) sprintf('%u', crc32($seedBase));
+    }
+
+    private function nextGap(int &$seed): int
+    {
+        $seed = (int) (($seed * 1103515245 + 12345) & 0x7fffffff);
+        $range = self::MAX_AUTO_AD_GAP - self::MIN_AUTO_AD_GAP + 1;
+
+        return self::MIN_AUTO_AD_GAP + ($seed % $range);
     }
 
     private function transformAd(Ad $ad): array
