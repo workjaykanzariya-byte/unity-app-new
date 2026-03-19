@@ -16,6 +16,7 @@
             ...($isGlobalAdmin ? [
                 ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
                 ['icon' => 'bi-tags', 'label' => 'Categories', 'route' => 'admin.categories.index'],
+                ['icon' => 'bi-megaphone', 'label' => 'Ads', 'route' => 'admin.ads.index'],
             ] : []),
         ]
         : [
@@ -27,6 +28,7 @@
             ...($isGlobalAdmin ? [
                 ['icon' => 'bi-images', 'label' => 'Event Gallery', 'route' => 'admin.event-gallery.index'],
                 ['icon' => 'bi-tags', 'label' => 'Categories', 'route' => 'admin.categories.index'],
+                ['icon' => 'bi-megaphone', 'label' => 'Ads', 'route' => 'admin.ads.index'],
             ] : []),
             ['icon' => 'bi-wallet2', 'label' => 'Wallet & Finance', 'route' => '#'],
             ['icon' => 'bi-chat-dots', 'label' => 'Posts & Moderation', 'route' => '#'],
