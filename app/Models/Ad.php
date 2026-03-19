@@ -61,7 +61,7 @@ class Ad extends Model
             return $query;
         }
 
-        return $query->where('placement', $placement);
+        return $query->whereRaw('LOWER(placement) = ?', [strtolower($placement)]);
     }
 
     public function scopeCurrentlyVisible(Builder $query): Builder
