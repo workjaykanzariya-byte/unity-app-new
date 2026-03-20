@@ -45,6 +45,7 @@ class PostController extends BaseApiController
 
         $timelineAds = $adFeedService->timelineAds();
         $items = $adFeedService->mergeTimelineFeed($postItems, $timelineAds);
+        $items = $adFeedService->mergeTimelineFeed($postItems, $timelineAds, (int) $posts->currentPage());
 
         return $this->success([
             'items' => $items,

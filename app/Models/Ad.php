@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 class Ad extends Model
 {
     use HasFactory;
+    use HasUuids;
     use SoftDeletes;
 
     protected $keyType = 'string';
@@ -69,6 +71,7 @@ class Ad extends Model
         }
 
         return $query->where('placement', $placement);
+        return $query->whereRaw('LOWER(placement) = ?', [strtolower($placement)]);
     }
 
     public function scopeCurrentlyVisible(Builder $query): Builder
@@ -92,5 +95,51 @@ class Ad extends Model
         }
 
         return Storage::disk('public')->url($this->image_path);
+        $path = $this->normalizedImagePath();
+
+        if (! $path) {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        if (! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    public function setImagePathAttribute($value): void
+    {
+        $this->attributes['image_path'] = $this->normalizeImagePathValue($value);
+    }
+
+    public function normalizedImagePath(): ?string
+    {
+        return $this->normalizeImagePathValue($this->attributes['image_path'] ?? null);
+    }
+
+    private function normalizeImagePathValue(mixed $value): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $path = trim($value);
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (Str::startsWith($path, 'storage/')) {
+            $path = Str::after($path, 'storage/');
+        }
+
+        return $path;
     }
 }

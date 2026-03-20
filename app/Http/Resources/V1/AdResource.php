@@ -14,6 +14,7 @@ class AdResource extends JsonResource
             'title' => $this->title,
             'subtitle' => $this->subtitle,
             'description' => $this->description,
+            'image_path' => $this->image_path,
             'image_url' => $this->image_url,
             'redirect_url' => $this->redirect_url,
             'button_text' => $this->button_text,
@@ -25,6 +26,10 @@ class AdResource extends JsonResource
             'starts_at' => $this->starts_at,
             'ends_at' => $this->ends_at,
             'created_at' => $this->created_at,
+            'created_by' => $this->created_by,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at,
         ];
     }
 }
