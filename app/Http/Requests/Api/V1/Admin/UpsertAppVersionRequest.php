@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Http\Requests\Api\V1\Admin;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpsertAppVersionRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'platform' => ['required', 'in:android,ios'],
+            'latest_version' => ['required', 'string'],
+            'min_version' => ['required', 'string'],
+            'update_type' => ['required', 'in:force,optional'],
+            'playstore_url' => ['nullable', 'url'],
+        ];
+    }
+}
