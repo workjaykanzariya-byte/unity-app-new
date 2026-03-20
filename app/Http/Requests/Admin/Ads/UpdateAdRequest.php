@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Admin\Ads;
 
+class UpdateAdRequest extends StoreAdRequest
+{
+}
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAdRequest extends FormRequest

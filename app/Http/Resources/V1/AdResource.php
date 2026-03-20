@@ -25,6 +25,7 @@ class AdResource extends JsonResource
             'is_active' => (bool) $this->is_active,
             'starts_at' => $this->starts_at,
             'ends_at' => $this->ends_at,
+            'created_at' => $this->created_at,
             'created_by' => $this->created_by,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

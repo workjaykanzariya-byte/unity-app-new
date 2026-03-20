@@ -46,6 +46,7 @@ class AdController extends Controller
         $data = $this->payload($request);
 
         if ($request->hasFile('image')) {
+            $data['image_path'] = $request->file('image')->store('ads', 'public');
             $data['image_path'] = $this->storeImage($request);
         }
 
@@ -70,6 +71,11 @@ class AdController extends Controller
         $data = $this->payload($request);
 
         if ($request->hasFile('image')) {
+            if ($ad->image_path) {
+                Storage::disk('public')->delete($ad->image_path);
+            }
+
+            $data['image_path'] = $request->file('image')->store('ads', 'public');
             $oldImagePath = $ad->normalizedImagePath();
             $data['image_path'] = $this->storeImage($request);
 
@@ -85,6 +91,8 @@ class AdController extends Controller
 
     public function destroy(Ad $ad): RedirectResponse
     {
+        if ($ad->image_path) {
+            Storage::disk('public')->delete($ad->image_path);
         $imagePath = $ad->normalizedImagePath();
 
         if ($imagePath && ! str_starts_with($imagePath, 'http')) {
