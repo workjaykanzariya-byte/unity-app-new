@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Categories\StoreCategoryRequest;
 use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
+use App\Imports\CategoriesImport;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -157,54 +158,11 @@ class CategoryController extends Controller
     public function import(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|mimes:csv,txt',
+            'file' => 'required|mimes:csv,txt,xlsx',
         ]);
 
         try {
-            $file = $request->file('file');
-            $stream = fopen($file->getRealPath(), 'r');
-
-            if ($stream === false) {
-                throw new \RuntimeException('Unable to read uploaded CSV file.');
-            }
-
-            $headers = fgetcsv($stream);
-            if (! is_array($headers)) {
-                fclose($stream);
-                throw new \RuntimeException('Invalid CSV header row.');
-            }
-
-            $headers = array_map(static function ($header): string {
-                $normalized = strtolower(trim((string) $header));
-                return $normalized === "\xEF\xBB\xBFid" ? 'id' : $normalized;
-            }, $headers);
-
-            while (($row = fgetcsv($stream)) !== false) {
-                if ($row === [null] || $row === []) {
-                    continue;
-                }
-
-                $record = array_combine($headers, array_pad($row, count($headers), null));
-
-                if (! is_array($record)) {
-                    continue;
-                }
-
-                $categoryName = trim((string) ($record['category_name'] ?? ''));
-                if ($categoryName === '') {
-                    continue;
-                }
-
-                Category::query()->updateOrCreate(
-                    ['category_name' => $categoryName],
-                    [
-                        'sector' => $record['sector'] ?? null,
-                        'remarks' => $record['remarks'] ?? null,
-                    ]
-                );
-            }
-
-            fclose($stream);
+            $result = (new CategoriesImport())->import($request->file('file'));
         } catch (\Throwable $e) {
             return redirect()
                 ->back()
@@ -213,6 +171,9 @@ class CategoryController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'Categories imported successfully.');
+            ->with('success', "Categories import completed. Imported: {$result['imported_count']}, Skipped duplicates: {$result['skipped_duplicate_count']}, Skipped empty: {$result['skipped_empty_count']}")
+            ->with('imported_count', $result['imported_count'])
+            ->with('skipped_duplicate_count', $result['skipped_duplicate_count'])
+            ->with('skipped_empty_count', $result['skipped_empty_count']);
     }
 }
