@@ -50,15 +50,6 @@ class Ad extends Model
         'image_url',
     ];
 
-    protected static function booted(): void
-    {
-        static::creating(function (self $ad): void {
-            if (empty($ad->id)) {
-                $ad->id = Str::uuid()->toString();
-            }
-        });
-    }
-
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -70,7 +61,6 @@ class Ad extends Model
             return $query;
         }
 
-        return $query->where('placement', $placement);
         return $query->whereRaw('LOWER(placement) = ?', [strtolower($placement)]);
     }
 
@@ -90,11 +80,6 @@ class Ad extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (! $this->image_path) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($this->image_path);
         $path = $this->normalizedImagePath();
 
         if (! $path) {
