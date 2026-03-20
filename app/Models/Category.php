@@ -30,6 +30,6 @@ class Category extends Model
 
     public function eventGalleries(): HasMany
     {
-        return $this->hasMany(EventGallery::class);
+        return $this->hasMany(EventGallery::class, 'circle_category_id');
     }
 }
