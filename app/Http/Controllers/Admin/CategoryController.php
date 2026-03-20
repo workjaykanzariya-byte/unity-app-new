@@ -8,7 +8,6 @@ use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -19,8 +18,14 @@ class CategoryController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $categories = Category::query()
-            ->when($search !== '', fn ($query) => $query->where('category_name', 'ILIKE', '%' . $search . '%'))
-            ->orderBy('category_name')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery
+                        ->where('category_name', 'ILIKE', '%' . $search . '%')
+                        ->orWhere('sector', 'ILIKE', '%' . $search . '%');
+                });
+            })
+            ->orderBy('id')
             ->paginate(20)
             ->appends($request->query());
 
@@ -93,13 +98,24 @@ class CategoryController extends Controller
     {
         try {
             $search = trim((string) $request->query('q', ''));
-            $hasNameColumn = Schema::hasColumn('categories', 'name');
-            $nameColumn = $hasNameColumn ? 'name' : 'category_name';
 
             $categories = Category::query()
-                ->with('sector')
-                ->when($search !== '', fn ($query) => $query->where($nameColumn, 'ILIKE', '%' . $search . '%'))
-                ->orderBy($nameColumn)
+                ->select([
+                    'id',
+                    'category_name',
+                    'sector',
+                    'remarks',
+                    'created_at',
+                    'updated_at',
+                ])
+                ->when($search !== '', function ($query) use ($search) {
+                    $query->where(function ($subQuery) use ($search) {
+                        $subQuery
+                            ->where('category_name', 'ILIKE', '%' . $search . '%')
+                            ->orWhere('sector', 'ILIKE', '%' . $search . '%');
+                    });
+                })
+                ->orderBy('id')
                 ->get();
 
             return response()->streamDownload(
@@ -111,22 +127,16 @@ class CategoryController extends Controller
                     }
 
                     fwrite($handle, "\xEF\xBB\xBF");
-                    fputcsv($handle, ['ID', 'Category Name', 'Sector', 'Remarks']);
+                    fputcsv($handle, ['ID', 'Category Name', 'Sector', 'Remarks', 'Created At', 'Updated At']);
 
                     foreach ($categories as $category) {
-                        $name = (string) ($category->name ?? $category->category_name ?? '');
-                        $sectorName = (string) (
-                            $category->getRelationValue('sector')?->name
-                            ?? $category->sector
-                            ?? $category->sector_id
-                            ?? ''
-                        );
-
                         fputcsv($handle, [
                             $category->id,
-                            $name,
-                            $sectorName,
+                            (string) ($category->category_name ?? ''),
+                            (string) ($category->sector ?? ''),
                             (string) ($category->remarks ?? ''),
+                            (string) ($category->created_at ?? ''),
+                            (string) ($category->updated_at ?? ''),
                         ]);
                     }
 
@@ -169,9 +179,6 @@ class CategoryController extends Controller
                 return $normalized === "\xEF\xBB\xBFid" ? 'id' : $normalized;
             }, $headers);
 
-            $hasNameColumn = Schema::hasColumn('categories', 'name');
-            $hasSectorIdColumn = Schema::hasColumn('categories', 'sector_id');
-
             while (($row = fgetcsv($stream)) !== false) {
                 if ($row === [null] || $row === []) {
                     continue;
@@ -183,27 +190,18 @@ class CategoryController extends Controller
                     continue;
                 }
 
-                $name = trim((string) ($record['name'] ?? $record['category_name'] ?? ''));
-                if ($name === '') {
+                $categoryName = trim((string) ($record['category_name'] ?? ''));
+                if ($categoryName === '') {
                     continue;
                 }
 
-                $payload = ['remarks' => $record['remarks'] ?? null];
-
-                if ($hasNameColumn) {
-                    $payload['name'] = $name;
-                } else {
-                    $payload['category_name'] = $name;
-                }
-
-                if ($hasSectorIdColumn) {
-                    $payload['sector_id'] = $record['sector_id'] ?? null;
-                } else {
-                    $payload['sector'] = $record['sector'] ?? $record['sector_id'] ?? null;
-                }
-
-                $identifier = $hasNameColumn ? ['name' => $name] : ['category_name' => $name];
-                Category::query()->updateOrCreate($identifier, $payload);
+                Category::query()->updateOrCreate(
+                    ['category_name' => $categoryName],
+                    [
+                        'sector' => $record['sector'] ?? null,
+                        'remarks' => $record['remarks'] ?? null,
+                    ]
+                );
             }
 
             fclose($stream);

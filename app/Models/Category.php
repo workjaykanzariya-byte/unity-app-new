@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,28 +11,13 @@ class Category extends Model
 {
     use HasFactory;
 
+    protected $table = 'categories';
+
     protected $fillable = [
-        'name',
-        'sector_id',
         'category_name',
         'sector',
         'remarks',
     ];
-
-    public function getNameAttribute(): ?string
-    {
-        return $this->attributes['name'] ?? $this->attributes['category_name'] ?? null;
-    }
-
-    public function getSectorIdAttribute(): ?string
-    {
-        return $this->attributes['sector_id'] ?? $this->attributes['sector'] ?? null;
-    }
-
-    public function sector(): BelongsTo
-    {
-        return $this->belongsTo(Sector::class, 'sector_id');
-    }
 
     public function circleMappings(): HasMany
     {
