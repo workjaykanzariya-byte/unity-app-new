@@ -10,26 +10,32 @@ use Throwable;
 
 class AppVersionController extends Controller
 {
+    private const PLATFORMS = ['android', 'ios'];
+
     public function upsert(UpsertAppVersionRequest $request): JsonResponse
     {
         try {
             $payload = $request->validated();
 
-            $appVersion = AppVersion::updateOrCreate(
-                ['platform' => $payload['platform']],
-                [
-                    'latest_version' => $payload['latest_version'],
-                    'min_version' => $payload['min_version'],
-                    'update_type' => $payload['update_type'],
-                    'is_active' => true,
-                ]
-            );
+            foreach (self::PLATFORMS as $platform) {
+                AppVersion::updateOrCreate(
+                    ['platform' => $platform],
+                    [
+                        'latest_version' => $payload['latest_version'],
+                        'min_version' => $payload['min_version'],
+                        'update_type' => $payload['update_type'],
+                        'is_active' => true,
+                    ]
+                );
+            }
 
             return response()->json([
                 'status' => true,
                 'message' => 'App version updated successfully',
                 'data' => [
-                    'latest_version' => $appVersion->latest_version,
+                    'latest_version' => $payload['latest_version'],
+                    'min_version' => $payload['min_version'],
+                    'update_type' => $payload['update_type'],
                 ],
             ]);
         } catch (Throwable $exception) {

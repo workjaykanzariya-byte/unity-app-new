@@ -3,27 +3,31 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\AppVersionRequest;
 use App\Models\AppVersion;
 use Illuminate\Http\JsonResponse;
 use Throwable;
 
 class AppVersionController extends Controller
 {
-    public function show(AppVersionRequest $request): JsonResponse
+    public function show(): JsonResponse
     {
         try {
-            $platform = $request->validatedPlatform();
-
             $version = AppVersion::query()
-                ->where('platform', $platform)
+                ->where('platform', 'android')
                 ->where('is_active', true)
                 ->first();
 
             if (! $version) {
+                $version = AppVersion::query()
+                    ->where('platform', 'ios')
+                    ->where('is_active', true)
+                    ->first();
+            }
+
+            if (! $version) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'No app version found for this platform.',
+                    'message' => 'No app version found.',
                     'data' => null,
                 ], 404);
             }

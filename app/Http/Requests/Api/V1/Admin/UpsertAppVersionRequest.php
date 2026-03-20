@@ -14,7 +14,6 @@ class UpsertAppVersionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'platform' => ['required', 'in:android,ios'],
             'latest_version' => ['required', 'string'],
             'min_version' => ['required', 'string'],
             'update_type' => ['required', 'in:force,optional'],
