@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,8 +11,9 @@ class CollaborationPostListResource extends JsonResource
     public function toArray(Request $request): array
     {
         $authUser = $request->user();
-        $isPaidAuth = $authUser ? (method_exists($authUser, 'isPaidMember') ? $authUser->isPaidMember() : ! in_array($authUser->membership_status, ['visitor', 'free_peer', 'suspended'], true)) : false;
-        $posterPaid = ! in_array($this->user?->membership_status, ['visitor', 'free_peer', 'suspended'], true);
+        $freeStatuses = ['visitor', User::STATUS_FREE, 'free_peer', 'suspended'];
+        $isPaidAuth = $authUser ? (method_exists($authUser, 'isPaidMember') ? $authUser->isPaidMember() : ! in_array($authUser->membership_status, $freeStatuses, true)) : false;
+        $posterPaid = ! in_array($this->user?->membership_status, $freeStatuses, true);
         $profilePhotoFileId = $this->user?->profile_photo_file_id ?? $this->user?->profile_photo_id;
 
         return [

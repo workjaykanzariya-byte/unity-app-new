@@ -17,6 +17,10 @@ use Throwable;
 
 class User extends Authenticatable
 {
+    public const STATUS_FREE_TRIAL = 'Free Trial Peer';
+    public const STATUS_FREE = 'Free Peer';
+    public const FREE_TRIAL_DURATION_DAYS = 3;
+
     private const FREE_PEER_STATUS_CANDIDATES = ['Free Peer', 'Free_peer', 'free_peer'];
 
     use HasApiTokens;
@@ -456,6 +460,10 @@ class User extends Authenticatable
 
     public static function freePeerMembershipStatus(): string
     {
+        if (in_array(self::STATUS_FREE, (array) config('membership.statuses', []), true)) {
+            return self::STATUS_FREE;
+        }
+
         $configuredStatuses = (array) config('membership.statuses', []);
 
         foreach (self::FREE_PEER_STATUS_CANDIDATES as $candidate) {
@@ -633,7 +641,33 @@ class User extends Authenticatable
 
     public function isFreeMember(): bool
     {
-        return (string) $this->membership_status === 'free_peer';
+        return in_array((string) $this->membership_status, [self::STATUS_FREE, 'free_peer'], true);
+    }
+
+    public function shouldExpireFreeTrialMembership(?\DateTimeInterface $asOf = null): bool
+    {
+        $asOf ??= now();
+
+        if ((string) $this->membership_status !== self::STATUS_FREE_TRIAL) {
+            return false;
+        }
+
+        if ($this->membership_ends_at === null) {
+            return false;
+        }
+
+        return $this->membership_ends_at->lessThanOrEqualTo($asOf);
+    }
+
+    public function expireFreeTrialMembershipIfNeeded(?\DateTimeInterface $asOf = null): bool
+    {
+        if (! $this->shouldExpireFreeTrialMembership($asOf)) {
+            return false;
+        }
+
+        $this->membership_status = self::STATUS_FREE;
+
+        return $this->save();
     }
 
     public function isPaidMember(): bool

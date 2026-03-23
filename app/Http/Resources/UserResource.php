@@ -27,7 +27,7 @@ class UserResource extends JsonResource
             'phone'               => $this->phone,
             'city'                => new CityResource($this->whenLoaded('city')),
             'membership_status'   => $this->effective_membership_status,
-            'membership_expiry'   => $this->membership_ends_at ?? $this->membership_expiry,
+            'membership_expiry'   => $this->membership_expiry,
             'membership_starts_at' => $this->membership_starts_at,
             'membership_ends_at' => $this->membership_ends_at,
             'zoho_plan_code' => $this->zoho_plan_code,

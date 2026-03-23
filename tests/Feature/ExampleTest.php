@@ -75,5 +75,6 @@ class ExampleTest extends TestCase
         $this->assertSame('https://twitter.com/jane', $resource['social_links']['twitter']);
         $this->assertNull($resource['social_links']['youtube']);
         $this->assertSame('Short bio', $resource['bio']);
+        $this->assertSame('2025-01-01T00:00:00.000000Z', $resource['membership_expiry']->toJSON());
     }
 }

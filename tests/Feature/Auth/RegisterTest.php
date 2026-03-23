@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -37,6 +40,14 @@ class RegisterTest extends TestCase
 
         $firstResponse = $this->postJson('/api/v1/auth/register', $firstPayload);
         $firstResponse->assertStatus(201)->assertJson(['success' => true]);
+        $firstResponse->assertJsonPath('data.user.membership_status', User::STATUS_FREE_TRIAL);
+
+        $firstMembershipStartsAt = Carbon::parse($firstResponse->json('data.user.membership_starts_at'));
+        $firstMembershipExpiry = Carbon::parse($firstResponse->json('data.user.membership_expiry'));
+        $this->assertTrue(
+            $firstMembershipExpiry->equalTo($firstMembershipStartsAt->copy()->addDays(User::FREE_TRIAL_DURATION_DAYS)),
+            'Newly registered user should receive a 3-day trial expiry window.'
+        );
 
         $secondResponse = $this->postJson('/api/v1/auth/register', $secondPayload);
         $secondResponse->assertStatus(201)->assertJson(['success' => true]);
@@ -65,6 +76,31 @@ class RegisterTest extends TestCase
         $duplicateEmailResponse->assertStatus(422)->assertJsonValidationErrors(['email']);
     }
 
+    public function test_login_expires_elapsed_trial_membership_as_fallback(): void
+    {
+        $user = User::query()->create([
+            'id' => '1cb9148a-b1f2-4ed5-8fa6-c268ca6956c5',
+            'first_name' => 'Trial',
+            'last_name' => 'User',
+            'display_name' => 'Trial User',
+            'email' => 'trial-fallback@example.com',
+            'phone' => '8888888888',
+            'password_hash' => Hash::make('password123'),
+            'membership_status' => User::STATUS_FREE_TRIAL,
+            'membership_starts_at' => now()->subDays(4),
+            'membership_ends_at' => now()->subHour(),
+            'membership_expiry' => now()->subHour(),
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'trial-fallback@example.com',
+            'password' => 'password123',
+        ])->assertStatus(200);
+
+        $user->refresh();
+        $this->assertSame(User::STATUS_FREE, $user->membership_status);
+    }
+
     private function setUpInMemoryDatabase(): void
     {
         Schema::dropIfExists('personal_access_tokens');
@@ -82,6 +118,9 @@ class RegisterTest extends TestCase
             $table->string('designation', 100)->nullable();
             $table->uuid('city_id')->nullable();
             $table->string('membership_status', 50)->default('visitor');
+            $table->timestamp('membership_starts_at')->nullable();
+            $table->timestamp('membership_ends_at')->nullable();
+            $table->timestamp('membership_expiry')->nullable();
             $table->bigInteger('coins_balance')->default(0);
             $table->string('public_profile_slug', 80)->nullable()->unique();
             $table->rememberToken();

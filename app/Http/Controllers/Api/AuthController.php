@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\UserLoginHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -36,8 +37,15 @@ class AuthController extends BaseApiController
         $user->company_name   = $data['company_name'] ?? null;
         $user->designation    = $data['designation'] ?? null;
         $user->city_id        = $user->city_id ?? null;
-        $user->membership_status = 'free_peer';
-        $user->membership_expiry = null;
+        if (blank($user->membership_status)) {
+            $trialStartsAt = Carbon::now();
+            $trialEndsAt = $trialStartsAt->copy()->addDays(User::FREE_TRIAL_DURATION_DAYS);
+
+            $user->membership_status = User::STATUS_FREE_TRIAL;
+            $user->membership_starts_at = $trialStartsAt;
+            $user->membership_ends_at = $trialEndsAt;
+            $user->membership_expiry = $trialEndsAt;
+        }
         $user->coins_balance  = $user->coins_balance ?? 0;
 
         // Store the hashed password in password_hash (not password)
@@ -97,6 +105,8 @@ class AuthController extends BaseApiController
                 'data'    => null,
             ], 403);
         }
+
+        $this->expireTrialMembershipIfNeeded($user);
 
         // Create Sanctum token
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -219,6 +229,8 @@ class AuthController extends BaseApiController
                 'data' => null,
             ], 403);
         }
+
+        $this->expireTrialMembershipIfNeeded($user);
 
         $user->last_login_at = now();
         $user->save();
@@ -350,7 +362,17 @@ class AuthController extends BaseApiController
     public function me(): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
+        $this->expireTrialMembershipIfNeeded($user);
 
         return $this->success(new UserResource($user->loadMissing('city')));
+    }
+
+    private function expireTrialMembershipIfNeeded(?User $user): void
+    {
+        if (! $user) {
+            return;
+        }
+
+        $user->expireFreeTrialMembershipIfNeeded();
     }
 }

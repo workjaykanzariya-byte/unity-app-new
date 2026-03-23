@@ -56,7 +56,10 @@ class CollaborationController extends Controller
         }
 
         $query->where('status', '!=', CollaborationPost::STATUS_DELETED)
-            ->orderByRaw("CASE WHEN users.membership_status IN ('visitor','free_peer','suspended') THEN 0 ELSE 1 END DESC")
+            ->orderByRaw(
+                "CASE WHEN users.membership_status IN ('visitor', ?, 'free_peer', 'suspended') THEN 0 ELSE 1 END DESC",
+                [User::STATUS_FREE]
+            )
             ->join('users', 'users.id', '=', 'collaboration_posts.user_id')
             ->select('collaboration_posts.*')
             ->orderByDesc('posted_at');
