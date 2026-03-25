@@ -6,6 +6,7 @@ use App\Models\CircleMember;
 use App\Models\CircleSubscription;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class CircleMembershipSyncService
@@ -79,13 +80,27 @@ class CircleMembershipSyncService
 
             $member->forceFill($updates)->save();
 
+            Log::info('circle member updated from subscription payment', [
+                'circle_member_id' => $member->id,
+                'circle_id' => $subscription->circle_id,
+                'user_id' => $subscription->user_id,
+            ]);
+
             return $member->fresh();
         }
 
-        return CircleMember::query()->create(array_merge($updates, [
+        $created = CircleMember::query()->create(array_merge($updates, [
             'circle_id' => $subscription->circle_id,
             'user_id' => $subscription->user_id,
         ]));
+
+        Log::info('circle member created from subscription payment', [
+            'circle_member_id' => $created->id,
+            'circle_id' => $subscription->circle_id,
+            'user_id' => $subscription->user_id,
+        ]);
+
+        return $created;
     }
 
     public function refreshUserActiveCircleSummary(User $user): void
@@ -118,6 +133,11 @@ class CircleMembershipSyncService
             'circle_joined_at' => $latestActiveMembership->joined_at,
             'circle_expires_at' => $activeSubscription?->expires_at,
         ])->save();
+
+        Log::info('user active circle summary refreshed from memberships', [
+            'user_id' => $user->id,
+            'active_circle_id' => $latestActiveMembership->circle_id,
+            'active_circle_subscription_id' => $activeSubscription?->id,
+        ]);
     }
 }
-
