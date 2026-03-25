@@ -415,7 +415,8 @@ class ZohoBillingWebhookController extends Controller
                 ->first(function (CircleSubscription $subscription) use ($referenceId) {
                     return $referenceId === (string) data_get($subscription->raw_checkout_response, 'reference_id')
                         || $referenceId === (string) data_get($subscription->raw_checkout_response, 'hostedpage.reference_id')
-                        || $referenceId === (string) data_get($subscription->raw_checkout_response, 'hostedpage.data.reference_id');
+                        || $referenceId === (string) data_get($subscription->raw_checkout_response, 'hostedpage.data.reference_id')
+                        || $referenceId === (string) data_get($subscription->raw_checkout_response, '_circle_checkout.reference_id');
                 });
         };
 

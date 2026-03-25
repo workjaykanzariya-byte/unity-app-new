@@ -100,6 +100,14 @@ class CircleSubscriptionController extends BaseApiController
 
             $checkout = $this->zohoBillingService->createHostedPageForCircleAddon($user, $circle);
 
+            $rawCheckout = is_array($checkout['raw'] ?? null) ? $checkout['raw'] : [];
+            $rawCheckout['_circle_checkout'] = [
+                'reference_id' => $checkout['reference_id'] ?? null,
+                'hostedpage_id' => $checkout['hostedpage_id'] ?? null,
+                'decrypted_hostedpage_id' => $checkout['decrypted_hostedpage_id'] ?? null,
+                'generated_at' => now()->toIso8601String(),
+            ];
+
             $createPayload = [
                 'user_id' => $user->id,
                 'circle_id' => $circle->id,
@@ -112,7 +120,7 @@ class CircleSubscriptionController extends BaseApiController
                 'amount' => $circle->circle_price_amount,
                 'currency_code' => $circle->circle_price_currency,
                 'status' => 'pending',
-                'raw_checkout_response' => $checkout['raw'] ?? null,
+                'raw_checkout_response' => $rawCheckout,
             ];
 
             if (Schema::hasColumn('circle_subscriptions', 'reference_id')) {
