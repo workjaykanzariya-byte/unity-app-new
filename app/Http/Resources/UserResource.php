@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
@@ -63,6 +64,7 @@ class UserResource extends JsonResource
                     ] : null,
                 ];
             }),
+            'circle_memberships' => $this->resolveCircleMemberships(),
             'coins_balance'       => $this->coins_balance,
             'business_type'       => $this->business_type,
             'turnover_range'      => $this->turnover_range,
@@ -93,6 +95,52 @@ class UserResource extends JsonResource
             'created_at'          => $this->created_at,
             'updated_at'          => $this->updated_at,
         ];
+    }
+
+    private function resolveCircleMemberships(): array
+    {
+        $joinedStatus = (string) config('circle.member_joined_status', 'approved');
+        $memberships = $this->resource->relationLoaded('circleMemberships')
+            ? $this->resource->circleMemberships
+            : $this->resource->circleMemberships()
+                ->where('status', $joinedStatus)
+                ->whereNull('deleted_at')
+                ->orderByDesc('joined_at')
+                ->with('circle:id,name,slug')
+                ->get();
+
+        if (! $memberships instanceof Collection) {
+            return [];
+        }
+
+        $subscriptionMap = $this->resource->circleSubscriptions()
+            ->whereIn('circle_id', $memberships->pluck('circle_id')->filter()->values())
+            ->orderByDesc('paid_at')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('circle_id')
+            ->map(fn ($items) => $items->first());
+
+        return $memberships->map(function ($membership) use ($subscriptionMap): array {
+            $subscription = $subscriptionMap->get((string) $membership->circle_id);
+
+            return [
+                'circle_member_id' => $membership->id,
+                'circle_id' => $membership->circle_id,
+                'circle_name' => optional($membership->circle)->name,
+                'circle_slug' => optional($membership->circle)->slug,
+                'member_status' => $membership->status,
+                'member_role' => $membership->role,
+                'joined_at' => $membership->joined_at,
+                'expires_at' => $membership->paid_ends_at,
+                'joined_via' => $membership->joined_via,
+                'payment_status' => $membership->payment_status,
+                'zoho_addon_code' => $membership->zoho_addon_code ?: optional($subscription)->zoho_addon_code,
+                'addon_name' => optional($subscription)->zoho_addon_name,
+                'circle_subscription_id' => optional($subscription)->id,
+                'subscription_status' => optional($subscription)->status,
+            ];
+        })->values()->all();
     }
 
     private function resolveSocialLinks(): ?array

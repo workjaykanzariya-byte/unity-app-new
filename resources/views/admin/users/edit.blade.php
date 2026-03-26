@@ -291,6 +291,22 @@
                         @error('active_circle_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                        <div class="form-text">Primary/backward-compatible active circle.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="additional_circle_id">Add Another Circle Membership</label>
+                        <select name="additional_circle_id" id="additional_circle_id" class="form-select @error('additional_circle_id') is-invalid @enderror">
+                            <option value="">-- Optional --</option>
+                            @foreach ($circles as $circle)
+                                <option value="{{ $circle->id }}" @selected((string) old('additional_circle_id') === (string) $circle->id)>
+                                    {{ $circle->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('additional_circle_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Adds or reactivates membership without removing existing circles.</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Circle Package / Addon Code</label>
@@ -332,6 +348,45 @@
                             </div>
                         </div>
                     @endif
+
+                    <div class="col-12 mt-2">
+                        <h6 class="mb-2">Joined Circle Memberships (Multi-circle)</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Circle</th>
+                                        <th>Addon Code</th>
+                                        <th>Addon Name</th>
+                                        <th>Joined At</th>
+                                        <th>Expires At</th>
+                                        <th>Member Status</th>
+                                        <th>Payment Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($circleMemberships as $membership)
+                                        @php
+                                            $latestSubscription = $latestCircleSubscriptions->get((string) $membership->circle_id);
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $membership->circle?->name ?: '—' }}</td>
+                                            <td>{{ $membership->zoho_addon_code ?: ($latestSubscription->zoho_addon_code ?? '—') }}</td>
+                                            <td>{{ $latestSubscription->zoho_addon_name ?? '—' }}</td>
+                                            <td>{{ optional($membership->joined_at)->format('Y-m-d') ?: '—' }}</td>
+                                            <td>{{ optional($membership->paid_ends_at)->format('Y-m-d') ?: optional($latestSubscription?->expires_at)->format('Y-m-d') ?: '—' }}</td>
+                                            <td>{{ $membership->status ?: '—' }}</td>
+                                            <td>{{ $membership->payment_status ?: ($latestSubscription->status ?? '—') }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-muted text-center">No joined circle memberships.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -11,6 +11,7 @@ use App\Services\Circles\CircleJoinRequestPaymentSyncService;
 use App\Support\Zoho\ZohoBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +25,8 @@ class ZohoBillingWebhookController extends Controller
         private readonly CircleJoinRequestPaymentSyncService $circleJoinRequestPaymentSyncService,
     ) {
     }
+
+    private const ACTIVE_CIRCLE_MEMBER_STATUS = 'approved';
 
     public function handle(Request $request)
     {
@@ -167,46 +170,45 @@ class ZohoBillingWebhookController extends Controller
             $durationMonths = (int) ($subscription->circle?->circle_duration_months ?: 12);
             $expiresAt = $startedAt->copy()->addMonths(max(1, $durationMonths));
 
-            $subscription->forceFill([
-                'status' => 'active',
-                'zoho_customer_id' => $identifiers['customer_id'] ?: $subscription->zoho_customer_id,
-                'zoho_subscription_id' => $identifiers['subscription_id'] ?: $subscription->zoho_subscription_id,
-                'zoho_payment_id' => $identifiers['payment_id'] ?: $subscription->zoho_payment_id,
-                'zoho_hosted_page_id' => $identifiers['hostedpage_id'] ?: $subscription->zoho_hosted_page_id,
-                'started_at' => $startedAt,
-                'paid_at' => $paidAt,
-                'expires_at' => $expiresAt,
-                'raw_webhook_payload' => $payload,
-            ])->save();
+            DB::transaction(function () use ($subscription, $identifiers, $startedAt, $paidAt, $expiresAt, $payload): void {
+                $subscription->forceFill([
+                    'status' => 'active',
+                    'zoho_customer_id' => $identifiers['customer_id'] ?: $subscription->zoho_customer_id,
+                    'zoho_subscription_id' => $identifiers['subscription_id'] ?: $subscription->zoho_subscription_id,
+                    'zoho_payment_id' => $identifiers['payment_id'] ?: $subscription->zoho_payment_id,
+                    'zoho_hosted_page_id' => $identifiers['hostedpage_id'] ?: $subscription->zoho_hosted_page_id,
+                    'started_at' => $startedAt,
+                    'paid_at' => $paidAt,
+                    'expires_at' => $expiresAt,
+                    'raw_webhook_payload' => $payload,
+                ])->save();
 
-            Log::info('circle subscription activated', [
-                'circle_subscription_id' => $subscription->id,
-                'payment_id' => $subscription->zoho_payment_id,
-                'subscription_id' => $subscription->zoho_subscription_id,
-            ]);
+                Log::info('circle subscription activated', [
+                    'circle_subscription_id' => $subscription->id,
+                    'payment_id' => $subscription->zoho_payment_id,
+                    'subscription_id' => $subscription->zoho_subscription_id,
+                ]);
 
-            $user = $subscription->user;
-            $user->forceFill([
-                'membership_status' => 'Circle Peer',
-                'active_circle_id' => $subscription->circle_id,
-                'active_circle_subscription_id' => $subscription->id,
-                'circle_joined_at' => $startedAt,
-                'circle_expires_at' => $expiresAt,
-                'active_circle_addon_code' => $subscription->zoho_addon_code,
-                'active_circle_addon_name' => $subscription->zoho_addon_name,
-            ])->save();
+                $user = $subscription->user;
+                $user->forceFill([
+                    'membership_status' => 'Circle Peer',
+                    'active_circle_id' => $subscription->circle_id,
+                    'active_circle_subscription_id' => $subscription->id,
+                    'circle_joined_at' => $startedAt,
+                    'circle_expires_at' => $expiresAt,
+                    'active_circle_addon_code' => $subscription->zoho_addon_code,
+                    'active_circle_addon_name' => $subscription->zoho_addon_name,
+                ])->save();
 
-            Log::info('user upgraded to Circle Peer', [
-                'user_id' => $user->id,
-                'circle_id' => $subscription->circle_id,
-            ]);
+                Log::info('user upgraded to Circle Peer', [
+                    'user_id' => $user->id,
+                    'circle_id' => $subscription->circle_id,
+                ]);
 
-            $this->circleJoinRequestPaymentSyncService->updateUserCircleMembershipTier($user);
-
-            $this->upsertPaidCircleMember($subscription, $paidAt, $startedAt, $expiresAt);
-
-            $user->refresh();
-            $this->safeSyncJoinRequestPayment($user);
+                $this->upsertPaidCircleMember($subscription, $paidAt, $startedAt, $expiresAt);
+                $this->circleJoinRequestPaymentSyncService->markRequestPaid($user, (string) $subscription->circle_id, $paidAt);
+                $this->circleJoinRequestPaymentSyncService->updateUserCircleMembershipTier($user);
+            });
 
             return response()->json(['success' => true]);
         } catch (Throwable $throwable) {
@@ -450,7 +452,7 @@ class ZohoBillingWebhookController extends Controller
             ->first();
 
         $updates = [
-            'status' => 'active',
+            'status' => $this->activeCircleMemberStatus(),
             'role' => $member?->role ?: 'member',
             'joined_at' => $member?->joined_at ?: $startedAt,
             'left_at' => null,
@@ -511,17 +513,9 @@ class ZohoBillingWebhookController extends Controller
     }
 
 
-    private function safeSyncJoinRequestPayment(User $user): void
+    private function activeCircleMemberStatus(): string
     {
-        try {
-            $this->circleJoinRequestPaymentSyncService->markRequestPaidFromUserCircle($user);
-        } catch (Throwable $exception) {
-            Log::warning('circle join request payment sync failed', [
-                'user_id' => $user->id,
-                'active_circle_id' => $user->active_circle_id,
-                'error' => $exception->getMessage(),
-            ]);
-        }
+        return (string) config('circle.member_joined_status', self::ACTIVE_CIRCLE_MEMBER_STATUS);
     }
 
     private function firstString(array $payload, array $keys): ?string
