@@ -347,11 +347,14 @@
                                             <td>{{ $membership->status ?: '—' }}</td>
                                             <td>{{ $membership->payment_status ?: ($latestSubscription->status ?? '—') }}</td>
                                             <td>
-                                                <form method="POST" action="{{ route('admin.users.circle-members.destroy', [$user->id, $membership->id]) }}" onsubmit="return confirm('Remove this circle membership for this peer?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                                                </form>
+                                                <button
+                                                    type="submit"
+                                                    form="remove-circle-membership-{{ $membership->id }}"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Remove this circle membership for this peer?');"
+                                                >
+                                                    Remove
+                                                </button>
                                             </td>
                                         </tr>
                                     @empty
@@ -492,6 +495,18 @@
         <a href="{{ route('admin.users.index') }}" class="btn btn-outline-secondary" type="button">Cancel</a>
     </div>
 </form>
+
+@foreach ($circleMemberships as $membership)
+    <form
+        id="remove-circle-membership-{{ $membership->id }}"
+        method="POST"
+        action="{{ route('admin.users.circle-members.destroy', [$user->id, $membership->id]) }}"
+        class="d-none"
+    >
+        @csrf
+        @method('DELETE')
+    </form>
+@endforeach
 
 @push('scripts')
 <script>
