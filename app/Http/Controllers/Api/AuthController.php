@@ -251,6 +251,10 @@ class AuthController extends BaseApiController
                 'circleMemberships' => fn ($query) => $query
                     ->where('status', (string) config('circle.member_joined_status', 'approved'))
                     ->whereNull('deleted_at')
+                    ->whereNull('left_at')
+                    ->where(function ($nested): void {
+                        $nested->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+                    })
                     ->orderByDesc('joined_at')
                     ->with('circle:id,name,slug'),
             ])),
@@ -379,6 +383,10 @@ class AuthController extends BaseApiController
             'circleMemberships' => fn ($query) => $query
                 ->where('status', (string) config('circle.member_joined_status', 'approved'))
                 ->whereNull('deleted_at')
+                ->whereNull('left_at')
+                ->where(function ($nested): void {
+                    $nested->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+                })
                 ->orderByDesc('joined_at')
                 ->with('circle:id,name,slug'),
         ])));

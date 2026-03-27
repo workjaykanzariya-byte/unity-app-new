@@ -117,6 +117,10 @@ class UserResource extends JsonResource
             : $this->resource->circleMemberships()
                 ->where('status', $joinedStatus)
                 ->whereNull('deleted_at')
+                ->whereNull('left_at')
+                ->where(function ($query): void {
+                    $query->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+                })
                 ->orderByDesc('joined_at')
                 ->with('circle:id,name,slug')
                 ->get();
@@ -161,6 +165,10 @@ class UserResource extends JsonResource
         $membership = $this->resource->circleMemberships()
             ->where('status', $joinedStatus)
             ->whereNull('deleted_at')
+            ->whereNull('left_at')
+            ->where(function ($query): void {
+                $query->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+            })
             // Selection rule for legacy single-circle fields:
             // prefer paid memberships, then latest join.
             ->orderByRaw('CASE WHEN paid_starts_at IS NULL THEN 1 ELSE 0 END ASC')

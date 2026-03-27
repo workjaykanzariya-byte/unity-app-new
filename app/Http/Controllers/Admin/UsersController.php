@@ -212,10 +212,7 @@ class UsersController extends Controller
             ->get(['id', 'name', 'zoho_addon_code', 'zoho_addon_name']);
 
         $joinedStatus = $this->activeCircleMemberStatus();
-        $joinedCircleId = CircleMember::query()
-            ->where('user_id', $user->id)
-            ->where('status', $joinedStatus)
-            ->whereNull('deleted_at')
+        $joinedCircleId = $this->activeCircleMembershipQuery($user->id, $joinedStatus)
             ->latest('created_at')
             ->value('circle_id');
 
@@ -229,11 +226,8 @@ class UsersController extends Controller
             ? Circle::query()->with('cityRef:id,name')->find($effectiveCircleId)
             : null;
 
-        $circleMemberships = CircleMember::query()
+        $circleMemberships = $this->activeCircleMembershipQuery($user->id, $joinedStatus)
             ->with('circle:id,name,slug')
-            ->where('user_id', $user->id)
-            ->where('status', $joinedStatus)
-            ->whereNull('deleted_at')
             ->orderByDesc('joined_at')
             ->get();
 
@@ -247,11 +241,9 @@ class UsersController extends Controller
 
         $isJoinedToEffectiveCircle = false;
         if ($effectiveCircleId) {
-            $isJoinedToEffectiveCircle = CircleMember::query()
+            $isJoinedToEffectiveCircle = $this->activeCircleMembershipQuery($user->id, $joinedStatus)
                 ->where('user_id', $user->id)
                 ->where('circle_id', $effectiveCircleId)
-                ->where('status', $joinedStatus)
-                ->whereNull('deleted_at')
                 ->exists();
         }
 
@@ -448,7 +440,7 @@ class UsersController extends Controller
                         'user_id' => $user->id,
                         'circle_id' => $selectedCircleId,
                     ],
-                    $membershipAttributes,
+                    array_merge($membershipAttributes, ['left_at' => null]),
                 );
 
                 $circle = Circle::query()->whereKey($selectedCircleId)->firstOrFail();
@@ -532,7 +524,7 @@ class UsersController extends Controller
                         'user_id' => $user->id,
                         'circle_id' => $additionalCircleId,
                     ],
-                    $additionalMembership,
+                    array_merge($additionalMembership, ['left_at' => null]),
                 );
             }
 
@@ -926,6 +918,18 @@ class UsersController extends Controller
         return (string) config('circle.member_joined_status', 'approved');
     }
 
+    private function activeCircleMembershipQuery(string $userId, string $joinedStatus)
+    {
+        return CircleMember::query()
+            ->where('user_id', $userId)
+            ->where('status', $joinedStatus)
+            ->whereNull('deleted_at')
+            ->whereNull('left_at')
+            ->where(function ($query): void {
+                $query->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+            });
+    }
+
     private function buildUserQuery(Request $request): array
     {
         $allowedCircleIds = $request->attributes->get('allowed_circle_ids');
@@ -999,6 +1003,10 @@ class UsersController extends Controller
                     $circleMembersQuery
                         ->where('status', $joinedStatus)
                         ->whereNull('deleted_at')
+                        ->whereNull('left_at')
+                        ->where(function ($query): void {
+                            $query->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+                        })
                         ->orderByDesc('joined_at')
                         ->with(['circle:id,name']);
                 },

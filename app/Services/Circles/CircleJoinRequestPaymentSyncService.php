@@ -105,6 +105,10 @@ class CircleJoinRequestPaymentSyncService
                 ->where('user_id', $user->id)
                 ->where('status', $joinedStatus)
                 ->whereNull('deleted_at')
+                ->whereNull('left_at')
+                ->where(function ($query): void {
+                    $query->whereNull('paid_ends_at')->orWhere('paid_ends_at', '>=', now());
+                })
                 ->count();
 
             if ($activeCircleCount <= 0) {
