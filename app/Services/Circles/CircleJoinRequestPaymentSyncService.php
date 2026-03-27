@@ -3,7 +3,6 @@
 namespace App\Services\Circles;
 
 use App\Models\CircleJoinRequest;
-use App\Models\CircleSubscription;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -84,29 +83,8 @@ class CircleJoinRequestPaymentSyncService
 
     public function updateUserCircleMembershipTier(User $user): void
     {
-        try {
-            $activePaidCircleCount = CircleSubscription::query()
-                ->where('user_id', $user->id)
-                ->where('status', 'active')
-                ->where(function ($query): void {
-                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-                })
-                ->count();
-
-            if ($activePaidCircleCount <= 0) {
-                return;
-            }
-
-            $nextStatus = $activePaidCircleCount > 1 ? 'Multi Circle Peer' : 'Circle Peer';
-
-            if ((string) $user->membership_status !== $nextStatus) {
-                $user->forceFill(['membership_status' => $nextStatus])->save();
-            }
-        } catch (Throwable $exception) {
-            Log::warning('Failed to sync user circle membership tier', [
-                'user_id' => $user->id,
-                'error' => $exception->getMessage(),
-            ]);
-        }
+        // Intentionally no-op.
+        // Circle membership truth is maintained in circle_members/circle_subscriptions.
+        // Do not write circle-specific tier labels into users.membership_status enum.
     }
 }

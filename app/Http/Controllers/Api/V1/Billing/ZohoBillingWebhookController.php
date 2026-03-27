@@ -195,7 +195,6 @@ class ZohoBillingWebhookController extends Controller
 
                 $user = $subscription->user;
                 $user->forceFill([
-                    'membership_status' => 'Circle Peer',
                     'active_circle_id' => $subscription->circle_id,
                     'active_circle_subscription_id' => $subscription->id,
                     'circle_joined_at' => $startedAt,
@@ -204,13 +203,12 @@ class ZohoBillingWebhookController extends Controller
                     'active_circle_addon_name' => $subscription->zoho_addon_name,
                 ])->save();
 
-                Log::info('user upgraded to Circle Peer', [
+                Log::info('user active circle snapshot updated for compatibility', [
                     'user_id' => $user->id,
                     'circle_id' => $subscription->circle_id,
                 ]);
 
                 $this->finalizePaidCircleJoin($user, $subscription, $paidAt, $startedAt, $expiresAt);
-                $this->circleJoinRequestPaymentSyncService->updateUserCircleMembershipTier($user);
             });
 
             return response()->json(['success' => true]);
