@@ -40,7 +40,6 @@ class EmailLogController extends Controller
             ->when($status !== '' && $status !== 'all', fn ($builder) => $builder->where('status', $status))
             ->when($dateFrom !== '', fn ($builder) => $builder->whereDate('sent_at', '>=', $dateFrom))
             ->when($dateTo !== '', fn ($builder) => $builder->whereDate('sent_at', '<=', $dateTo))
-            ->orderByDesc('sent_at')
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->appends($request->query());
