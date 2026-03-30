@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostSaveController;
+use App\Http\Controllers\Api\PublicUserController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\SupportController;
@@ -90,6 +91,7 @@ Route::prefix('v1')->group(function () {
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
     Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
+    Route::get('/public/users', [PublicUserController::class, 'index']);
 
     Route::post('/contacts/sync', [UserContactController::class, 'syncContacts']);
     Route::get('/contacts', [UserContactController::class, 'getContacts']);
