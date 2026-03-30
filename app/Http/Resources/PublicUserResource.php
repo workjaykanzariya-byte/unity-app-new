@@ -18,6 +18,22 @@ class PublicUserResource extends JsonResource
             $profileImageUrl = url('/api/v1/files/' . $this->profile_photo_file_id);
         }
 
+        $circles = $this->whenLoaded('circleMembers', function () {
+            return $this->circleMembers
+                ->map(fn ($member) => [
+                    'id' => optional($member->circle)->id,
+                    'name' => optional($member->circle)->name,
+                ])
+                ->filter(fn ($circle) => ! empty($circle['id']))
+                ->values()
+                ->all();
+        }, []);
+
+        $circleNames = collect($circles)->pluck('name')->filter()->values()->all();
+        $statusValue = $this->status ?? 'active';
+        $statusLabel = strtolower((string) $statusValue) === 'active' ? 'Active' : ucfirst((string) $statusValue);
+        $membershipStatus = $this->membership_status;
+
         return [
             'id' => $this->id,
             'first_name' => $this->first_name,
@@ -30,9 +46,16 @@ class PublicUserResource extends JsonResource
             'designation' => $this->designation,
             'city_id' => $this->city_id,
             'city_name' => optional($this->whenLoaded('city'))->name,
-            'country' => $this->country,
+            'country_name' => $this->country,
+            'circles' => $circles,
+            'circle_names' => $circleNames,
+            'circle_name' => $circleNames[0] ?? null,
+            'membership_label' => $membershipStatus ? ucfirst(str_replace('_', ' ', (string) $membershipStatus)) : null,
             'profile_image_url' => $profileImageUrl,
-            'membership_status' => $this->membership_status,
+            'membership_status' => $membershipStatus,
+            'coins' => (int) ($this->coins_balance ?? 0),
+            'last_login_at' => $this->last_login_at,
+            'status' => $statusLabel,
             'created_at' => $this->created_at,
         ];
     }

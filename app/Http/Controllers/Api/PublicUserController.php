@@ -14,6 +14,7 @@ class PublicUserController extends BaseApiController
         $userTable = (new User)->getTable();
         $availableColumns = $this->resolveAvailableColumns($userTable);
         $perPage = max(1, min((int) $request->integer('per_page', 20), 100));
+        $hasCircleMembersTable = Schema::hasTable('circle_members');
 
         $query = User::query()->select($availableColumns);
 
@@ -37,13 +38,17 @@ class PublicUserController extends BaseApiController
                 'company_name',
             ], $availableColumns));
 
-            if ($searchableColumns !== []) {
-                $query->where(function ($searchQuery) use ($searchableColumns, $search) {
+            $query->where(function ($searchQuery) use ($searchableColumns, $search) {
+                if ($searchableColumns !== []) {
                     foreach ($searchableColumns as $column) {
                         $searchQuery->orWhere($column, 'ILIKE', '%' . $search . '%');
                     }
+                }
+
+                $searchQuery->orWhereHas('city', function ($cityQuery) use ($search) {
+                    $cityQuery->where('name', 'ILIKE', '%' . $search . '%');
                 });
-            }
+            });
         }
 
         if (
@@ -60,8 +65,40 @@ class PublicUserController extends BaseApiController
             $query->where('city_id', $request->query('city_id'));
         }
 
+        if (
+            $request->filled('status')
+            && in_array('status', $availableColumns, true)
+        ) {
+            $query->where('status', (string) $request->query('status'));
+        }
+
+        if ($request->filled('circle_id') && $hasCircleMembersTable) {
+            $circleId = (string) $request->query('circle_id');
+            $query->whereHas('circleMembers', function ($circleMembersQuery) use ($circleId) {
+                $circleMembersQuery
+                    ->where('circle_id', $circleId)
+                    ->where('status', $this->activeCircleMemberStatus())
+                    ->whereNull('deleted_at')
+                    ->whereNull('left_at');
+            });
+        }
+
         if (in_array('city_id', $availableColumns, true)) {
             $query->with('city:id,name');
+        }
+
+        if ($hasCircleMembersTable) {
+            $query->with([
+                'circleMembers' => function ($circleMembersQuery) {
+                    $circleMembersQuery
+                        ->select(['id', 'user_id', 'circle_id', 'status', 'joined_at', 'deleted_at', 'left_at'])
+                        ->where('status', $this->activeCircleMemberStatus())
+                        ->whereNull('deleted_at')
+                        ->whereNull('left_at')
+                        ->orderByDesc('joined_at')
+                        ->with(['circle:id,name']);
+                },
+            ]);
         }
 
         if (in_array('created_at', $availableColumns, true)) {
@@ -98,9 +135,11 @@ class PublicUserController extends BaseApiController
             'city_id',
             'country',
             'membership_status',
+            'coins_balance',
+            'last_login_at',
+            'status',
             'profile_photo_url',
             'profile_photo_file_id',
-            'status',
             'created_at',
             'deleted_at',
         ];
@@ -109,5 +148,10 @@ class PublicUserController extends BaseApiController
             $candidates,
             static fn (string $column): bool => Schema::hasColumn($table, $column)
         ));
+    }
+
+    private function activeCircleMemberStatus(): string
+    {
+        return (string) config('circle.member_joined_status', 'approved');
     }
 }
