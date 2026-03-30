@@ -25,16 +25,6 @@ class PublicMemberResource extends JsonResource
                 'circle_name' => $circleMember->circle?->name,
                 'role' => $circleMember->role,
                 'status' => $circleMember->status,
-                'joined_at' => $circleMember->joined_at,
-                'left_at' => $circleMember->left_at,
-                'joined_via' => $circleMember->joined_via,
-                'joined_via_payment' => $circleMember->joined_via_payment,
-                'billing_term' => $circleMember->billing_term,
-                'paid_at' => $circleMember->paid_at,
-                'paid_starts_at' => $circleMember->paid_starts_at,
-                'paid_ends_at' => $circleMember->paid_ends_at,
-                'payment_status' => $circleMember->payment_status,
-                'zoho_addon_code' => $circleMember->zoho_addon_code,
             ];
         })->values();
 
