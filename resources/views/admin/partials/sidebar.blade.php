@@ -61,7 +61,6 @@
     $postsMenu = $isGlobalAdmin ? [
         ['label' => 'All Posts', 'route' => 'admin.posts.index'],
         ['label' => 'Post Reports', 'route' => 'admin.post-reports.index'],
-        ['label' => 'Ads', 'route' => 'admin.ads.index'],
     ] : [];
     $postsActive = request()->routeIs('admin.posts.*') || request()->routeIs('admin.post-reports.*') || request()->routeIs('admin.ads.*');
 
