@@ -24,9 +24,13 @@ class ReferralController extends BaseApiController
 
     public function generate(GenerateReferralCodeRequest $request, ReferralService $referralService)
     {
+        $payload = $referralService->generateOrGetReferral($request->user());
+        $isExisting = (bool) ($payload['is_existing'] ?? false);
+        unset($payload['is_existing']);
+
         return $this->success(
-            $referralService->generateOrGetReferral($request->user()),
-            'Referral code generated successfully.'
+            $payload,
+            $isExisting ? 'Referral code fetched successfully.' : 'Referral code generated successfully.'
         );
     }
 

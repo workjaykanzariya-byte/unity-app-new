@@ -26,9 +26,7 @@ class ReferralService
     {
         $existing = ReferralData::query()
             ->where('referrer_user_id', $user->id)
-            ->whereNull('referred_user_id')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->orderBy('id', 'asc')
             ->first();
 
         if ($existing) {
@@ -41,6 +39,7 @@ class ReferralService
             return [
                 'referral_code' => (string) $existing->referral_code,
                 'referral_link' => (string) $existing->referral_link,
+                'is_existing' => true,
             ];
         }
 
@@ -67,6 +66,7 @@ class ReferralService
         return [
             'referral_code' => $code,
             'referral_link' => $link,
+            'is_existing' => false,
         ];
     }
 
