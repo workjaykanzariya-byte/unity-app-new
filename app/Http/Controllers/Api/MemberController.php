@@ -51,6 +51,26 @@ class MemberController extends BaseApiController
             ->with([
                 'city:id,name,country,country_name',
                 'activeCircle:id,name',
+                'circleMembers' => function ($circleMemberQuery) {
+                    $circleMemberQuery->select([
+                        'id',
+                        'circle_id',
+                        'user_id',
+                        'role',
+                        'status',
+                        'joined_at',
+                        'left_at',
+                        'joined_via',
+                        'joined_via_payment',
+                        'billing_term',
+                        'paid_at',
+                        'paid_starts_at',
+                        'paid_ends_at',
+                        'payment_status',
+                        'zoho_addon_code',
+                    ]);
+                },
+                'circleMembers.circle:id,name',
             ]);
 
         // Manual test: inactive members should be excluded from the members list API.

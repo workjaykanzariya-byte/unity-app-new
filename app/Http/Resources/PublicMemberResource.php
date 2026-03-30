@@ -15,6 +15,28 @@ class PublicMemberResource extends JsonResource
         $cityRelation = $this->relationLoaded('city') ? $this->getRelation('city') : null;
         $cityName = $cityRelation?->name ?? $this->getAttribute('city');
         $countryName = data_get($cityRelation, 'country_name') ?? data_get($cityRelation, 'country');
+        $circleMembers = $this->relationLoaded('circleMembers')
+            ? $this->getRelation('circleMembers')
+            : collect();
+        $circles = $circleMembers->map(function ($circleMember) {
+            return [
+                'circle_member_id' => $circleMember->id,
+                'circle_id' => $circleMember->circle_id,
+                'circle_name' => $circleMember->circle?->name,
+                'role' => $circleMember->role,
+                'status' => $circleMember->status,
+                'joined_at' => $circleMember->joined_at,
+                'left_at' => $circleMember->left_at,
+                'joined_via' => $circleMember->joined_via,
+                'joined_via_payment' => $circleMember->joined_via_payment,
+                'billing_term' => $circleMember->billing_term,
+                'paid_at' => $circleMember->paid_at,
+                'paid_starts_at' => $circleMember->paid_starts_at,
+                'paid_ends_at' => $circleMember->paid_ends_at,
+                'payment_status' => $circleMember->payment_status,
+                'zoho_addon_code' => $circleMember->zoho_addon_code,
+            ];
+        })->values();
 
         return [
             'id' => $this->id,
@@ -52,6 +74,8 @@ class PublicMemberResource extends JsonResource
             'active_circle_id' => $this->active_circle_id,
             'active_circle_addon_name' => $this->active_circle_addon_name,
             'active_circle_name' => $this->activeCircle?->name,
+            'circles_count' => $circles->count(),
+            'circles' => $circles,
             'circle_joined_at' => $this->circle_joined_at,
             'circle_expires_at' => $this->circle_expires_at,
             'created_at' => $this->created_at,
