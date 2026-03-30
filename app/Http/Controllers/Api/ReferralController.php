@@ -5,15 +5,60 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Activity\StoreReferralRequest;
 use App\Events\ActivityCreated;
+use App\Http\Requests\Api\GenerateReferralCodeRequest;
+use App\Http\Resources\ReferralMemberResource;
 use App\Models\Referral;
 use App\Models\User;
 use App\Services\Coins\CoinsService;
 use App\Services\Notifications\NotifyUserService;
+use App\Services\Referrals\ReferralCodeService;
+use App\Services\Referrals\ReferralService;
 use Illuminate\Http\Request;
 use Throwable;
 
 class ReferralController extends BaseApiController
 {
+    public function me(Request $request, ReferralService $referralService)
+    {
+        return $this->success($referralService->buildReferralProfile($request->user()));
+    }
+
+    public function generate(GenerateReferralCodeRequest $request, ReferralService $referralService, ReferralCodeService $referralCodeService)
+    {
+        $user = $request->user();
+        $code = $referralService->ensureReferralCode($user, $request->boolean('regenerate'));
+
+        return $this->success([
+            'referral_code' => $code,
+            'referral_link' => $referralCodeService->buildReferralLink($code),
+        ], 'Referral code generated successfully.');
+    }
+
+    public function members(Request $request, ReferralService $referralService)
+    {
+        $paginator = $referralService->members($request->user(), (int) $request->input('per_page', 20));
+
+        return $this->success([
+            'items' => ReferralMemberResource::collection($paginator->items()),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    public function stats(Request $request, ReferralService $referralService)
+    {
+        return $this->success($referralService->getStats($request->user()));
+    }
+
+    public function validateCode(string $code, ReferralService $referralService)
+    {
+        return $this->success($referralService->validateCodeResponse($code));
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();

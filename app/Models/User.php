@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -96,6 +97,10 @@ class User extends Authenticatable
         'active_circle_id',
         'active_circle_addon_code',
         'active_circle_addon_name',
+        'referral_code',
+        'referred_by_user_id',
+        'referred_at',
+        'referral_code_used',
     ];
 
     protected $hidden = [
@@ -126,6 +131,7 @@ class User extends Authenticatable
         'social_links' => 'array',
         'coins_balance' => 'integer',
         'is_sponsored_member' => 'boolean',
+        'referred_at' => 'datetime',
     ];
 
     public function getAuthPassword()
@@ -256,6 +262,16 @@ class User extends Authenticatable
     public function introducedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'introduced_by');
+    }
+
+    public function referredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by_user_id');
+    }
+
+    public function referredMembers(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by_user_id');
     }
 
     public function foundedCircles(): HasMany
@@ -643,6 +659,16 @@ class User extends Authenticatable
     public function visitorLeads(): HasMany
     {
         return $this->hasMany(VisitorLead::class, 'converted_user_id');
+    }
+
+    public function referralHistoriesAsReferrer(): HasMany
+    {
+        return $this->hasMany(ReferralHistory::class, 'referrer_user_id');
+    }
+
+    public function referralHistoryAsReferred(): HasOne
+    {
+        return $this->hasOne(ReferralHistory::class, 'referred_user_id', 'id');
     }
 
     public function dataExports(): HasMany

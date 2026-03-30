@@ -10,6 +10,7 @@ use App\Models\OtpCode;
 use App\Models\User;
 use App\Models\UserLoginHistory;
 use App\Services\EmailLogs\EmailLogService;
+use App\Services\Referrals\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,40 +21,61 @@ use Illuminate\Support\Str;
 
 class AuthController extends BaseApiController
 {
-    public function register(RegisterRequest $request)
+    public function register(RegisterRequest $request, ReferralService $referralService)
     {
         $data = $request->validated();
 
-        // Build a display name from first + last name
-        $displayName = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
+        $referrer = $referralService->validateReferralCodeOrFail($data['referral_code'] ?? null);
 
-        $user                 = new User();
-        $user->id             = Str::uuid();
-        $user->first_name     = $data['first_name'];
-        $user->last_name      = $data['last_name'] ?? null;
-        $user->display_name   = $displayName;
-        $user->email          = $data['email'];
-        $user->phone          = $data['phone'] ?? null;
-        $user->company_name   = $data['company_name'] ?? null;
-        $user->designation    = $data['designation'] ?? null;
-        $user->city_id        = $user->city_id ?? null;
-        $trialEndsAt = now()->addDays(3);
+        $registrationContext = DB::transaction(function () use ($data, $referralService, $referrer) {
+            // Build a display name from first + last name
+            $displayName = trim($data['first_name'] . ' ' . ($data['last_name'] ?? ''));
 
-        $user->membership_status = User::STATUS_FREE_TRIAL;
-        $user->membership_starts_at = now();
-        $user->membership_ends_at = $trialEndsAt;
-        $user->membership_expiry = $trialEndsAt;
-        $user->coins_balance  = $user->coins_balance ?? 0;
+            $user                 = new User();
+            $user->id             = Str::uuid();
+            $user->first_name     = $data['first_name'];
+            $user->last_name      = $data['last_name'] ?? null;
+            $user->display_name   = $displayName;
+            $user->email          = $data['email'];
+            $user->phone          = $data['phone'] ?? null;
+            $user->company_name   = $data['company_name'] ?? null;
+            $user->designation    = $data['designation'] ?? null;
+            $user->city_id        = $user->city_id ?? null;
+            $trialEndsAt = now()->addDays(3);
 
-        // Store the hashed password in password_hash (not password)
-        $user->password_hash = Hash::make($data['password']);
+            $user->membership_status = User::STATUS_FREE_TRIAL;
+            $user->membership_starts_at = now();
+            $user->membership_ends_at = $trialEndsAt;
+            $user->membership_expiry = $trialEndsAt;
+            $user->coins_balance  = $user->coins_balance ?? 0;
 
-        // Ensure any legacy password attribute isn't used
-        if (isset($user->password)) {
-            $user->password = null;
-        }
+            // Store the hashed password in password_hash (not password)
+            $user->password_hash = Hash::make($data['password']);
 
-        $user->save();
+            // Ensure any legacy password attribute isn't used
+            if (isset($user->password)) {
+                $user->password = null;
+            }
+
+            $user->save();
+
+            $referralMeta = null;
+
+            if ($referrer) {
+                $referralMeta = $referralService->processRegistrationReferral($user, (string) $data['referral_code']);
+            }
+
+            return [
+                'user' => $user,
+                'referral' => $referralMeta,
+            ];
+        });
+
+        /** @var User $user */
+        $user = $registrationContext['user'];
+        $referralMeta = $registrationContext['referral'];
+
+        $referralService->ensureReferralCode($user);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -62,7 +84,8 @@ class AuthController extends BaseApiController
             'message' => 'Registration successful.',
             'data'    => [
                 'token' => $token,
-                'user'  => $user,
+                'user'  => $user->fresh(),
+                'referral' => $referralMeta,
             ],
         ], 201);
     }

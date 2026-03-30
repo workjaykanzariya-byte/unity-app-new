@@ -6,6 +6,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('referral_code')) {
+            $this->merge([
+                'referral_code' => strtoupper(trim((string) $this->input('referral_code'))),
+            ]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -28,6 +37,7 @@ class RegisterRequest extends FormRequest
             // NEW OPTIONAL FIELDS FOR REGISTRATION
             'company_name' => ['nullable', 'string', 'max:255'],
             'designation'  => ['nullable', 'string', 'max:255'],
+            'referral_code' => ['nullable', 'string', 'max:32', 'regex:/^[A-Z]+\d{4}$/'],
         ];
     }
 
@@ -35,6 +45,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'phone.unique' => 'This phone number is already registered.',
+            'referral_code.regex' => 'Referral code format is invalid.',
         ];
     }
 }
