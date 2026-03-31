@@ -17,6 +17,8 @@ class ReferralData extends Model
         'coins',
         'reward_status',
         'used_at',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [
