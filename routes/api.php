@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\P2pMeetingController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostSaveController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\PublicMemberProfileController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\TestimonialController;
@@ -95,6 +96,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/contacts/sync', [UserContactController::class, 'syncContacts']);
     Route::get('/contacts', [UserContactController::class, 'getContacts']);
     Route::get('/members-with-circles', [MemberWithCircleController::class, 'index']);
+    Route::get('/members-with-circles/{slug}', [PublicMemberProfileController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/membership-summary', [MembershipSummaryController::class, 'show']);
