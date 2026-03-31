@@ -143,6 +143,12 @@ class ReferralService
                 ]);
             }
 
+
+            Log::info('referral.registration.link_resolved', [
+                'referrer_user_id' => (string) $link->user_id,
+                'referral_code' => $normalized,
+            ]);
+
             if ((string) $link->user_id === (string) $newUser->id) {
                 throw ValidationException::withMessages([
                     'referral_code' => ['A user cannot refer themselves.'],
@@ -225,6 +231,11 @@ class ReferralService
             ]);
 
             $referrer = User::query()->find($referrerUserId);
+
+            Log::info('referral.registration.referrer_resolved', [
+                'referrer_user_id' => $referrerUserId,
+                'found' => $referrer !== null,
+            ]);
 
             if ($referrer && blank($data->referrer_email)) {
                 $data->referrer_email = $referrer->email;

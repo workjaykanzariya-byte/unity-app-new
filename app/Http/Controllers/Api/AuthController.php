@@ -25,7 +25,13 @@ class AuthController extends BaseApiController
     public function register(RegisterRequest $request, ReferralService $referralService)
     {
         $data = $request->validated();
-        $normalizedReferralCode = isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null;
+        $incomingReferralCode = $data['referral_code']
+            ?? $request->input('referral_code')
+            ?? $request->input('referralCode');
+
+        $normalizedReferralCode = filled($incomingReferralCode)
+            ? strtoupper(trim((string) $incomingReferralCode))
+            : null;
 
         Log::info('auth.register.before_user_creation', [
             'email' => (string) ($data['email'] ?? ''),
