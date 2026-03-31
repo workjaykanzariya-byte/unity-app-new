@@ -27,47 +27,87 @@ class AuthController extends BaseApiController
         $data = $request->validated();
         $normalizedReferralCode = isset($data['referral_code']) ? strtoupper(trim((string) $data['referral_code'])) : null;
 
+        Log::info('auth.register.before_user_creation', [
+            'email' => (string) ($data['email'] ?? ''),
+            'first_name' => (string) ($data['first_name'] ?? ''),
+            'last_name' => (string) ($data['last_name'] ?? ''),
+            'phone' => (string) ($data['phone'] ?? ''),
+            'display_name' => trim((string) (($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))),
+            'has_referral_code' => filled($normalizedReferralCode),
+        ]);
+
         $referralRow = $referralService->validateReferralCodeOrFail($normalizedReferralCode);
 
         $registrationContext = DB::transaction(function () use ($data, $referralService, $referralRow, $normalizedReferralCode) {
             $user = $this->createRegisteredUser($data);
 
-            Log::info('auth.register.user_created', [
+            if (! $user->exists) {
+                throw new \RuntimeException('User creation failed: model was not persisted.');
+            }
+
+            Log::info('auth.register.after_user_created', [
                 'user_id' => (string) $user->id,
                 'email' => (string) $user->email,
                 'first_name' => (string) ($user->first_name ?? ''),
                 'last_name' => (string) ($user->last_name ?? ''),
                 'phone' => (string) ($user->phone ?? ''),
                 'display_name' => (string) ($user->display_name ?? ''),
-                'status' => (string) ($user->status ?? 'active'),
-                'deleted_at' => $user->deleted_at,
-                'registration_path' => blank($normalizedReferralCode) ? 'standard' : 'referral',
             ]);
 
             $referralMeta = null;
 
             if ($referralRow) {
+                Log::info('auth.register.before_referral_apply', [
+                    'user_id' => (string) $user->id,
+                    'referral_code' => (string) $normalizedReferralCode,
+                ]);
+
                 $referralMeta = $referralService->applyReferralOnRegistration($user, (string) $normalizedReferralCode);
+
+                Log::info('auth.register.after_referral_apply', [
+                    'user_id' => (string) $user->id,
+                    'referral_code' => (string) $normalizedReferralCode,
+                    'referrer_user_id' => (string) ($referralMeta['referrer_user_id'] ?? ''),
+                    'reward_status' => (string) ($referralMeta['reward_status'] ?? ''),
+                ]);
             }
 
             return [
-                'user' => $user,
+                'user_id' => (string) $user->id,
                 'referral' => $referralMeta,
             ];
         });
 
-        /** @var User $user */
-        $user = $registrationContext['user'];
+        $userId = (string) $registrationContext['user_id'];
         $referralMeta = $registrationContext['referral'];
 
+        /** @var User|null $user */
+        $user = User::query()->useWritePdo()->find($userId);
+
+        if (! $user) {
+            Log::error('auth.register.user_missing_after_transaction', [
+                'user_id' => $userId,
+                'email' => (string) ($data['email'] ?? ''),
+                'has_referral_code' => filled($normalizedReferralCode),
+            ]);
+
+            throw new \RuntimeException('Registration failed: user record was not found after creation.');
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
+
+        Log::info('auth.register.before_response', [
+            'user_id' => (string) $user->id,
+            'email' => (string) $user->email,
+            'has_referral_meta' => $referralMeta !== null,
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Registration successful.',
             'data'    => [
                 'token' => $token,
-                'user'  => $user->fresh(),
+                'user'  => $user,
                 'referral' => $referralMeta,
             ],
         ], 201);
