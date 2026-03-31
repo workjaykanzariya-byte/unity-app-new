@@ -318,6 +318,7 @@ Route::prefix('v1')->group(function () {
         }
 
         // Referrals & Visitors
+        Route::get('/referrals/validate', [ReferralController::class, 'validateSelf']);
         Route::get('/referrals/me', [ReferralController::class, 'me']);
         Route::post('/referrals/generate', [ReferralController::class, 'generate']);
         Route::get('/referrals/members', [ReferralController::class, 'members']);

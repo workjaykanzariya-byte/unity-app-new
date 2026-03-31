@@ -64,6 +64,19 @@ class ReferralController extends BaseApiController
         ]);
     }
 
+    public function validateSelf(Request $request, ReferralService $referralService)
+    {
+        $user = $request->user();
+        $payload = $referralService->generateOrGetReferral($user);
+
+        return $this->success([
+            'valid' => true,
+            'referral_code' => $payload['referral_code'] ?? null,
+            'referral_link' => $payload['referral_link'] ?? null,
+            'referrer_name' => trim((string) (($user->display_name ?: '') ?: (($user->first_name ?? '') . ' ' . ($user->last_name ?? '')))),
+        ]);
+    }
+
     public function index(Request $request)
     {
         $authUser = $request->user();
