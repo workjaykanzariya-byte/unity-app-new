@@ -11,20 +11,36 @@ class MemberWithCircleController extends BaseApiController
 {
     public function index()
     {
+        $availableOptionalColumns = $this->availableOptionalColumns();
+        $listOptionalColumns = array_values(array_intersect($availableOptionalColumns, [
+            'profile_photo_file_id',
+            'profile_photo_url',
+            'active_circle_id',
+            'circle_joined_at',
+            'short_bio',
+            'experience_summary',
+            'social_links',
+            'address',
+        ]));
+
         $members = User::query()
-            ->select([
+            ->select(array_merge([
                 'users.id',
                 'users.display_name',
                 'users.first_name',
                 'users.last_name',
                 'users.email',
                 'users.public_profile_slug',
-            ])
+                'users.phone',
+                'users.designation',
+                'users.company_name',
+            ], array_map(fn (string $column): string => 'users.' . $column, $listOptionalColumns)))
+            ->with('activeCircle:id,name')
             ->orderByDesc('created_at')
             ->get();
 
         $items = $members
-            ->map(fn (User $member): array => $this->transformListMember($member))
+            ->map(fn (User $member): array => $this->transformListMember($member, $listOptionalColumns))
             ->values();
 
         return $this->success([
@@ -264,10 +280,18 @@ class MemberWithCircleController extends BaseApiController
         ];
     }
 
-    private function transformListMember(User $member): array
+    private function transformListMember(User $member, array $listOptionalColumns): array
     {
         $displayName = trim((string) ($member->display_name ?? ''));
         $fullName = trim(trim((string) ($member->first_name ?? '')) . ' ' . trim((string) ($member->last_name ?? '')));
+        $socialMedia = $this->optionalValue($member, 'social_links', $listOptionalColumns);
+        $profilePhotoId = $this->optionalValue($member, 'profile_photo_file_id', $listOptionalColumns);
+        $legacyProfilePhotoUrl = $this->optionalValue($member, 'profile_photo_url', $listOptionalColumns);
+        $photo = $profilePhotoId
+            ? url('/api/v1/files/' . $profilePhotoId)
+            : $legacyProfilePhotoUrl;
+        $businessDescription = $this->optionalValue($member, 'short_bio', $listOptionalColumns)
+            ?: $this->optionalValue($member, 'experience_summary', $listOptionalColumns);
 
         return [
             'id' => $member->id,
@@ -275,6 +299,17 @@ class MemberWithCircleController extends BaseApiController
                 ? $displayName
                 : ($fullName !== '' ? $fullName : $member->email),
             'slug' => $member->public_profile_slug,
+            'mobile' => $member->phone,
+            'photo' => $photo,
+            'designation' => $member->designation,
+            'company' => $member->company_name,
+            'email' => $member->email,
+            'active_circle_name' => $member->activeCircle?->name,
+            'address' => $this->optionalValue($member, 'address', $listOptionalColumns),
+            'website' => $this->extractWebsite($socialMedia),
+            'business_description' => $businessDescription,
+            'circle_joined_at' => $this->optionalValue($member, 'circle_joined_at', $listOptionalColumns),
+            'social_media' => $socialMedia,
         ];
     }
 
