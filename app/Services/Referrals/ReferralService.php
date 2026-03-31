@@ -190,18 +190,18 @@ class ReferralService
 
             $rewardCoins = (int) config('coins.activity_rewards.referral_signup', 100);
 
-            Log::info('referral.registration.before_insert', [
+            $referrer = User::query()->find($referrerUserId);
+
+            Log::info('referral.registration.referrer_resolved', [
                 'referrer_user_id' => $referrerUserId,
-                'referred_user_id' => $newUserId,
-                'referral_code' => $normalized,
-                'coins' => $rewardCoins,
+                'found' => $referrer !== null,
             ]);
 
             $insertPayload = [
                 'referrer_user_id' => $referrerUserId,
                 'referred_user_id' => $newUserId,
                 'referral_code' => $normalized,
-                'referrer_email' => null,
+                'referrer_email' => $referrer?->email,
                 'coins' => $rewardCoins,
                 'reward_status' => 'granted',
                 'used_at' => now(),
@@ -209,32 +209,24 @@ class ReferralService
                 'updated_at' => now(),
             ];
 
-            $inserted = DB::table('referraldata')->insert($insertPayload);
+            Log::info('referral.registration.before_insert', [
+                'referrer_user_id' => $referrerUserId,
+                'referred_user_id' => $newUserId,
+                'referral_code' => $normalized,
+                'coins' => $rewardCoins,
+                'payload' => $insertPayload,
+            ]);
 
-            if (! $inserted) {
+            $data = ReferralData::query()->create($insertPayload);
+
+            if (! $data->exists || ! $data->id) {
                 throw new \RuntimeException('Referral registration failed: referraldata row was not created.');
-            }
-
-            $data = ReferralData::query()
-                ->where('referred_user_id', $newUserId)
-                ->orderByDesc('id')
-                ->first();
-
-            if (! $data) {
-                throw new \RuntimeException('Referral registration failed: referraldata row was not retrievable.');
             }
 
             Log::info('referral.registration.insert_success', [
                 'referral_data_id' => (int) $data->id,
                 'referred_user_id' => $newUserId,
                 'referrer_user_id' => $referrerUserId,
-            ]);
-
-            $referrer = User::query()->find($referrerUserId);
-
-            Log::info('referral.registration.referrer_resolved', [
-                'referrer_user_id' => $referrerUserId,
-                'found' => $referrer !== null,
             ]);
 
             if ($referrer && blank($data->referrer_email)) {
