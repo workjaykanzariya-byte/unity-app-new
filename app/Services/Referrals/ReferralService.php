@@ -14,7 +14,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class ReferralService
@@ -192,12 +191,10 @@ class ReferralService
                 'coins' => $rewardCoins,
             ]);
 
-            $referralCodeColumn = Schema::hasColumn('referraldata', 'referralCode') ? 'referralCode' : 'referral_code';
-
             $insertPayload = [
                 'referrer_user_id' => $referrerUserId,
                 'referred_user_id' => $newUserId,
-                $referralCodeColumn => $normalized,
+                'referral_code' => $normalized,
                 'referrer_email' => null,
                 'coins' => $rewardCoins,
                 'reward_status' => 'granted',
@@ -225,7 +222,6 @@ class ReferralService
                 'referral_data_id' => (int) $data->id,
                 'referred_user_id' => $newUserId,
                 'referrer_user_id' => $referrerUserId,
-                'referral_code_column' => $referralCodeColumn,
             ]);
 
             $referrer = User::query()->find($referrerUserId);

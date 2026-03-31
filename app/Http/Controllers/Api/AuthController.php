@@ -37,9 +37,9 @@ class AuthController extends BaseApiController
             'referral_code' => (string) ($normalizedReferralCode ?? ''),
         ]);
 
-        $referralRow = $referralService->validateReferralCodeOrFail($normalizedReferralCode);
+        $referralService->validateReferralCodeOrFail($normalizedReferralCode);
 
-        $registrationContext = DB::transaction(function () use ($data, $referralService, $referralRow, $normalizedReferralCode) {
+        $registrationContext = DB::transaction(function () use ($data, $referralService, $normalizedReferralCode) {
             $user = $this->createRegisteredUser($data);
 
             if (! $user->exists) {
@@ -66,7 +66,7 @@ class AuthController extends BaseApiController
 
             $referralMeta = null;
 
-            if ($referralRow) {
+            if (filled($normalizedReferralCode)) {
                 Log::info('auth.register.before_referral_apply', [
                     'user_id' => (string) $user->id,
                     'referral_code' => (string) $normalizedReferralCode,
