@@ -257,11 +257,54 @@ class ReferralService
     {
         $query = ReferralData::query()->where('referrer_user_id', $user->id);
 
+        $referrer = User::query()
+            ->with(['circles:id,name'])
+            ->find($user->id);
+
+        $referredUsers = ReferralData::query()
+            ->with(['referredUser:id,first_name,last_name,display_name,email,company_name,designation'])
+            ->where('referrer_user_id', $user->id)
+            ->whereNotNull('referred_user_id')
+            ->orderByRaw('used_at DESC NULLS LAST')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (ReferralData $row): array {
+                $referred = $row->referredUser;
+
+                return [
+                    'id' => (string) ($referred?->id ?? ''),
+                    'name' => trim((string) (($referred?->display_name ?: '') ?: (($referred?->first_name ?? '') . ' ' . ($referred?->last_name ?? '')))),
+                    'email' => $referred?->email,
+                    'business_name' => $referred?->company_name,
+                    'position' => $referred?->designation,
+                ];
+            })
+            ->values()
+            ->all();
+
         return [
             'total_referrals' => (clone $query)->whereNotNull('referred_user_id')->count(),
             'total_referral_coins' => (int) (clone $query)->where('reward_status', 'granted')->sum('coins'),
             'granted_referrals' => (clone $query)->where('reward_status', 'granted')->whereNotNull('referred_user_id')->count(),
             'pending_referrals' => (clone $query)->where('reward_status', 'pending')->whereNull('referred_user_id')->count(),
+            'referrer' => [
+                'id' => (string) ($referrer?->id ?? ''),
+                'name' => trim((string) (($referrer?->display_name ?: '') ?: (($referrer?->first_name ?? '') . ' ' . ($referrer?->last_name ?? '')))),
+                'company_name' => $referrer?->company_name,
+                'city' => $referrer?->city,
+                'email' => $referrer?->email,
+                'phone' => $referrer?->phone,
+                'first_name' => $referrer?->first_name,
+                'last_name' => $referrer?->last_name,
+                'profile_photo' => $referrer?->profile_photo_url,
+                'circle' => $referrer?->circles?->first()
+                    ? [
+                        'id' => (string) $referrer->circles->first()->id,
+                        'name' => (string) $referrer->circles->first()->name,
+                    ]
+                    : null,
+            ],
+            'referred_users' => $referredUsers,
         ];
     }
 
