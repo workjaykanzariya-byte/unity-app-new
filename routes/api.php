@@ -362,6 +362,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/leadership-certification/{id}', [WebsiteFormsController::class, 'showLeadershipCertification'])->whereUuid('id');
         Route::get('/entrepreneur-certification', [WebsiteFormsController::class, 'indexEntrepreneurCertification']);
         Route::get('/entrepreneur-certification/{id}', [WebsiteFormsController::class, 'showEntrepreneurCertification'])->whereUuid('id');
+        Route::get('/partner-with-us', [WebsiteFormsController::class, 'indexPartnerWithUs']);
+        Route::get('/partner-with-us/{id}', [WebsiteFormsController::class, 'showPartnerWithUs'])->whereUuid('id');
 
         Route::get('/zoho/test-token', [ZohoDebugController::class, 'testToken']);
         Route::get('/zoho/org', [ZohoDebugController::class, 'org']);

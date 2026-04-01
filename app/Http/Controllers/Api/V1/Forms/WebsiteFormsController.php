@@ -141,6 +141,36 @@ class WebsiteFormsController extends BaseApiController
         ]);
     }
 
+    public function indexPartnerWithUs(Request $request)
+    {
+        $query = PartnerWithUsSubmission::query();
+        $this->applyCommonFilters($query, $request, ['full_name', 'email_id', 'brand_or_company_name', 'city', 'industry']);
+
+        $items = $query->latest()->paginate($this->resolvePerPage($request));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => $items->items(),
+            'meta' => $this->paginationMeta($items),
+        ]);
+    }
+
+    public function showPartnerWithUs(string $id)
+    {
+        $item = PartnerWithUsSubmission::find($id);
+
+        if (! $item) {
+            return $this->submissionNotFound();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => $item,
+        ]);
+    }
+
     public function submitBecomeSpeaker(SubmitBecomeSpeakerRequest $request)
     {
         $data = $request->validated();
