@@ -393,6 +393,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/share-sme-business-story', [WebsiteFormsController::class, 'submitSmeBusinessStory']);
     Route::post('/leadership-certification', [WebsiteFormsController::class, 'submitLeadershipCertification']);
     Route::post('/entrepreneur-certification', [WebsiteFormsController::class, 'submitEntrepreneurCertification']);
+    Route::post('/partner-with-us', [WebsiteFormsController::class, 'submitPartnerWithUs']);
 
     // Ads banners (public)
     Route::get('/ads/banners', [AdsController::class, 'index']);

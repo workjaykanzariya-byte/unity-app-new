@@ -6,11 +6,13 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Forms\SubmitBecomeSpeakerRequest;
 use App\Http\Requests\Forms\SubmitEntrepreneurCertificationRequest;
 use App\Http\Requests\Forms\SubmitLeadershipCertificationRequest;
+use App\Http\Requests\Forms\SubmitPartnerWithUsRequest;
 use App\Http\Requests\Forms\SubmitSmeBusinessStoryRequest;
 use App\Models\BecomeSpeakerSubmission;
 use App\Models\EntrepreneurCertificationSubmission;
 use App\Models\FileModel;
 use App\Models\LeadershipCertificationSubmission;
+use App\Models\PartnerWithUsSubmission;
 use App\Models\SmeBusinessStorySubmission;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -361,6 +363,70 @@ class WebsiteFormsController extends BaseApiController
             Log::error('Entrepreneur certification submission failed', [
                 'email' => $data['email'] ?? null,
                 'contact_no' => $data['contact_no'] ?? null,
+                'ip' => $request->ip(),
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to submit form right now. Please try again later.',
+                'data' => null,
+            ], 500);
+        }
+    }
+
+    public function submitPartnerWithUs(SubmitPartnerWithUsRequest $request)
+    {
+        $data = $request->validated();
+
+        Log::info('Partner with us submission started', [
+            'email_id' => $data['email_id'] ?? null,
+            'mobile_number' => $data['mobile_number'] ?? null,
+            'ip' => $request->ip(),
+        ]);
+
+        try {
+            $submission = PartnerWithUsSubmission::create([
+                'full_name' => $data['full_name'],
+                'mobile_number' => $data['mobile_number'],
+                'email_id' => $data['email_id'],
+                'city' => $data['city'],
+                'brand_or_company_name' => $data['brand_or_company_name'],
+                'website_or_social_media_link' => $data['website_or_social_media_link'] ?? null,
+                'industry' => $data['industry'],
+                'about_your_business' => $data['about_your_business'],
+                'partnership_goal' => $data['partnership_goal'],
+                'why_partner_with_peers_global' => $data['why_partner_with_peers_global'],
+                'status' => 'new',
+            ]);
+
+            Log::info('Partner with us submission stored successfully', [
+                'submission_id' => $submission->id,
+                'email_id' => $submission->email_id,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Partner with us form submitted successfully.',
+                'data' => [
+                    'id' => $submission->id,
+                    'full_name' => $submission->full_name,
+                    'mobile_number' => $submission->mobile_number,
+                    'email_id' => $submission->email_id,
+                    'city' => $submission->city,
+                    'brand_or_company_name' => $submission->brand_or_company_name,
+                    'website_or_social_media_link' => $submission->website_or_social_media_link,
+                    'industry' => $submission->industry,
+                    'about_your_business' => $submission->about_your_business,
+                    'partnership_goal' => $submission->partnership_goal,
+                    'why_partner_with_peers_global' => $submission->why_partner_with_peers_global,
+                    'created_at' => optional($submission->created_at)?->toISOString(),
+                ],
+            ], 201);
+        } catch (\Throwable $exception) {
+            Log::error('Partner with us submission failed', [
+                'email_id' => $data['email_id'] ?? null,
+                'mobile_number' => $data['mobile_number'] ?? null,
                 'ip' => $request->ip(),
                 'error' => $exception->getMessage(),
             ]);
