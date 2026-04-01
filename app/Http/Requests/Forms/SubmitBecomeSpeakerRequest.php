@@ -34,11 +34,6 @@ class SubmitBecomeSpeakerRequest extends FormRequest
         ]);
     }
 
-    protected function validationData(): array
-    {
-        return $this->all();
-    }
-
     public function rules(): array
     {
         return [
