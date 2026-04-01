@@ -120,7 +120,7 @@ class BecomeMentorController extends BaseApiController
                 recipientName: trim($submission->first_name . ' ' . $submission->last_name) ?: $submission->first_name,
                 subject: 'Your Mentor Application Has Been Received',
                 formTitle: 'Become a Mentor',
-                confirmationMessage: 'Your mentor application has been received successfully.',
+                confirmationMessage: 'We have successfully received your “Become a Mentor” form submission on Peers Global. Our team will review your details and connect with you soon.',
                 submissionId: (string) $submission->id,
             );
 
@@ -161,16 +161,36 @@ class BecomeMentorController extends BaseApiController
         $mailable = new WebsiteFormConfirmationMail($subject, $recipientName, $formTitle, $confirmationMessage);
 
         try {
-            Mail::to($email)->send($mailable);
-            app(EmailLogService::class)->logMailableSent($mailable, [
-                'to_email' => $email,
-                'to_name' => $recipientName,
-                'template_key' => 'website_form_confirmation',
-                'source_module' => 'WebsiteForms',
-                'related_type' => BecomeMentorSubmission::class,
-                'related_id' => $submissionId,
-                'payload' => ['form_title' => $formTitle],
+            Log::info('Mentor confirmation email send started', [
+                'email' => $email,
+                'submission_id' => $submissionId,
+                'mailer' => config('mail.default'),
             ]);
+
+            Mail::to($email)->send($mailable);
+
+            Log::info('Mentor confirmation email sent successfully', [
+                'email' => $email,
+                'submission_id' => $submissionId,
+            ]);
+
+            try {
+                app(EmailLogService::class)->logMailableSent($mailable, [
+                    'to_email' => $email,
+                    'to_name' => $recipientName,
+                    'template_key' => 'website_form_confirmation',
+                    'source_module' => 'WebsiteForms',
+                    'related_type' => BecomeMentorSubmission::class,
+                    'related_id' => $submissionId,
+                    'payload' => ['form_title' => $formTitle],
+                ]);
+            } catch (\Throwable $logException) {
+                Log::warning('Mentor confirmation email sent but email-log write failed', [
+                    'email' => $email,
+                    'submission_id' => $submissionId,
+                    'error' => $logException->getMessage(),
+                ]);
+            }
         } catch (\Throwable $exception) {
             Log::error('Mentor confirmation email failed', [
                 'email' => $email,
@@ -178,15 +198,23 @@ class BecomeMentorController extends BaseApiController
                 'error' => $exception->getMessage(),
             ]);
 
-            app(EmailLogService::class)->logMailableFailed($mailable, [
-                'to_email' => $email,
-                'to_name' => $recipientName,
-                'template_key' => 'website_form_confirmation',
-                'source_module' => 'WebsiteForms',
-                'related_type' => BecomeMentorSubmission::class,
-                'related_id' => $submissionId,
-                'payload' => ['form_title' => $formTitle],
-            ], $exception);
+            try {
+                app(EmailLogService::class)->logMailableFailed($mailable, [
+                    'to_email' => $email,
+                    'to_name' => $recipientName,
+                    'template_key' => 'website_form_confirmation',
+                    'source_module' => 'WebsiteForms',
+                    'related_type' => BecomeMentorSubmission::class,
+                    'related_id' => $submissionId,
+                    'payload' => ['form_title' => $formTitle],
+                ], $exception);
+            } catch (\Throwable $logException) {
+                Log::warning('Mentor confirmation email failed and email-log write failed', [
+                    'email' => $email,
+                    'submission_id' => $submissionId,
+                    'error' => $logException->getMessage(),
+                ]);
+            }
         }
     }
 }
