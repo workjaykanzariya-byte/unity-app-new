@@ -351,6 +351,18 @@ Route::prefix('v1')->group(function () {
         Route::get('/forms/register-visitor/my', [VisitorRegistrationController::class, 'myIndex']);
         Route::get('/forms/visitor-registrations/my', [VisitorRegistrationController::class, 'myIndex']);
 
+        // Website form submissions (read)
+        Route::get('/become-a-mentor', [BecomeMentorController::class, 'index']);
+        Route::get('/become-a-mentor/{id}', [BecomeMentorController::class, 'show'])->whereUuid('id');
+        Route::get('/become-a-speaker', [WebsiteFormsController::class, 'indexBecomeSpeaker']);
+        Route::get('/become-a-speaker/{id}', [WebsiteFormsController::class, 'showBecomeSpeaker'])->whereUuid('id');
+        Route::get('/share-sme-business-story', [WebsiteFormsController::class, 'indexSmeBusinessStory']);
+        Route::get('/share-sme-business-story/{id}', [WebsiteFormsController::class, 'showSmeBusinessStory'])->whereUuid('id');
+        Route::get('/leadership-certification', [WebsiteFormsController::class, 'indexLeadershipCertification']);
+        Route::get('/leadership-certification/{id}', [WebsiteFormsController::class, 'showLeadershipCertification'])->whereUuid('id');
+        Route::get('/entrepreneur-certification', [WebsiteFormsController::class, 'indexEntrepreneurCertification']);
+        Route::get('/entrepreneur-certification/{id}', [WebsiteFormsController::class, 'showEntrepreneurCertification'])->whereUuid('id');
+
         Route::get('/zoho/test-token', [ZohoDebugController::class, 'testToken']);
         Route::get('/zoho/org', [ZohoDebugController::class, 'org']);
         Route::post('/billing/checkout', [BillingCheckoutController::class, 'checkout']);

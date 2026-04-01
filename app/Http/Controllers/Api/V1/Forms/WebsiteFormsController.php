@@ -12,12 +12,133 @@ use App\Models\EntrepreneurCertificationSubmission;
 use App\Models\FileModel;
 use App\Models\LeadershipCertificationSubmission;
 use App\Models\SmeBusinessStorySubmission;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class WebsiteFormsController extends BaseApiController
 {
+    public function indexBecomeSpeaker(Request $request)
+    {
+        $query = BecomeSpeakerSubmission::query();
+        $this->applyCommonFilters($query, $request, ['first_name', 'last_name', 'email', 'city', 'company_name']);
+
+        $items = $query->latest()->paginate($this->resolvePerPage($request));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => collect($items->items())->map(fn (BecomeSpeakerSubmission $item) => $this->mapSpeakerSubmission($item))->values(),
+            'meta' => $this->paginationMeta($items),
+        ]);
+    }
+
+    public function showBecomeSpeaker(string $id)
+    {
+        $item = BecomeSpeakerSubmission::find($id);
+
+        if (! $item) {
+            return $this->submissionNotFound();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => $this->mapSpeakerSubmission($item),
+        ]);
+    }
+
+    public function indexSmeBusinessStory(Request $request)
+    {
+        $query = SmeBusinessStorySubmission::query();
+        $this->applyCommonFilters($query, $request, ['full_name', 'email', 'business_name']);
+
+        $items = $query->latest()->paginate($this->resolvePerPage($request));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => $items->items(),
+            'meta' => $this->paginationMeta($items),
+        ]);
+    }
+
+    public function showSmeBusinessStory(string $id)
+    {
+        $item = SmeBusinessStorySubmission::find($id);
+
+        if (! $item) {
+            return $this->submissionNotFound();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => $item,
+        ]);
+    }
+
+    public function indexLeadershipCertification(Request $request)
+    {
+        $query = LeadershipCertificationSubmission::query();
+        $this->applyCommonFilters($query, $request, ['full_name', 'email', 'business_name']);
+
+        $items = $query->latest()->paginate($this->resolvePerPage($request));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => $items->items(),
+            'meta' => $this->paginationMeta($items),
+        ]);
+    }
+
+    public function showLeadershipCertification(string $id)
+    {
+        $item = LeadershipCertificationSubmission::find($id);
+
+        if (! $item) {
+            return $this->submissionNotFound();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => $item,
+        ]);
+    }
+
+    public function indexEntrepreneurCertification(Request $request)
+    {
+        $query = EntrepreneurCertificationSubmission::query();
+        $this->applyCommonFilters($query, $request, ['full_name', 'email', 'business_name']);
+
+        $items = $query->latest()->paginate($this->resolvePerPage($request));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => $items->items(),
+            'meta' => $this->paginationMeta($items),
+        ]);
+    }
+
+    public function showEntrepreneurCertification(string $id)
+    {
+        $item = EntrepreneurCertificationSubmission::find($id);
+
+        if (! $item) {
+            return $this->submissionNotFound();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => $item,
+        ]);
+    }
+
     public function submitBecomeSpeaker(SubmitBecomeSpeakerRequest $request)
     {
         $data = $request->validated();
@@ -269,5 +390,78 @@ class WebsiteFormsController extends BaseApiController
             'height' => null,
             'duration' => null,
         ]);
+    }
+
+    private function applyCommonFilters($query, Request $request, array $searchColumns): void
+    {
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function ($subQuery) use ($search, $searchColumns) {
+                foreach ($searchColumns as $index => $column) {
+                    if ($index === 0) {
+                        $subQuery->where($column, 'ilike', '%' . $search . '%');
+                    } else {
+                        $subQuery->orWhere($column, 'ilike', '%' . $search . '%');
+                    }
+                }
+            });
+        }
+
+        if ($status = trim((string) $request->query('status', ''))) {
+            $query->where('status', $status);
+        }
+
+        if ($fromDate = $request->query('from_date')) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+
+        if ($toDate = $request->query('to_date')) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+    }
+
+    private function mapSpeakerSubmission(BecomeSpeakerSubmission $item): array
+    {
+        return [
+            'id' => $item->id,
+            'first_name' => $item->first_name,
+            'last_name' => $item->last_name,
+            'email' => $item->email,
+            'phone' => $item->phone,
+            'city' => $item->city,
+            'linkedin_profile_url' => $item->linkedin_profile_url,
+            'company_name' => $item->company_name,
+            'brief_bio' => $item->brief_bio,
+            'topics_to_speak_on' => $item->topics_to_speak_on,
+            'status' => $item->status,
+            'notes' => $item->notes,
+            'image_file_id' => $item->image_file_id,
+            'image_url' => $item->image_file_id ? url('/api/v1/files/' . $item->image_file_id) : null,
+            'created_at' => optional($item->created_at)?->toISOString(),
+            'updated_at' => optional($item->updated_at)?->toISOString(),
+        ];
+    }
+
+    private function resolvePerPage(Request $request): int
+    {
+        return min(max((int) $request->query('per_page', 15), 1), 100);
+    }
+
+    private function paginationMeta($items): array
+    {
+        return [
+            'current_page' => $items->currentPage(),
+            'last_page' => $items->lastPage(),
+            'per_page' => $items->perPage(),
+            'total' => $items->total(),
+        ];
+    }
+
+    private function submissionNotFound()
+    {
+        return response()->json([
+            'status' => false,
+            'message' => 'Submission not found.',
+            'data' => null,
+        ], 404);
     }
 }

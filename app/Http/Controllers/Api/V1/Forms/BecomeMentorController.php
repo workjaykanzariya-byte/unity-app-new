@@ -6,10 +6,71 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Forms\SubmitBecomeMentorRequest;
 use App\Http\Resources\BecomeMentorSubmissionResource;
 use App\Models\BecomeMentorSubmission;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class BecomeMentorController extends BaseApiController
 {
+    public function index(Request $request)
+    {
+        $query = BecomeMentorSubmission::query();
+
+        if ($search = trim((string) $request->query('search', ''))) {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('first_name', 'ilike', '%' . $search . '%')
+                    ->orWhere('last_name', 'ilike', '%' . $search . '%')
+                    ->orWhere('email', 'ilike', '%' . $search . '%')
+                    ->orWhere('city', 'ilike', '%' . $search . '%');
+            });
+        }
+
+        if ($status = trim((string) $request->query('status', ''))) {
+            $query->where('status', $status);
+        }
+
+        if ($fromDate = $request->query('from_date')) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+
+        if ($toDate = $request->query('to_date')) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
+        $items = $query->latest()->paginate($perPage);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submissions fetched successfully.',
+            'data' => BecomeMentorSubmissionResource::collection($items->items()),
+            'meta' => [
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
+                'per_page' => $items->perPage(),
+                'total' => $items->total(),
+            ],
+        ]);
+    }
+
+    public function show(string $id)
+    {
+        $submission = BecomeMentorSubmission::find($id);
+
+        if (! $submission) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Submission not found.',
+                'data' => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Submission fetched successfully.',
+            'data' => new BecomeMentorSubmissionResource($submission),
+        ]);
+    }
+
     public function submit(SubmitBecomeMentorRequest $request)
     {
         $data = $request->validated();
