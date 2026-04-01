@@ -44,9 +44,9 @@ class SubmitBecomeSpeakerRequest extends FormRequest
             'city' => ['required', 'string', 'max:150'],
             'linkedin_profile_url' => ['required', 'url', 'max:500'],
             'company_name' => ['required', 'string', 'max:255'],
-            'brief_bio' => ['required', 'string', 'max:5000'],
-            'topics_to_speak_on' => ['required', 'string', 'max:2000'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'brief_bio' => ['required', 'string'],
+            'topics_to_speak_on' => ['required', 'string'],
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 

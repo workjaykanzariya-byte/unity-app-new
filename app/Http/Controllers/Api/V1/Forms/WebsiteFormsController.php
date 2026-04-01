@@ -59,7 +59,7 @@ class WebsiteFormsController extends BaseApiController
 
             return response()->json([
                 'status' => true,
-                'message' => 'Form submitted successfully.',
+                'message' => 'Become a Speaker form submitted successfully.',
                 'data' => [
                     'id' => $submission->id,
                     'first_name' => $submission->first_name,
