@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\Log;
 
 class ImpactService
 {
+    public function __construct(
+        private readonly ImpactUserNotificationService $notificationService,
+        private readonly ImpactEmailService $emailService,
+    ) {
+    }
+
     public function submitImpact(User $user, array $data): Impact
     {
         $impact = Impact::create([
@@ -31,11 +37,10 @@ class ImpactService
             'impacted_peer_id' => (string) $impact->impacted_peer_id,
         ]);
 
-        $this->notify((string) $user->id, 'impact_submitted', [
-            'impact_id' => (string) $impact->id,
-            'title' => 'Impact submitted',
-            'body' => 'Your impact has been submitted and is pending review.',
-        ]);
+        $impact->loadMissing(['user', 'impactedPeer']);
+
+        $this->notificationService->sendSubmitted($impact);
+        $this->emailService->sendSubmitted($impact);
 
         return $impact;
     }
@@ -83,13 +88,12 @@ class ImpactService
                 'incremented_by' => $incrementBy,
             ]);
 
-            $this->notify((string) $impact->user_id, 'impact_approved', [
-                'impact_id' => (string) $impact->id,
-                'title' => 'Impact approved',
-                'body' => 'Your impact has been approved and published.',
-            ]);
+            $impact = $impact->fresh(['user', 'impactedPeer']);
 
-            return $impact->fresh(['user', 'impactedPeer']);
+            $this->notificationService->sendApproved($impact);
+            $this->emailService->sendApproved($impact);
+
+            return $impact;
         });
     }
 
