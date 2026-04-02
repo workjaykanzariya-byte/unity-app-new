@@ -8,11 +8,15 @@ use App\Http\Resources\PostCommentResource;
 use App\Models\CircleMember;
 use App\Models\Connection;
 use App\Models\File;
+use App\Models\Impact;
 use App\Models\Post;
 use App\Models\PostComment;
 use App\Models\PostLike;
 use App\Services\AdFeedService;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class PostController extends BaseApiController
@@ -21,6 +25,7 @@ class PostController extends BaseApiController
     {
         $user = $request->user();
         $perPage = max(1, min((int) $request->integer('per_page', 20), 50));
+        $page = LengthAwarePaginator::resolveCurrentPage();
 
         $query = Post::query()
             ->with([
@@ -37,14 +42,65 @@ class PostController extends BaseApiController
         $query->where('posts.is_deleted', false)
             ->whereNull('posts.deleted_at');
 
-        $posts = $query->paginate($perPage)->appends($request->query());
+        $impactQuery = Impact::query()
+            ->with([
+                'user:id,display_name,first_name,last_name,profile_photo_file_id',
+                'impactedPeer:id,display_name,first_name,last_name',
+            ])
+            ->where('status', 'approved')
+            ->whereNotNull('timeline_posted_at');
 
-        $postItems = $posts->getCollection()->map(function (Post $post) {
-            return $this->formatPostFeedItem($post);
-        });
+        $postRows = (clone $query)->toBase()
+            ->selectRaw("posts.id as id, posts.created_at as sort_at, 'post' as source_type");
+        $impactRows = (clone $impactQuery)->toBase()
+            ->selectRaw("impacts.id as id, COALESCE(impacts.timeline_posted_at, impacts.approved_at, impacts.created_at) as sort_at, 'impact' as source_type");
+
+        $union = $postRows->unionAll($impactRows);
+        $orderedRows = DB::query()->fromSub($union, 'feed_rows')->orderByDesc('sort_at');
+
+        $total = (clone $orderedRows)->count();
+        $pageRows = (clone $orderedRows)->forPage($page, $perPage)->get();
+
+        $postIds = $pageRows->where('source_type', 'post')->pluck('id')->values()->all();
+        $impactIds = $pageRows->where('source_type', 'impact')->pluck('id')->values()->all();
+
+        $postsById = Post::query()
+            ->with([
+                'author:id,display_name,first_name,last_name,profile_photo_file_id',
+            ])
+            ->withCount(['likes', 'comments', 'saves'])
+            ->withExists([
+                'likes as is_liked_by_me' => fn ($rowQuery) => $rowQuery->where('user_id', $user->id),
+                'saves as is_saved_by_me' => fn ($rowQuery) => $rowQuery->where('user_id', $user->id),
+            ])
+            ->whereIn('id', $postIds)
+            ->get()
+            ->keyBy(fn (Post $post) => (string) $post->id);
+
+        $impactsById = Impact::query()
+            ->with([
+                'user:id,display_name,first_name,last_name,profile_photo_file_id',
+                'impactedPeer:id,display_name,first_name,last_name',
+            ])
+            ->whereIn('id', $impactIds)
+            ->get()
+            ->keyBy(fn (Impact $impact) => (string) $impact->id);
+
+        $postItems = $this->hydrateFeedRows($pageRows, $postsById, $impactsById);
+
+        $posts = new LengthAwarePaginator(
+            collect($postItems),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         $timelineAds = $adFeedService->timelineAds();
-        $items = $adFeedService->mergeTimelineFeed($postItems, $timelineAds, (int) $posts->currentPage());
+        $items = $adFeedService->mergeTimelineFeed(collect($postItems), $timelineAds, (int) $posts->currentPage());
 
         return $this->success([
             'items' => $items,
@@ -55,6 +111,21 @@ class PostController extends BaseApiController
                 'total' => $posts->total(),
             ],
         ]);
+    }
+
+    private function hydrateFeedRows($pageRows, Collection $postsById, Collection $impactsById): Collection
+    {
+        return collect($pageRows)->map(function ($row) use ($postsById, $impactsById) {
+            if ((string) $row->source_type === 'post') {
+                $post = $postsById->get((string) $row->id);
+
+                return $post ? $this->formatPostFeedItem($post) : null;
+            }
+
+            $impact = $impactsById->get((string) $row->id);
+
+            return $impact ? $this->formatImpactFeedItem($impact) : null;
+        })->filter()->values();
     }
 
     private function formatPostFeedItem(Post $post): array
@@ -85,6 +156,44 @@ class PostController extends BaseApiController
             'is_saved'          => (bool) ($post->is_saved_by_me ?? false),
             'created_at'        => $post->created_at,
             'updated_at'        => $post->updated_at,
+        ];
+    }
+
+    private function formatImpactFeedItem(Impact $impact): array
+    {
+        return [
+            'type'              => 'impact',
+            'id'                => $impact->id,
+            'content_text'      => $impact->story_to_share,
+            'media'             => [],
+            'tags'              => [],
+            'visibility'        => 'public',
+            'moderation_status' => 'approved',
+            'author'            => $impact->relationLoaded('user') && $impact->user ? [
+                'id'               => $impact->user->id,
+                'display_name'     => $impact->user->display_name,
+                'first_name'       => $impact->user->first_name,
+                'last_name'        => $impact->user->last_name,
+                'profile_photo_url'=> $impact->user->profile_photo_url,
+            ] : null,
+            'circle'            => null,
+            'likes_count'       => 0,
+            'comments_count'    => 0,
+            'is_liked_by_me'    => false,
+            'saves_count'       => 0,
+            'is_saved'          => false,
+            'impact'            => [
+                'action' => $impact->action,
+                'impact_date' => optional($impact->impact_date)->toDateString(),
+                'impacted_peer' => $impact->relationLoaded('impactedPeer') && $impact->impactedPeer ? [
+                    'id' => $impact->impactedPeer->id,
+                    'display_name' => $impact->impactedPeer->display_name,
+                    'first_name' => $impact->impactedPeer->first_name,
+                    'last_name' => $impact->impactedPeer->last_name,
+                ] : null,
+            ],
+            'created_at'        => $impact->timeline_posted_at ?? $impact->approved_at ?? $impact->created_at,
+            'updated_at'        => $impact->updated_at,
         ];
     }
 
