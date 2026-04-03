@@ -36,6 +36,8 @@ class DashboardController extends Controller
 
         $supportRequests = $this->safeCountTable('support_requests');
         $reportedPosts = $this->safeReportedPostsCount();
+        $approvedImpacts = $this->safeImpactsCountByStatus('approved');
+        $pendingImpacts = $this->safeImpactsCountByStatus('pending');
 
         $coinsIssued = $this->safeCountTable('coin_ledgers');
         $walletCollections = $this->safeCountTable('wallet_transactions');
@@ -50,6 +52,8 @@ class DashboardController extends Controller
             'supportRequests' => (int) $supportRequests,
             'activitiesToday' => (int) $activitiesToday,
             'reportedPosts' => (int) $reportedPosts,
+            'approvedImpacts' => (int) $approvedImpacts,
+            'pendingImpacts' => (int) $pendingImpacts,
             // Legacy keys for existing blade usage
             'total_users' => (int) $totalUsers,
             'active_circles' => (int) $activeCircles,
@@ -58,10 +62,11 @@ class DashboardController extends Controller
         ];
 
         $pendingItems = [
-            ['title' => 'Pending Activities Today', 'count' => (int) $activitiesToday],
-            ['title' => 'Circles Awaiting Review', 'count' => (int) $pendingApprovals],
-            ['title' => 'Reported Posts', 'count' => (int) $reportedPosts],
-            ['title' => 'Support Requests', 'count' => (int) $supportRequests],
+            ['title' => 'Pending Activities Today', 'count' => (int) $activitiesToday, 'url' => null],
+            ['title' => 'Circles Awaiting Review', 'count' => (int) $pendingApprovals, 'url' => null],
+            ['title' => 'Pending Impact', 'count' => (int) $pendingImpacts, 'url' => route('admin.impacts.pending')],
+            ['title' => 'Reported Posts', 'count' => (int) $reportedPosts, 'url' => null],
+            ['title' => 'Support Requests', 'count' => (int) $supportRequests, 'url' => null],
         ];
 
         return view('admin.dashboard', [
@@ -103,5 +108,14 @@ class DashboardController extends Controller
         }
 
         return 0;
+    }
+
+    private function safeImpactsCountByStatus(string $status): int
+    {
+        if (! $this->hasTableColumn('impacts', 'status')) {
+            return 0;
+        }
+
+        return (int) DB::table('impacts')->where('status', $status)->count();
     }
 }

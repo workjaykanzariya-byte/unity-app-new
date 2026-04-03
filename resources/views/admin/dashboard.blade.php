@@ -44,14 +44,21 @@
         <div class="card p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Pending Approvals & Reviews</h6>
-                <button class="btn btn-sm btn-outline-secondary">View All</button>
+                <a href="{{ route('admin.impacts.pending') }}" class="btn btn-sm btn-outline-secondary">View All</a>
             </div>
             <div class="list-group list-group-flush">
                 @foreach ($pendingItems as $item)
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>{{ $item['title'] }}</span>
-                        <span class="badge bg-primary">{{ $item['count'] }}</span>
-                    </div>
+                    @if (!empty($item['url']))
+                        <a href="{{ $item['url'] }}" class="list-group-item d-flex justify-content-between align-items-center list-group-item-action">
+                            <span>{{ $item['title'] }}</span>
+                            <span class="badge bg-primary">{{ $item['count'] }}</span>
+                        </a>
+                    @else
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ $item['title'] }}</span>
+                            <span class="badge bg-primary">{{ $item['count'] }}</span>
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </div>
@@ -75,6 +82,19 @@
                 <a href="#" class="btn btn-sm btn-light">View</a>
             </div>
             <p class="text-muted mb-0">Placeholder widget for audit & compliance summaries.</p>
+        </div>
+    </div>
+    <div class="col-12 col-xxl-6">
+        <div class="card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="mb-0">Impact</h6>
+                    <small class="text-muted">Manage approved impacts and review impact activity.</small>
+                </div>
+                <a href="{{ route('admin.impacts.posts') }}" class="btn btn-sm btn-light">View</a>
+            </div>
+            <p class="text-muted mb-1">All Impact</p>
+            <h4 class="mb-0">{{ number_format($stats['approvedImpacts'] ?? 0) }}</h4>
         </div>
     </div>
 </div>

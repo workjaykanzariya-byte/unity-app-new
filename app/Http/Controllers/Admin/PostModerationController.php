@@ -118,7 +118,10 @@ class PostModerationController extends Controller
         $impactQuery = Impact::query()
             ->with(['user'])
             ->where('status', 'approved')
-            ->whereNotNull('timeline_posted_at');
+            ->where(function ($query): void {
+                $query->whereNotNull('timeline_posted_at')
+                    ->orWhereNotNull('approved_at');
+            });
 
         if ($circleId !== 'all' && filled($circleId)) {
             $impactQuery->whereRaw('1 = 0');
