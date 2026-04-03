@@ -121,7 +121,9 @@
                             $isImpact = ($post->source_type ?? 'post') === 'impact';
                             $owner = $post->user;
                             $circleName = optional($post->circle)->name;
-                            $isActive = $post->deleted_at === null;
+                            $isActive = $isImpact
+                                ? ! is_null($post->timeline_posted_at ?? null)
+                                : $post->deleted_at === null;
                             $mediaUrl = (function ($media) {
                                 if (empty($media)) {
                                     return null;

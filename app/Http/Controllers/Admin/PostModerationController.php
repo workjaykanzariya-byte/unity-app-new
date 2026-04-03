@@ -131,8 +131,7 @@ class PostModerationController extends Controller
 
         $impactQuery = Impact::query()
             ->with(['user'])
-            ->where('status', 'approved')
-            ->whereNotNull('timeline_posted_at');
+            ->where('status', 'approved');
 
         if ($circleId !== 'all' && filled($circleId)) {
             $impactQuery->whereRaw('1 = 0');
@@ -161,7 +160,9 @@ class PostModerationController extends Controller
         }
 
         if (($filters['active'] ?? 'all') === 'deactivated' || $inlineActive === 'no') {
-            $impactQuery->whereRaw('1 = 0');
+            $impactQuery->whereNull('timeline_posted_at');
+        } else {
+            $impactQuery->whereNotNull('timeline_posted_at');
         }
 
         if ($media === 'has') {
@@ -291,6 +292,7 @@ class PostModerationController extends Controller
                 'deleted_at' => null,
                 'content_text' => (string) $impact->story_to_share,
                 'media' => [],
+                'timeline_posted_at' => $impact->timeline_posted_at,
                 'created_at' => $impact->timeline_posted_at ?? $impact->approved_at ?? $impact->created_at,
             ];
         })->filter()->values();
@@ -356,7 +358,7 @@ class PostModerationController extends Controller
         $impact->timeline_posted_at = null;
         $impact->save();
 
-        return redirect()->back()->with('success', 'Impact deactivated successfully.');
+        return redirect()->back()->with('success', 'Item deactivated successfully.');
     }
 
 
