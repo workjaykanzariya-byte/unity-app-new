@@ -181,6 +181,16 @@
                             <td class="text-end" style="white-space:nowrap;">
                                 @if($isImpact)
                                     <a href="{{ route('admin.impacts.show', $post->id) }}" class="btn btn-outline-primary btn-sm">View</a>
+                                    <form method="POST"
+                                          action="{{ route('admin.posts.impacts.deactivate', $post->id) }}"
+                                          style="display:inline-block; margin-left:6px;">
+                                        @csrf
+                                        <button type="submit"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Are you sure you want to deactivate this impact?')">
+                                            Deactivate
+                                        </button>
+                                    </form>
                                 @else
                                     <a href="{{ route('admin.posts.show', $post) }}" class="btn btn-outline-primary btn-sm">View</a>
 

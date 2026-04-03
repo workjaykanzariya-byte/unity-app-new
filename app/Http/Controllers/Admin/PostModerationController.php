@@ -347,6 +347,18 @@ class PostModerationController extends Controller
         return redirect()->back()->with('success', 'Post deactivated successfully.');
     }
 
+    public function deactivateImpact(string $impactId): RedirectResponse
+    {
+        $this->ensureGlobalAdmin();
+
+        $impact = Impact::query()->findOrFail($impactId);
+
+        $impact->timeline_posted_at = null;
+        $impact->save();
+
+        return redirect()->back()->with('success', 'Impact deactivated successfully.');
+    }
+
 
     public function restore(string $postId): RedirectResponse
     {
