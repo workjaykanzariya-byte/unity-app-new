@@ -23,8 +23,11 @@
                 return '';
             }
 
-            $company = $user->company_name ?? $user->company ?? $user->business_name;
-            $parts = array_filter([$company, $user->email ?? null]);
+            $parts = array_filter([
+                $user->company_name ?? null,
+                $user->business_type ?? null,
+                $user->email ?? null,
+            ]);
 
             return implode(' • ', $parts);
         };

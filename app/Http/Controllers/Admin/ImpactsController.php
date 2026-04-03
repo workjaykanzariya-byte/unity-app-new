@@ -33,8 +33,8 @@ class ImpactsController extends Controller
 
         $impacts = Impact::query()
             ->with([
-                'user:id,display_name,first_name,last_name,email,company,company_name,business_name',
-                'impactedPeer:id,display_name,first_name,last_name,email,company,company_name,business_name',
+                'user:id,display_name,first_name,last_name,email,company_name,business_type',
+                'impactedPeer:id,display_name,first_name,last_name,email,company_name,business_type',
                 'approvedBy:id,name',
             ])
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
@@ -64,7 +64,7 @@ class ImpactsController extends Controller
 
         $impactActions = array_values((array) config('impact.actions', []));
         $peers = User::query()
-            ->select(['id', 'display_name', 'first_name', 'last_name', 'email', 'company', 'company_name', 'business_name'])
+            ->select(['id', 'display_name', 'first_name', 'last_name', 'email', 'company_name', 'business_type'])
             ->orderByRaw("COALESCE(NULLIF(display_name, ''), NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email) ASC")
             ->get();
 
