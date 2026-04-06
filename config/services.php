@@ -39,4 +39,9 @@ return [
         'webhook_token' => env('ZOHO_WEBHOOK_TOKEN'),
     ],
 
+    'members_list' => [
+        // Fixed token for GET /api/v1/members-with-circles
+        'fixed_token' => env('MEMBERS_LIST_FIXED_TOKEN', '302|cO0VMR2dmr9j8c3JtIU9dfkuZfSfvzaCCF1GVxJAdc6fdd2d'),
+    ],
+
 ];

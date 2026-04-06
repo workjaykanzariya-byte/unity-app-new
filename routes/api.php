@@ -99,7 +99,7 @@ Route::prefix('v1')->group(function () {
 
     Route::post('/contacts/sync', [UserContactController::class, 'syncContacts']);
     Route::get('/contacts', [UserContactController::class, 'getContacts']);
-    Route::get('/members-with-circles', [MemberWithCircleController::class, 'index']);
+    Route::get('/members-with-circles', [MemberWithCircleController::class, 'index'])->middleware('fixed.api.token');
     Route::get('/members-with-circles/{identifier}', [MemberWithCircleController::class, 'show']);
 
 
