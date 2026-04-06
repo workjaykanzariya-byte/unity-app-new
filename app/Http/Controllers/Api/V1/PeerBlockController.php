@@ -18,13 +18,16 @@ class PeerBlockController extends BaseApiController
 
     public function index(Request $request)
     {
-        $blocks = PeerBlock::query()
+        $blocksQuery = PeerBlock::query()
             ->where('blocker_user_id', (string) $request->user()->id)
             ->with('blocked:id,display_name,first_name,last_name,company_name,designation,profile_photo_url')
-            ->orderByDesc('created_at')
-            ->get();
+            ->orderByDesc('created_at');
+
+        $count = (clone $blocksQuery)->count();
+        $blocks = $blocksQuery->get();
 
         return $this->success([
+            'count' => $count,
             'items' => BlockedPeerResource::collection($blocks),
         ]);
     }
