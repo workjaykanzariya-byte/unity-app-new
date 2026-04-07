@@ -10,19 +10,13 @@ class CircleCategoryHierarchyService
 {
     public function getMainCircles(): Collection
     {
-        $query = Category::query()
+        return Category::query()
             ->active()
-            ->when(
-                Category::hierarchyColumnsAvailable(),
-                fn ($query) => $query->mainCircles()
-            )
-            ->ordered();
-
-        if (Category::hierarchyColumnsAvailable()) {
-            $query->withCount('children');
-        }
-
-        return $query->get();
+            ->whereNull('parent_id')
+            ->where('level', 1)
+            ->withCount('children')
+            ->ordered()
+            ->get();
     }
 
     public function getChildren(int $parentId): Collection

@@ -18,9 +18,22 @@ class CircleCategoryController extends BaseApiController
 
     public function main()
     {
-        $categories = $this->hierarchyService->getMainCircles();
+        $data = $this->hierarchyService->getMainCircles()
+            ->map(static function (Category $category): array {
+                $childrenCount = (int) ($category->children_count ?? 0);
 
-        return $this->success(CircleCategoryResource::collection($categories));
+                return [
+                    'id' => $category->id,
+                    'name' => $category->category_name,
+                    'parent_id' => $category->parent_id,
+                    'level' => (int) $category->level,
+                    'has_children' => $childrenCount > 0,
+                    'children_count' => $childrenCount,
+                ];
+            })
+            ->values();
+
+        return $this->success($data);
     }
 
     public function children(int $id)
