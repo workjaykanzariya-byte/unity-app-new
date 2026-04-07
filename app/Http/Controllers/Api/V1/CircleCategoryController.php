@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Resources\CircleCategoryNodeResource;
 use App\Http\Resources\CircleCategoryResource;
 use App\Models\Category;
 use App\Services\CircleCategoryHierarchyService;
@@ -44,7 +45,7 @@ class CircleCategoryController extends BaseApiController
 
         $categories = $this->hierarchyService->getChildren($id);
 
-        return $this->success(CircleCategoryResource::collection($categories));
+        return $this->success(CircleCategoryNodeResource::collection($categories));
     }
 
     public function tree(int $id)
@@ -55,7 +56,7 @@ class CircleCategoryController extends BaseApiController
             return $this->error('Category not found', 404);
         }
 
-        return $this->success(new CircleCategoryResource($tree));
+        return $this->success(new CircleCategoryNodeResource($tree));
     }
 
     public function final(Request $request)
