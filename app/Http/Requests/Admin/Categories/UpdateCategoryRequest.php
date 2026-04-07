@@ -25,6 +25,11 @@ class UpdateCategoryRequest extends FormRequest
             ],
             'sector' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string'],
+            'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'level' => ['nullable', 'integer', 'between:1,4'],
+            'slug' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
         ];
     }
 

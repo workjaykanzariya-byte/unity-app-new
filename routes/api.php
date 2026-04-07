@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\V1\Billing\BillingCheckoutController;
 use App\Http\Controllers\Api\V1\Billing\CircleSubscriptionController;
 use App\Http\Controllers\Api\V1\Billing\ZohoBillingWebhookController;
 use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
+use App\Http\Controllers\Api\V1\CircleCategoryController;
 use App\Http\Controllers\Api\V1\CoinClaimController;
 use App\Http\Controllers\Api\V1\CoinHistoryController;
 use App\Http\Controllers\Api\V1\CoinsController;
@@ -96,6 +97,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/referrals/validate/{code}', [ReferralController::class, 'validateCode']);
 
     Route::get('/industries/tree', [IndustryController::class, 'tree']);
+    Route::get('/circle-categories/main', [CircleCategoryController::class, 'main']);
+    Route::get('/circle-categories/{id}/children', [CircleCategoryController::class, 'children'])->whereNumber('id');
+    Route::get('/circle-categories/{id}/tree', [CircleCategoryController::class, 'tree'])->whereNumber('id');
+    Route::get('/circle-categories/final', [CircleCategoryController::class, 'final']);
     Route::get('/collaboration-types', [CollaborationTypeController::class, 'index']);
 
     Route::post('/contacts/sync', [UserContactController::class, 'syncContacts']);

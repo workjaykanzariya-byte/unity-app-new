@@ -4,10 +4,73 @@ namespace App\Imports;
 
 use App\Models\Category;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class CategoriesImport
 {
+    /**
+     * @param array<int, array<string, mixed>> $nodes
+     */
+    public function importHierarchy(array $nodes, ?int $parentId = null, int $level = 1): array
+    {
+        $inserted = 0;
+        $updated = 0;
+
+        foreach ($nodes as $index => $node) {
+            $name = trim((string) ($node['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $attributes = ['category_name' => $name];
+            $payload = [
+                'sector' => $this->nullableTrim($node['sector'] ?? null),
+                'remarks' => $this->nullableTrim($node['remarks'] ?? null),
+            ];
+
+            if (Schema::hasColumn('categories', 'parent_id')) {
+                $payload['parent_id'] = $parentId;
+            }
+
+            if (Schema::hasColumn('categories', 'level')) {
+                $payload['level'] = $level;
+            }
+
+            if (Schema::hasColumn('categories', 'sort_order')) {
+                $payload['sort_order'] = (int) ($node['sort_order'] ?? ($index + 1));
+            }
+
+            if (Schema::hasColumn('categories', 'slug')) {
+                $payload['slug'] = (string) ($node['slug'] ?? Str::slug($name));
+            }
+
+            if (Schema::hasColumn('categories', 'is_active')) {
+                $payload['is_active'] = (bool) ($node['is_active'] ?? true);
+            }
+
+            $category = Category::query()->updateOrCreate($attributes, $payload);
+
+            if ($category->wasRecentlyCreated) {
+                $inserted++;
+            } else {
+                $updated++;
+            }
+
+            if (! empty($node['children']) && is_array($node['children'])) {
+                $childResult = $this->importHierarchy($node['children'], $category->id, min($level + 1, 4));
+                $inserted += $childResult['inserted_count'];
+                $updated += $childResult['updated_count'];
+            }
+        }
+
+        return [
+            'inserted_count' => $inserted,
+            'updated_count' => $updated,
+        ];
+    }
+
     public function import(UploadedFile $file): array
     {
         $extension = strtolower((string) $file->getClientOriginalExtension());
@@ -243,6 +306,11 @@ class CategoriesImport
             'category_name' => 'category_name',
             'sector' => 'sector',
             'remarks' => 'remarks',
+            'parent_id' => 'parent_id',
+            'level' => 'level',
+            'slug' => 'slug',
+            'sort_order' => 'sort_order',
+            'is_active' => 'is_active',
             'id' => 'id',
             'created_at' => 'created_at',
             'updated_at' => 'updated_at',

@@ -9,6 +9,7 @@ use App\Imports\CategoriesImport;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -45,7 +46,7 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Category::query()->create($request->validated());
+        Category::query()->create($this->filterCategoryPayload($request->validated()));
 
         return redirect()
             ->route('admin.categories.index')
@@ -61,7 +62,7 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        $category->update($request->validated());
+        $category->update($this->filterCategoryPayload($request->validated()));
 
         return redirect()
             ->route('admin.categories.index')
@@ -175,5 +176,12 @@ class CategoryController extends Controller
             ->with('imported_count', $result['imported_count'])
             ->with('skipped_duplicate_count', $result['skipped_duplicate_count'])
             ->with('skipped_empty_count', $result['skipped_empty_count']);
+    }
+
+    private function filterCategoryPayload(array $payload): array
+    {
+        return collect($payload)
+            ->filter(fn ($value, $key) => Schema::hasColumn('categories', $key))
+            ->all();
     }
 }
