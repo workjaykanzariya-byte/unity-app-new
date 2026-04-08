@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\Categories\StoreCategoryRequest;
 use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
 use App\Imports\CategoriesImport;
 use App\Models\Category;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -20,6 +21,11 @@ class CategoryController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $categories = Category::query()
+            ->when($this->hierarchyColumnsAvailable(), function ($query) {
+                $query->whereNull('parent_id')
+                    ->where('level', 1)
+                    ->when(Schema::hasColumn('categories', 'is_active'), fn ($q) => $q->where('is_active', true));
+            })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery
@@ -34,6 +40,58 @@ class CategoryController extends Controller
         return view('admin.categories.index', [
             'categories' => $categories,
             'search' => $search,
+        ]);
+    }
+
+    public function showHierarchy(Category $category): View
+    {
+        abort_unless($this->isMainCategory($category), 404);
+
+        $level2Categories = $this->childrenQuery($category->id)->get();
+        $level2Ids = $level2Categories->pluck('id');
+
+        $level3Count = $level2Ids->isEmpty()
+            ? 0
+            : Category::query()->whereIn('parent_id', $level2Ids)->count();
+
+        $level3Ids = $level2Ids->isEmpty()
+            ? collect()
+            : Category::query()->whereIn('parent_id', $level2Ids)->pluck('id');
+
+        $level4Count = $level3Ids->isEmpty()
+            ? 0
+            : Category::query()->whereIn('parent_id', $level3Ids)->count();
+
+        return view('admin.categories.view', [
+            'category' => $category,
+            'level2Categories' => $level2Categories,
+            'counts' => [
+                'level2' => $level2Categories->count(),
+                'level3' => $level3Count,
+                'level4' => $level4Count,
+            ],
+        ]);
+    }
+
+    public function children(Category $category, Request $request): JsonResponse
+    {
+        $items = $this->childrenQuery($category->id)
+            ->when($request->filled('level'), fn ($query) => $query->where('level', (int) $request->query('level')))
+            ->get()
+            ->map(fn (Category $item) => [
+                'id' => $item->id,
+                'name' => $item->category_name,
+                'level' => $item->level,
+                'sector' => $item->sector,
+                'remarks' => $item->remarks,
+                'parent_name' => $category->category_name,
+            ])
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => null,
+            'data' => $items,
         ]);
     }
 
@@ -183,5 +241,28 @@ class CategoryController extends Controller
         return collect($payload)
             ->filter(fn ($value, $key) => Schema::hasColumn('categories', $key))
             ->all();
+    }
+
+    private function childrenQuery(int $parentId)
+    {
+        return Category::query()
+            ->where('parent_id', $parentId)
+            ->when(Schema::hasColumn('categories', 'is_active'), fn ($query) => $query->where('is_active', true))
+            ->orderByRaw(Schema::hasColumn('categories', 'sort_order') ? 'sort_order ASC NULLS LAST' : 'id ASC')
+            ->orderBy('category_name');
+    }
+
+    private function hierarchyColumnsAvailable(): bool
+    {
+        return Schema::hasColumn('categories', 'parent_id') && Schema::hasColumn('categories', 'level');
+    }
+
+    private function isMainCategory(Category $category): bool
+    {
+        if (! $this->hierarchyColumnsAvailable()) {
+            return true;
+        }
+
+        return $category->parent_id === null && (int) $category->level === 1;
     }
 }

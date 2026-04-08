@@ -57,7 +57,7 @@
                     <th>Category Name</th>
                     <th>Sector</th>
                     <th>Remarks</th>
-                    <th style="width: 140px;">Actions</th>
+                    <th style="width: 220px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -69,6 +69,7 @@
                         <td>{{ $category->remarks ?: '—' }}</td>
                         <td>
                             <div class="d-flex gap-1">
+                                <a href="{{ route('admin.categories.view', $category) }}" class="btn btn-sm btn-outline-info">View</a>
                                 <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
                                     @csrf
