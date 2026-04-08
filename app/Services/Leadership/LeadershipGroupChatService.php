@@ -13,6 +13,60 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class LeadershipGroupChatService
 {
+    public function deleteForMe(Circle $circle, User $user, LeadershipGroupMessage $message): string
+    {
+        if (! $this->isActiveMember($circle, $user)) {
+            throw new HttpException(403, 'Forbidden.');
+        }
+
+        if ((string) $message->circle_id !== (string) $circle->id) {
+            throw new HttpException(404, 'Message not found.');
+        }
+
+        if ($message->deleted_at !== null) {
+            throw new HttpException(422, 'Message already deleted for everyone.');
+        }
+
+        $now = now();
+
+        DB::table('leadership_group_message_deletions')->upsert(
+            [[
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'message_id' => $message->id,
+                'user_id' => $user->id,
+                'deleted_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]],
+            ['message_id', 'user_id'],
+            ['deleted_at', 'updated_at']
+        );
+
+        return (string) $message->id;
+    }
+
+    public function deleteForEveryone(Circle $circle, User $user, LeadershipGroupMessage $message): string
+    {
+        if (! $this->isActiveMember($circle, $user)) {
+            throw new HttpException(403, 'Forbidden.');
+        }
+
+        if ((string) $message->circle_id !== (string) $circle->id) {
+            throw new HttpException(404, 'Message not found.');
+        }
+
+        if ((string) $message->sender_user_id !== (string) $user->id) {
+            throw new HttpException(403, 'Only sender can delete this message for everyone.');
+        }
+
+        $message->forceFill([
+            'deleted_at' => now(),
+            'updated_at' => now(),
+        ])->save();
+
+        return (string) $message->id;
+    }
+
     public function markMessagesRead(Circle $circle, User $user, array $messageIds): ?int
     {
         if (! $this->isActiveMember($circle, $user)) {
@@ -23,6 +77,9 @@ class LeadershipGroupChatService
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at')
             ->where('sender_user_id', '!=', $user->id)
+            ->whereDoesntHave('deletions', function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
+            })
             ->whereIn('id', $messageIds)
             ->pluck('id')
             ->all();
@@ -64,6 +121,9 @@ class LeadershipGroupChatService
         $paginator = LeadershipGroupMessage::query()
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at')
+            ->whereDoesntHave('deletions', function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
+            })
             ->with([
                 'sender',
                 'reads' => function ($query) use ($user): void {
@@ -154,6 +214,9 @@ class LeadershipGroupChatService
         $unreadCount = LeadershipGroupMessage::query()
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at')
+            ->whereDoesntHave('deletions', function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
+            })
             ->where('sender_user_id', '!=', $user->id)
             ->whereNotExists(function (Builder $query) use ($user): void {
                 $query->selectRaw('1')

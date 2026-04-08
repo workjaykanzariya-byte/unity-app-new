@@ -195,6 +195,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/circles/{circle}/leadership-chat/members', [LeadershipGroupChatController::class, 'members']);
         Route::get('/circles/{circle}/leadership-chat/messages', [LeadershipGroupChatController::class, 'messages']);
         Route::post('/circles/{circle}/leadership-chat/messages/read', [LeadershipGroupChatController::class, 'markRead']);
+        Route::post('/circles/{circle}/leadership-chat/messages/{message}/delete-for-me', [LeadershipGroupChatController::class, 'deleteForMe']);
+        Route::post('/circles/{circle}/leadership-chat/messages/{message}/delete-for-everyone', [LeadershipGroupChatController::class, 'deleteForEveryone']);
         Route::post('/circles/{circle}/leadership-chat/messages', [LeadershipGroupChatController::class, 'sendMessage']);
 
         // Posts & feed

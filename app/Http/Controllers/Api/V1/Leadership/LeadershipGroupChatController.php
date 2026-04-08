@@ -8,6 +8,7 @@ use App\Http\Requests\Leadership\SendLeadershipMessageRequest;
 use App\Http\Resources\Leadership\LeadershipMessageResource;
 use App\Http\Resources\Leadership\LeadershipMemberResource;
 use App\Models\Circle;
+use App\Models\LeadershipGroupMessage;
 use App\Services\Leadership\LeadershipGroupChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -82,6 +83,32 @@ class LeadershipGroupChatController extends BaseApiController
             }
 
             return $this->success(new LeadershipMessageResource($message), 'Message sent successfully.', 201);
+        } catch (HttpException $exception) {
+            return $this->error($exception->getMessage(), $exception->getStatusCode());
+        }
+    }
+
+    public function deleteForMe(Request $request, Circle $circle, LeadershipGroupMessage $message): JsonResponse
+    {
+        try {
+            $messageId = $this->leadershipGroupChatService->deleteForMe($circle, $request->user(), $message);
+
+            return $this->success([
+                'message_id' => $messageId,
+            ], 'Message deleted for you successfully.');
+        } catch (HttpException $exception) {
+            return $this->error($exception->getMessage(), $exception->getStatusCode());
+        }
+    }
+
+    public function deleteForEveryone(Request $request, Circle $circle, LeadershipGroupMessage $message): JsonResponse
+    {
+        try {
+            $messageId = $this->leadershipGroupChatService->deleteForEveryone($circle, $request->user(), $message);
+
+            return $this->success([
+                'message_id' => $messageId,
+            ], 'Message deleted for everyone successfully.');
         } catch (HttpException $exception) {
             return $this->error($exception->getMessage(), $exception->getStatusCode());
         }

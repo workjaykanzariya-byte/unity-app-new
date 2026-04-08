@@ -59,4 +59,9 @@ class LeadershipGroupMessage extends Model
     {
         return $this->hasMany(LeadershipGroupMessageRead::class, 'message_id');
     }
+
+    public function deletions(): HasMany
+    {
+        return $this->hasMany(LeadershipGroupMessageDeletion::class, 'message_id');
+    }
 }
