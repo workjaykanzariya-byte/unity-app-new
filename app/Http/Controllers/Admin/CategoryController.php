@@ -104,7 +104,10 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Category::query()->create($this->filterCategoryPayload($request->validated()));
+        $payload = $this->filterCategoryPayload($request->validated());
+        $payload = $this->applyMainCategoryDefaults($payload);
+
+        Category::query()->create($payload);
 
         return redirect()
             ->route('admin.categories.index')
@@ -120,7 +123,10 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
     {
-        $category->update($this->filterCategoryPayload($request->validated()));
+        $payload = $this->filterCategoryPayload($request->validated());
+        $payload = $this->preserveMainCategoryState($category, $payload);
+
+        $category->update($payload);
 
         return redirect()
             ->route('admin.categories.index')
@@ -264,5 +270,42 @@ class CategoryController extends Controller
         }
 
         return $category->parent_id === null && (int) $category->level === 1;
+    }
+
+    private function applyMainCategoryDefaults(array $payload): array
+    {
+        if (! $this->hierarchyColumnsAvailable()) {
+            return $payload;
+        }
+
+        if (! array_key_exists('parent_id', $payload)) {
+            $payload['parent_id'] = null;
+        }
+
+        if (! array_key_exists('level', $payload) || $payload['level'] === null) {
+            $payload['level'] = 1;
+        }
+
+        if (Schema::hasColumn('categories', 'is_active') && ! array_key_exists('is_active', $payload)) {
+            $payload['is_active'] = true;
+        }
+
+        return $payload;
+    }
+
+    private function preserveMainCategoryState(Category $category, array $payload): array
+    {
+        if (! $this->isMainCategory($category)) {
+            return $payload;
+        }
+
+        if (array_key_exists('parent_id', $payload) || array_key_exists('level', $payload)) {
+            return $payload;
+        }
+
+        return array_merge($payload, [
+            'parent_id' => null,
+            'level' => 1,
+        ]);
     }
 }
