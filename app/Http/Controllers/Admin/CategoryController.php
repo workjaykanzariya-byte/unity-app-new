@@ -8,52 +8,50 @@ use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
 use App\Imports\CategoriesImport;
 use App\Models\CircleCategory;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\View\View;
-
-class CategoryController extends Controller
-{
-    public function index(Request $request): View
-    {
-        $search = trim((string) $request->query('q', ''));
-
         $categories = CircleCategory::query()
             ->where('level', 1)
-            ->when($this->hasIsActiveColumn(), function ($query) {
+            ->when(Schema::hasColumn('circle_categories', 'is_active'), function ($query) {
                 $query->where('is_active', true);
             })
-            ->when($search !== '', function ($query) use ($search) {
                 $query->where('name', 'ILIKE', '%' . $search . '%');
-            })
-            ->with('parent:id,name')
             ->orderByRaw('COALESCE(sort_order, 2147483647) ASC')
-            ->orderBy('id')
-            ->paginate(20)
-            ->appends($request->query());
-
-        return view('admin.categories.index', [
-            'categories' => $categories,
-            'search' => $search,
-        ]);
-    }
-
-    public function create(): View
-    {
-        return view('admin.categories.create', [
             'category' => new CircleCategory([
                 'level' => 1,
                 'is_active' => true,
             ]),
-        ]);
-    }
-
-    public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        $payload = $this->filterPayload($request->validated());
+        $payload = $request->validated();
+        $payload['level'] = 1;
+        $payload['is_active'] = (bool) ($payload['is_active'] ?? true);
+
+        CircleCategory::query()->create($payload);
+
+    public function edit(CircleCategory $category): View
+    public function update(UpdateCategoryRequest $request, CircleCategory $category): RedirectResponse
+        $payload = $request->validated();
         $payload['level'] = 1;
 
+        if (Schema::hasColumn('circle_categories', 'is_active')) {
+            $payload['is_active'] = (bool) ($payload['is_active'] ?? $category->is_active ?? true);
+        }
+
+        $category->update($payload);
+    public function destroy(CircleCategory $category): RedirectResponse
+        } catch (\Throwable $e) {
+            $categories = CircleCategory::query()
+                ->where('level', 1)
+                ->when(Schema::hasColumn('circle_categories', 'is_active'), function ($query) {
+                    $query->where('is_active', true);
+                })
+                    $query->where('name', 'ILIKE', '%' . $search . '%');
+                ->orderByRaw('COALESCE(sort_order, 2147483647) ASC')
+                    fputcsv($handle, ['ID', 'Category Name', 'Slug', 'Circle Key', 'Sort Order', 'Is Active', 'Created At', 'Updated At']);
+                            (string) ($category->name ?? ''),
+                            (string) ($category->slug ?? ''),
+                            (string) ($category->circle_key ?? ''),
+                            (string) ($category->sort_order ?? ''),
+                            (string) ((bool) ($category->is_active ?? true) ? 'true' : 'false'),
         if ($this->hasIsActiveColumn()) {
             $payload['is_active'] = (bool) ($payload['is_active'] ?? true);
         }

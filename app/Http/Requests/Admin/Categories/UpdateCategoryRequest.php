@@ -24,8 +24,12 @@ class UpdateCategoryRequest extends FormRequest
                 Rule::unique('circle_categories', 'name')
                     ->where(fn ($query) => $query->where('level', 1))
                     ->ignore($category?->id),
-            ],
             'slug' => ['nullable', 'string', 'max:255'],
+            'circle_key' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+            'name.required' => 'Category name is required.',
+            'name.unique' => 'This category already exists.',
             'circle_key' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'remarks' => ['nullable', 'string'],

@@ -55,16 +55,12 @@
                 <tr>
                     <th>ID</th>
                     <th>Category Name</th>
-                    <th style="width: 140px;">Actions</th>
-                </tr>
             </thead>
             <tbody>
                 @forelse ($categories as $category)
                     <tr>
                         <td>{{ $category->id }}</td>
                         <td>{{ $category->name }}</td>
-                        <td>
-                            <div class="d-flex gap-1">
                                 <a href="{{ route('admin.categories.edit', $category) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}" onsubmit="return confirm('Delete this category?')">
                                     @csrf

@@ -4,19 +4,26 @@ namespace App\Imports;
 
 use App\Models\CircleCategory;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Http\UploadedFile;
-use ZipArchive;
+        $existingNormalized = CircleCategory::query()
+            ->where('level', 1)
+            ->pluck('name')
+            $nameRaw = $this->firstNonNull($row, ['name', 'category', 'category_name']);
+            $name = trim((string) ($nameRaw ?? ''));
+            if ($name === '') {
+            $normalizedName = $this->normalizeName($name);
+            $rowToInsert = [
+                'name' => $name,
+                'slug' => $this->nullableTrim($this->firstNonNull($row, ['slug'])),
+                'circle_key' => $this->nullableTrim($this->firstNonNull($row, ['circle_key', 'sector'])),
+                'sort_order' => $this->parseIntegerOrNull($this->firstNonNull($row, ['sort_order'])),
+                'level' => 1,
+            if (Schema::hasColumn('circle_categories', 'is_active')) {
+                $rowToInsert['is_active'] = true;
+            }
 
-class CategoriesImport
-{
-    public function import(UploadedFile $file): array
-    {
-        $extension = strtolower((string) $file->getClientOriginalExtension());
+            $insertRows[] = $rowToInsert;
 
-        $rows = match ($extension) {
-            'csv', 'txt' => $this->readCsvRows($file),
-            'xlsx' => $this->readXlsxRows($file),
-            default => throw new \RuntimeException('Unsupported file type. Please upload CSV or XLSX.'),
+                CircleCategory::query()->insert($chunk);
         };
 
         if ($rows === []) {
@@ -215,10 +222,20 @@ class CategoriesImport
                 if ($type === 's') {
                     $sharedIndex = (int) ($cell->v ?? 0);
                     $value = $sharedStrings[$sharedIndex] ?? '';
-                } elseif ($type === 'inlineStr') {
-                    $value = (string) ($cell->is->t ?? '');
-                } else {
-                    $value = isset($cell->v) ? (string) $cell->v : '';
+            'name' => 'name',
+            'circle_key' => 'circle_key',
+            'slug' => 'slug',
+            'sort_order' => 'sort_order',
+    private function parseIntegerOrNull(mixed $value): ?int
+    {
+        $trimmed = trim((string) ($value ?? ''));
+        if ($trimmed === '' || ! is_numeric($trimmed)) {
+            return null;
+        }
+
+        return (int) $trimmed;
+    }
+
                 }
 
                 $rowValues[$colIndex] = $value;
