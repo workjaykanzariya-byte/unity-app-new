@@ -155,7 +155,12 @@ class CategoryController extends Controller
                 }
 
                 if (Schema::hasTable('circle_categories')) {
-                    $circleCategoryId = $this->insertIntoCircleCategories($payload, $parentId, $level);
+                    $circleParentId = $this->resolveCircleCategoryParentId($parentId);
+                    if ($level > 1 && $circleParentId === null) {
+                        throw new \RuntimeException('Parent category mapping not found in circle_categories.');
+                    }
+
+                    $circleCategoryId = $this->insertIntoCircleCategories($payload, $circleParentId, $level);
                 }
             });
 
@@ -185,7 +190,7 @@ class CategoryController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->hierarchyErrorResponse($request, 'Unable to create category right now. Please try again.');
+            return $this->hierarchyErrorResponse($request, $e->getMessage());
         }
     }
 
@@ -503,6 +508,22 @@ class CategoryController extends Controller
         }
 
         return $candidate;
+    }
+
+    private function resolveCircleCategoryParentId(?int $categoriesParentId): ?int
+    {
+        if ($categoriesParentId === null || ! Schema::hasTable('circle_categories')) {
+            return null;
+        }
+
+        $parent = Category::query()->find($categoriesParentId);
+        if (! $parent) {
+            return null;
+        }
+
+        return DB::table('circle_categories')
+            ->whereRaw('LOWER(name) = LOWER(?)', [$parent->category_name])
+            ->value('id');
     }
 
     private function hierarchyErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
