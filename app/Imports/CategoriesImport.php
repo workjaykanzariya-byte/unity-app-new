@@ -2,8 +2,9 @@
 
 namespace App\Imports;
 
-use App\Models\Category;
+use App\Models\CircleCategory;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use ZipArchive;
@@ -24,33 +25,45 @@ class CategoriesImport
                 continue;
             }
 
-            $attributes = ['category_name' => $name];
+            $attributes = ['name' => $name];
             $payload = [
-                'sector' => $this->nullableTrim($node['sector'] ?? null),
                 'remarks' => $this->nullableTrim($node['remarks'] ?? null),
             ];
 
-            if (Schema::hasColumn('categories', 'parent_id')) {
+            if (Schema::hasColumn('circle_categories', 'parent_id')) {
                 $payload['parent_id'] = $parentId;
             }
 
-            if (Schema::hasColumn('categories', 'level')) {
+            if (Schema::hasColumn('circle_categories', 'level')) {
                 $payload['level'] = $level;
             }
 
-            if (Schema::hasColumn('categories', 'sort_order')) {
+            if (Schema::hasColumn('circle_categories', 'sort_order')) {
                 $payload['sort_order'] = (int) ($node['sort_order'] ?? ($index + 1));
             }
 
-            if (Schema::hasColumn('categories', 'slug')) {
-                $payload['slug'] = (string) ($node['slug'] ?? Str::slug($name));
+            if (Schema::hasColumn('circle_categories', 'slug')) {
+                $payload['slug'] = $this->nextUniqueValue(
+                    'circle_categories',
+                    'slug',
+                    (string) ($node['slug'] ?? Str::slug($name))
+                );
             }
 
-            if (Schema::hasColumn('categories', 'is_active')) {
+            if (Schema::hasColumn('circle_categories', 'is_active')) {
                 $payload['is_active'] = (bool) ($node['is_active'] ?? true);
             }
 
-            $category = Category::query()->updateOrCreate($attributes, $payload);
+            if (Schema::hasColumn('circle_categories', 'circle_key')) {
+                $payload['circle_key'] = $this->nextUniqueValue(
+                    'circle_categories',
+                    'circle_key',
+                    (string) ($node['circle_key'] ?? Str::upper(Str::snake($name))),
+                    '_'
+                );
+            }
+
+            $category = CircleCategory::query()->updateOrCreate($attributes, $payload);
 
             if ($category->wasRecentlyCreated) {
                 $inserted++;
@@ -89,8 +102,8 @@ class CategoriesImport
             ];
         }
 
-        $existingNormalized = Category::query()
-            ->pluck('category_name')
+        $existingNormalized = CircleCategory::query()
+            ->pluck('name')
             ->mapWithKeys(fn ($name) => [$this->normalizeName((string) $name) => true])
             ->all();
 
@@ -98,9 +111,6 @@ class CategoriesImport
         $importedCount = 0;
         $skippedDuplicateCount = 0;
         $skippedEmptyCount = 0;
-
-        $now = now();
-        $insertRows = [];
 
         foreach ($rows as $row) {
             $categoryNameRaw = $this->firstNonNull($row, ['category', 'category_name']);
@@ -117,27 +127,42 @@ class CategoriesImport
                 continue;
             }
 
-            $sector = $this->firstNonNull($row, ['sector']);
             $remarks = $this->firstNonNull($row, ['remarks']);
 
-            $insertRows[] = [
-                'category_name' => $categoryName,
-                'sector' => $this->nullableTrim($sector),
+            $payload = [
+                'name' => $categoryName,
                 'remarks' => $this->nullableTrim($remarks),
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
+
+            if (Schema::hasColumn('circle_categories', 'parent_id')) {
+                $payload['parent_id'] = null;
+            }
+
+            if (Schema::hasColumn('circle_categories', 'level')) {
+                $payload['level'] = 1;
+            }
+
+            if (Schema::hasColumn('circle_categories', 'is_active')) {
+                $payload['is_active'] = true;
+            }
+
+            if (Schema::hasColumn('circle_categories', 'slug')) {
+                $payload['slug'] = $this->nextUniqueValue('circle_categories', 'slug', Str::slug($categoryName));
+            }
+
+            if (Schema::hasColumn('circle_categories', 'circle_key')) {
+                $payload['circle_key'] = $this->nextUniqueValue('circle_categories', 'circle_key', Str::upper(Str::snake($categoryName)), '_');
+            }
+
+            if (Schema::hasColumn('circle_categories', 'sort_order')) {
+                $payload['sort_order'] = ((int) CircleCategory::query()->where('level', 1)->max('sort_order')) + 1;
+            }
+
+            CircleCategory::query()->create($payload);
+            $importedCount++;
 
             $seenInFile[$normalizedName] = true;
             $existingNormalized[$normalizedName] = true;
-        }
-
-        if ($insertRows !== []) {
-            foreach (array_chunk($insertRows, 500) as $chunk) {
-                Category::query()->insert($chunk);
-            }
-
-            $importedCount = count($insertRows);
         }
 
         return [
@@ -354,5 +379,23 @@ class CategoriesImport
         }
 
         return max(0, $index - 1);
+    }
+
+    private function nextUniqueValue(string $table, string $column, string $baseValue, string $separator = '-'): string
+    {
+        $value = trim($baseValue);
+        if ($value === '') {
+            $value = 'category';
+        }
+
+        $candidate = $value;
+        $suffix = 1;
+
+        while (DB::table($table)->where($column, $candidate)->exists()) {
+            $candidate = $value . $separator . $suffix;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 }

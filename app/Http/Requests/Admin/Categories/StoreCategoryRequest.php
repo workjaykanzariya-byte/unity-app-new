@@ -14,10 +14,10 @@ class StoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_name' => ['required', 'string', 'max:255', 'unique:categories,category_name'],
+            'category_name' => ['required', 'string', 'max:255', 'unique:circle_categories,name'],
             'sector' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string'],
-            'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:circle_categories,id'],
             'level' => ['nullable', 'integer', 'between:1,4'],
             'slug' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
