@@ -3,9 +3,10 @@
 namespace App\Services\Leadership;
 
 use App\Models\Circle;
-use App\Models\LeadershipGroupMember;
+use App\Models\CircleMember;
 use App\Models\LeadershipGroupMessage;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -21,9 +22,17 @@ class LeadershipGroupChatService
         'secretary',
     ];
 
+    private const ROLE_TITLES = [
+        'founder' => 'Founder',
+        'director' => 'Director',
+        'chair' => 'Chair',
+        'vice_chair' => 'Vice Chair',
+        'secretary' => 'Secretary',
+    ];
+
     public function deleteForMe(Circle $circle, User $user, LeadershipGroupMessage $message): string
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             throw new HttpException(403, 'Forbidden.');
         }
 
@@ -55,7 +64,7 @@ class LeadershipGroupChatService
 
     public function deleteForEveryone(Circle $circle, User $user, LeadershipGroupMessage $message): string
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             throw new HttpException(403, 'Forbidden.');
         }
 
@@ -77,7 +86,7 @@ class LeadershipGroupChatService
 
     public function markMessagesRead(Circle $circle, User $user, array $messageIds): ?int
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             return null;
         }
 
@@ -120,7 +129,7 @@ class LeadershipGroupChatService
 
     public function getMessages(Circle $circle, User $user, int $perPage = 20): ?LengthAwarePaginator
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             return null;
         }
 
@@ -167,7 +176,7 @@ class LeadershipGroupChatService
 
     public function sendMessage(Circle $circle, User $user, array $data): ?LeadershipGroupMessage
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             return null;
         }
 
@@ -199,21 +208,11 @@ class LeadershipGroupChatService
 
     public function getMembersPayload(Circle $circle, User $user): ?array
     {
-        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($user, $circle)) {
             return null;
         }
 
-        $membersQuery = LeadershipGroupMember::query()
-            ->where('circle_id', $circle->id)
-            ->where('is_active', true)
-            ->whereIn('leader_role', self::CHAT_ALLOWED_ROLES)
-            ->whereNull('deleted_at');
-
-        $members = (clone $membersQuery)
-            ->with('user')
-            ->orderByRaw($this->roleOrderExpression())
-            ->orderBy('created_at')
-            ->get();
+        $members = $this->getLeadershipChatParticipants($circle);
 
         $totalMessages = LeadershipGroupMessage::query()
             ->where('circle_id', $circle->id)
@@ -257,26 +256,93 @@ class LeadershipGroupChatService
         ];
     }
 
-    private function ensureUserCanAccessCircleLeadershipChat(Circle $circle, User $user): bool
+    public function getLeadershipChatParticipants(Circle $circle): Collection
     {
-        return LeadershipGroupMember::query()
+        $participants = collect();
+
+        if (! blank($circle->founder_user_id)) {
+            $participants->push([
+                'user_id' => (string) $circle->founder_user_id,
+                'leader_role' => 'founder',
+            ]);
+        }
+
+        if (! blank($circle->director_user_id)) {
+            $participants->push([
+                'user_id' => (string) $circle->director_user_id,
+                'leader_role' => 'director',
+            ]);
+        }
+
+        $roleMembers = CircleMember::query()
             ->where('circle_id', $circle->id)
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->whereIn('leader_role', self::CHAT_ALLOWED_ROLES)
+            ->whereIn('role', ['chair', 'vice_chair', 'secretary'])
             ->whereNull('deleted_at')
-            ->exists();
+            ->whereNull('left_at')
+            ->where(function ($query): void {
+                $query->whereNull('status')
+                    ->orWhereIn('status', ['active', 'approved']);
+            })
+            ->orderByRaw("CASE role
+                WHEN 'chair' THEN 1
+                WHEN 'vice_chair' THEN 2
+                WHEN 'secretary' THEN 3
+                ELSE 4
+            END")
+            ->orderBy('created_at')
+            ->get(['user_id', 'role']);
+
+        foreach ($roleMembers as $member) {
+            $participants->push([
+                'user_id' => (string) $member->user_id,
+                'leader_role' => (string) $member->role,
+            ]);
+        }
+
+        $seenUserIds = [];
+        $uniqueParticipants = $participants->filter(function (array $participant) use (&$seenUserIds): bool {
+            $userId = (string) $participant['user_id'];
+
+            if (isset($seenUserIds[$userId])) {
+                return false;
+            }
+
+            $seenUserIds[$userId] = true;
+
+            return true;
+        })->values();
+
+        $users = User::query()
+            ->whereIn('id', $uniqueParticipants->pluck('user_id')->all())
+            ->get()
+            ->keyBy('id');
+
+        return $uniqueParticipants
+            ->map(function (array $participant) use ($users, $circle): ?array {
+                $userId = (string) $participant['user_id'];
+                $user = $users->get($userId);
+
+                if (! $user) {
+                    return null;
+                }
+
+                $role = (string) $participant['leader_role'];
+
+                return [
+                    'id' => $circle->id . ':' . $role . ':' . $userId,
+                    'user_id' => $userId,
+                    'leader_role' => $role,
+                    'title' => self::ROLE_TITLES[$role] ?? ucfirst(str_replace('_', ' ', $role)),
+                    'user' => $user,
+                ];
+            })
+            ->filter()
+            ->values();
     }
 
-    private function roleOrderExpression(): string
+    private function ensureUserCanAccessCircleLeadershipChat(User $user, Circle $circle): bool
     {
-        return "CASE leader_role
-            WHEN 'founder' THEN 1
-            WHEN 'director' THEN 2
-            WHEN 'chair' THEN 3
-            WHEN 'vice_chair' THEN 4
-            WHEN 'secretary' THEN 5
-            ELSE 6
-        END";
+        return $this->getLeadershipChatParticipants($circle)
+            ->contains(fn (array $participant): bool => (string) $participant['user_id'] === (string) $user->id);
     }
 }
