@@ -33,4 +33,19 @@ class CircleCategory extends Model
     {
         return $this->hasMany(CircleCategoryMapping::class, 'category_id');
     }
+
+    public function level2Categories(): HasMany
+    {
+        return $this->hasMany(CircleCategoryLevel2::class, 'circle_category_id');
+    }
+
+    public function level3Categories(): HasMany
+    {
+        return $this->hasMany(CircleCategoryLevel3::class, 'circle_category_id');
+    }
+
+    public function level4Categories(): HasMany
+    {
+        return $this->hasMany(CircleCategoryLevel4::class, 'circle_category_id');
+    }
 }
