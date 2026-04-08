@@ -95,6 +95,7 @@ class CategoryController extends Controller
                 'sector' => $item->sector,
                 'remarks' => $item->remarks,
                 'parent_name' => $category->category_name,
+                'circle_category_id' => $this->resolveCircleCategoryParentId($item->id),
             ])
             ->values();
 
@@ -112,6 +113,7 @@ class CategoryController extends Controller
             'sector' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string'],
             'parent_id' => ['required', 'integer', 'exists:categories,id'],
+            'circle_parent_id' => ['nullable', 'integer'],
             'level' => ['required', 'integer', 'in:2,3,4'],
         ]);
 
@@ -145,21 +147,29 @@ class CategoryController extends Controller
             'is_active' => true,
         ]);
 
+        $circleParentId = null;
+        if (Schema::hasTable('circle_categories')) {
+            $circleParentId = $this->resolveCircleParentFromRequest(
+                (int) $validated['level'],
+                $request->integer('circle_parent_id'),
+                $parentId
+            );
+
+            if ($level > 1 && $circleParentId === null) {
+                return $this->hierarchyErrorResponse($request, 'Selected parent category was not found in circle_categories.');
+            }
+        }
+
         try {
             $createdCategory = null;
             $circleCategoryId = null;
 
-            DB::transaction(function () use ($payload, $parentId, $level, &$createdCategory, &$circleCategoryId): void {
+            DB::transaction(function () use ($payload, $circleParentId, $level, &$createdCategory, &$circleCategoryId): void {
                 if (Schema::hasTable('categories')) {
                     $createdCategory = Category::query()->create($payload);
                 }
 
                 if (Schema::hasTable('circle_categories')) {
-                    $circleParentId = $this->resolveCircleCategoryParentId($parentId);
-                    if ($level > 1 && $circleParentId === null) {
-                        throw new \RuntimeException('Parent category mapping not found in circle_categories.');
-                    }
-
                     $circleCategoryId = $this->insertIntoCircleCategories($payload, $circleParentId, $level);
                 }
             });
@@ -169,6 +179,8 @@ class CategoryController extends Controller
                 'name' => $payload['category_name'],
                 'level' => $level,
                 'parent_id' => $parentId,
+                'circle_parent_id' => $circleParentId,
+                'circle_category_id' => $circleCategoryId,
                 'sector' => $payload['sector'] ?? null,
                 'remarks' => $payload['remarks'] ?? null,
             ];
@@ -524,6 +536,22 @@ class CategoryController extends Controller
         return DB::table('circle_categories')
             ->whereRaw('LOWER(name) = LOWER(?)', [$parent->category_name])
             ->value('id');
+    }
+
+    private function resolveCircleParentFromRequest(int $level, ?int $circleParentId, int $categoryParentId): ?int
+    {
+        if (! Schema::hasTable('circle_categories') || $level <= 1) {
+            return null;
+        }
+
+        if ($circleParentId !== null) {
+            $row = DB::table('circle_categories')->where('id', $circleParentId)->first();
+            if ($row && (int) ($row->level ?? 0) === ($level - 1)) {
+                return (int) $row->id;
+            }
+        }
+
+        return $this->resolveCircleCategoryParentId($categoryParentId);
     }
 
     private function hierarchyErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse

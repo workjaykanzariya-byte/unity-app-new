@@ -56,7 +56,7 @@
                 <select id="level2Select" class="form-select">
                     <option value="">Select Level 2 Category</option>
                     @foreach($level2Categories as $item)
-                        <option value="{{ $item->id }}">{{ $item->category_name }}</option>
+                        <option value="{{ $item->id }}" data-circle-id="{{ $item->circle_category_id ?? $item->id }}">{{ $item->category_name }}</option>
                     @endforeach
                 </select>
                 <div id="level2Message" class="form-text text-muted mt-2">
@@ -126,7 +126,16 @@
                 <div class="modal-body">
                     <input type="hidden" id="modalLevel" name="level">
                     <input type="hidden" id="modalParentId" name="parent_id">
+                    <input type="hidden" id="modalCircleParentId" name="circle_parent_id">
                     <div id="modalErrorBox" class="alert alert-danger d-none"></div>
+                    <div class="mb-3 p-2 bg-light border rounded">
+                        <div class="small text-muted">Parent Category</div>
+                        <div class="fw-semibold" id="modalParentCategoryLabel">—</div>
+                        <div class="small text-muted mt-2">Main Sector</div>
+                        <div class="fw-semibold" id="modalMainSectorLabel">{{ $category->category_name }}</div>
+                        <div class="small text-muted mt-2">Creating Level</div>
+                        <div class="fw-semibold" id="modalCreatingLevelLabel">—</div>
+                    </div>
                     <div class="mb-3">
                         <label for="modalCategoryName" class="form-label">Category Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="modalCategoryName" name="category_name" required>
@@ -168,7 +177,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalTitle = document.getElementById('addHierarchyModalTitle');
     const modalLevel = document.getElementById('modalLevel');
     const modalParentId = document.getElementById('modalParentId');
+    const modalCircleParentId = document.getElementById('modalCircleParentId');
     const modalErrorBox = document.getElementById('modalErrorBox');
+    const modalParentCategoryLabel = document.getElementById('modalParentCategoryLabel');
+    const modalMainSectorLabel = document.getElementById('modalMainSectorLabel');
+    const modalCreatingLevelLabel = document.getElementById('modalCreatingLevelLabel');
     const modalCategoryName = document.getElementById('modalCategoryName');
     const modalSector = document.getElementById('modalSector');
     const modalRemarks = document.getElementById('modalRemarks');
@@ -214,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const option = document.createElement('option');
             option.value = item.id;
             option.textContent = item.name;
+            option.dataset.circleId = item.circle_category_id || item.id;
             targetSelect.appendChild(option);
         });
 
@@ -224,17 +238,39 @@ document.addEventListener('DOMContentLoaded', function () {
         return data;
     };
 
+    const selectedOptionText = (select) => select.options[select.selectedIndex]?.text || null;
+
     const resolveParentForLevel = (level) => {
         if (level === 2) {
-            return {{ (int) $category->id }};
+            return {
+                categoryParentId: {{ (int) $category->id }},
+                circleParentId: {{ (int) ($category->circle_category_id ?? $category->id) }},
+                parentName: @json($category->category_name),
+            };
         }
 
         if (level === 3) {
-            return level2Select.value ? parseInt(level2Select.value, 10) : null;
+            if (! level2Select.value) {
+                return null;
+            }
+
+            return {
+                categoryParentId: parseInt(level2Select.value, 10),
+                circleParentId: parseInt(level2Select.options[level2Select.selectedIndex]?.dataset.circleId || level2Select.value, 10),
+                parentName: selectedOptionText(level2Select),
+            };
         }
 
         if (level === 4) {
-            return level3Select.value ? parseInt(level3Select.value, 10) : null;
+            if (! level3Select.value) {
+                return null;
+            }
+
+            return {
+                categoryParentId: parseInt(level3Select.value, 10),
+                circleParentId: parseInt(level3Select.options[level3Select.selectedIndex]?.dataset.circleId || level3Select.value, 10),
+                parentName: selectedOptionText(level3Select),
+            };
         }
 
         return null;
@@ -245,12 +281,21 @@ document.addEventListener('DOMContentLoaded', function () {
         modalErrorBox.classList.remove('d-none');
     };
 
-    const openAddModal = (level, parentId) => {
+    const openAddModal = (level, parentPayload) => {
+        if (! parentPayload) {
+            showInlineError('Please select the required parent category first.');
+            return;
+        }
+
         modalErrorBox.classList.add('d-none');
         modalErrorBox.textContent = '';
         modalForm.reset();
         modalLevel.value = level;
-        modalParentId.value = parentId;
+        modalParentId.value = parentPayload.categoryParentId;
+        modalCircleParentId.value = parentPayload.circleParentId ?? '';
+        modalParentCategoryLabel.textContent = parentPayload.parentName ?? '—';
+        modalMainSectorLabel.textContent = rootSectorName ?? '—';
+        modalCreatingLevelLabel.textContent = `Level ${level}`;
         modalTitle.textContent = `Add Level ${level} Category`;
 
         if (addModal) {
@@ -288,8 +333,8 @@ document.addEventListener('DOMContentLoaded', function () {
     addButtons.forEach((button) => {
         button.addEventListener('click', function () {
             const level = parseInt(this.dataset.addLevel, 10);
-            const parentId = resolveParentForLevel(level);
-            openAddModal(level, parentId);
+            const parentPayload = resolveParentForLevel(level);
+            openAddModal(level, parentPayload);
         });
     });
 
@@ -342,6 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const option = document.createElement('option');
                 option.value = created.id;
                 option.textContent = created.name;
+                option.dataset.circleId = created.circle_category_id || created.id;
                 level2Select.appendChild(option);
                 level2Select.value = String(created.id);
                 level2Select.dispatchEvent(new Event('change'));
@@ -349,6 +395,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const option = document.createElement('option');
                 option.value = created.id;
                 option.textContent = created.name;
+                option.dataset.circleId = created.circle_category_id || created.id;
                 level3Select.appendChild(option);
                 level3Select.disabled = false;
                 level3Select.value = String(created.id);
@@ -357,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const option = document.createElement('option');
                 option.value = created.id;
                 option.textContent = created.name;
+                option.dataset.circleId = created.circle_category_id || created.id;
                 level4Select.appendChild(option);
                 level4Select.disabled = false;
                 level4Select.value = String(created.id);
