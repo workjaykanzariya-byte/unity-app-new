@@ -422,13 +422,92 @@ class ZohoBillingService
         return $this->client->request('GET', '/invoices/' . $invoiceId);
     }
 
-    public function listInvoicesBySubscription(string $subscriptionId): array
+    public function listInvoicesBySubscription(string $subscriptionId, int $page = 1, int $perPage = 10): array
     {
         return $this->client->request('GET', '/invoices', [
             'subscription_id' => $subscriptionId,
-            'page' => 1,
-            'per_page' => 10,
+            'page' => max(1, $page),
+            'per_page' => max(1, $perPage),
         ], true);
+    }
+
+    public function hasUserZohoMapping(User $user): bool
+    {
+        return trim((string) ($user->zoho_customer_id ?? '')) !== ''
+            || trim((string) ($user->zoho_subscription_id ?? '')) !== '';
+    }
+
+    public function listInvoicesForUser(User $user, int $page = 1, int $perPage = 20): array
+    {
+        $customerId = trim((string) ($user->zoho_customer_id ?? ''));
+        $subscriptionId = trim((string) ($user->zoho_subscription_id ?? ''));
+
+        if ($customerId !== '') {
+            return $this->client->request('GET', '/invoices', [
+                'customer_id' => $customerId,
+                'page' => max(1, $page),
+                'per_page' => max(1, $perPage),
+                'sort_column' => 'created_time',
+                'sort_order' => 'D',
+            ], true);
+        }
+
+        if ($subscriptionId !== '') {
+            return $this->listInvoicesBySubscription($subscriptionId, $page, $perPage);
+        }
+
+        return [
+            'invoices' => [],
+            'page_context' => [
+                'page' => max(1, $page),
+                'per_page' => max(1, $perPage),
+                'has_more_page' => false,
+                'total' => 0,
+            ],
+        ];
+    }
+
+    public function getInvoiceForUser(User $user, string $invoiceId): ?array
+    {
+        $customerId = trim((string) ($user->zoho_customer_id ?? ''));
+        $subscriptionId = trim((string) ($user->zoho_subscription_id ?? ''));
+
+        $invoiceResponse = $this->getInvoice($invoiceId);
+        $invoice = is_array($invoiceResponse['invoice'] ?? null) ? $invoiceResponse['invoice'] : $invoiceResponse;
+
+        if (! is_array($invoice) || $invoice === []) {
+            return null;
+        }
+
+        $invoiceCustomerId = trim((string) ($invoice['customer_id'] ?? ''));
+        $invoiceSubscriptionId = trim((string) ($invoice['subscription_id'] ?? ''));
+
+        if ($customerId !== '' && $invoiceCustomerId !== '' && $customerId === $invoiceCustomerId) {
+            return $invoice;
+        }
+
+        if ($subscriptionId !== '' && $invoiceSubscriptionId !== '' && $subscriptionId === $invoiceSubscriptionId) {
+            return $invoice;
+        }
+
+        return null;
+    }
+
+    public function getInvoicePdfForUser(User $user, string $invoiceId): ?array
+    {
+        $invoice = $this->getInvoiceForUser($user, $invoiceId);
+
+        if (! is_array($invoice)) {
+            return null;
+        }
+
+        $pdf = $this->client->requestPdf('/invoices/' . $invoiceId, ['accept' => 'pdf']);
+
+        return [
+            'content' => $pdf['content'] ?? '',
+            'content_type' => $pdf['content_type'] ?? 'application/pdf',
+            'invoice_number' => (string) ($invoice['invoice_number'] ?? $invoiceId),
+        ];
     }
 
     public function listSubscriptionsByCustomer(string $customerId): array
