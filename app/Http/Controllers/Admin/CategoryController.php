@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Categories\StoreCategoryRequest;
 use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
 use App\Imports\CategoriesImport;
-use App\Models\Category;
+use App\Models\CircleCategory;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
@@ -18,17 +18,16 @@ class CategoryController extends Controller
     {
         $search = trim((string) $request->query('q', ''));
 
-        $categories = Category::query()
+        $categories = CircleCategory::query()
+            ->where('level', 1)
+            ->where('is_active', true)
             ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery
-                        ->where('category_name', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('sector', 'ILIKE', '%' . $search . '%');
-                });
+                $query->where('name', 'ILIKE', '%' . $search . '%');
             })
+            ->orderBy('sort_order')
             ->orderBy('id')
-            ->paginate(20)
-            ->appends($request->query());
+            ->paginate(15)
+            ->withQueryString();
 
         return view('admin.categories.index', [
             'categories' => $categories,
@@ -39,36 +38,48 @@ class CategoryController extends Controller
     public function create(): View
     {
         return view('admin.categories.create', [
-            'category' => new Category(),
+            'category' => new CircleCategory([
+                'level' => 1,
+                'is_active' => true,
+                'sort_order' => 0,
+            ]),
         ]);
     }
 
     public function store(StoreCategoryRequest $request): RedirectResponse
     {
-        Category::query()->create($request->validated());
+        $payload = $request->validated();
+        $payload['level'] = 1;
+        $payload['is_active'] = $request->boolean('is_active');
+
+        CircleCategory::query()->create($payload);
 
         return redirect()
             ->route('admin.categories.index')
             ->with('success', 'Category created successfully.');
     }
 
-    public function edit(Category $category): View
+    public function edit(CircleCategory $category): View
     {
         return view('admin.categories.edit', [
             'category' => $category,
         ]);
     }
 
-    public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
+    public function update(UpdateCategoryRequest $request, CircleCategory $category): RedirectResponse
     {
-        $category->update($request->validated());
+        $payload = $request->validated();
+        $payload['level'] = 1;
+        $payload['is_active'] = $request->boolean('is_active');
+
+        $category->update($payload);
 
         return redirect()
             ->route('admin.categories.index')
             ->with('success', 'Category updated successfully.');
     }
 
-    public function destroy(Category $category): RedirectResponse
+    public function destroy(CircleCategory $category): RedirectResponse
     {
         try {
             if (
@@ -100,22 +111,24 @@ class CategoryController extends Controller
         try {
             $search = trim((string) $request->query('q', ''));
 
-            $categories = Category::query()
+            $categories = CircleCategory::query()
                 ->select([
                     'id',
-                    'category_name',
-                    'sector',
-                    'remarks',
+                    'name',
+                    'slug',
+                    'circle_key',
+                    'level',
+                    'sort_order',
+                    'is_active',
                     'created_at',
                     'updated_at',
                 ])
+                ->where('level', 1)
+                ->where('is_active', true)
                 ->when($search !== '', function ($query) use ($search) {
-                    $query->where(function ($subQuery) use ($search) {
-                        $subQuery
-                            ->where('category_name', 'ILIKE', '%' . $search . '%')
-                            ->orWhere('sector', 'ILIKE', '%' . $search . '%');
-                    });
+                    $query->where('name', 'ILIKE', '%' . $search . '%');
                 })
+                ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get();
 
@@ -128,14 +141,17 @@ class CategoryController extends Controller
                     }
 
                     fwrite($handle, "\xEF\xBB\xBF");
-                    fputcsv($handle, ['ID', 'Category Name', 'Sector', 'Remarks', 'Created At', 'Updated At']);
+                    fputcsv($handle, ['ID', 'Name', 'Slug', 'Circle Key', 'Level', 'Sort Order', 'Is Active', 'Created At', 'Updated At']);
 
                     foreach ($categories as $category) {
                         fputcsv($handle, [
                             $category->id,
-                            (string) ($category->category_name ?? ''),
-                            (string) ($category->sector ?? ''),
-                            (string) ($category->remarks ?? ''),
+                            (string) ($category->name ?? ''),
+                            (string) ($category->slug ?? ''),
+                            (string) ($category->circle_key ?? ''),
+                            (string) ($category->level ?? ''),
+                            (string) ($category->sort_order ?? ''),
+                            $category->is_active ? 'true' : 'false',
                             (string) ($category->created_at ?? ''),
                             (string) ($category->updated_at ?? ''),
                         ]);
@@ -143,7 +159,7 @@ class CategoryController extends Controller
 
                     fclose($handle);
                 },
-                'categories.csv',
+                'circle_categories.csv',
                 [
                     'Content-Type' => 'text/csv; charset=UTF-8',
                 ]
