@@ -23,7 +23,7 @@ class LeadershipGroupChatService
 
     public function deleteForMe(Circle $circle, User $user, LeadershipGroupMessage $message): string
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             throw new HttpException(403, 'Forbidden.');
         }
 
@@ -55,7 +55,7 @@ class LeadershipGroupChatService
 
     public function deleteForEveryone(Circle $circle, User $user, LeadershipGroupMessage $message): string
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             throw new HttpException(403, 'Forbidden.');
         }
 
@@ -77,7 +77,7 @@ class LeadershipGroupChatService
 
     public function markMessagesRead(Circle $circle, User $user, array $messageIds): ?int
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             return null;
         }
 
@@ -120,7 +120,7 @@ class LeadershipGroupChatService
 
     public function getMessages(Circle $circle, User $user, int $perPage = 20): ?LengthAwarePaginator
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             return null;
         }
 
@@ -167,7 +167,7 @@ class LeadershipGroupChatService
 
     public function sendMessage(Circle $circle, User $user, array $data): ?LeadershipGroupMessage
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             return null;
         }
 
@@ -199,7 +199,7 @@ class LeadershipGroupChatService
 
     public function getMembersPayload(Circle $circle, User $user): ?array
     {
-        if (! $this->isActiveMember($circle, $user)) {
+        if (! $this->ensureUserCanAccessCircleLeadershipChat($circle, $user)) {
             return null;
         }
 
@@ -257,7 +257,7 @@ class LeadershipGroupChatService
         ];
     }
 
-    private function isActiveMember(Circle $circle, User $user): bool
+    private function ensureUserCanAccessCircleLeadershipChat(Circle $circle, User $user): bool
     {
         return LeadershipGroupMember::query()
             ->where('circle_id', $circle->id)
@@ -273,8 +273,10 @@ class LeadershipGroupChatService
         return "CASE leader_role
             WHEN 'founder' THEN 1
             WHEN 'director' THEN 2
-            WHEN 'industry_director' THEN 3
-            ELSE 4
+            WHEN 'chair' THEN 3
+            WHEN 'vice_chair' THEN 4
+            WHEN 'secretary' THEN 5
+            ELSE 6
         END";
     }
 }
