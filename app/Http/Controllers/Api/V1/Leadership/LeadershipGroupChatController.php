@@ -11,6 +11,7 @@ use App\Models\Circle;
 use App\Services\Leadership\LeadershipGroupChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class LeadershipGroupChatController extends BaseApiController
 {
@@ -73,12 +74,16 @@ class LeadershipGroupChatController extends BaseApiController
 
     public function sendMessage(SendLeadershipMessageRequest $request, Circle $circle): JsonResponse
     {
-        $message = $this->leadershipGroupChatService->sendMessage($circle, $request->user(), $request->validated());
+        try {
+            $message = $this->leadershipGroupChatService->sendMessage($circle, $request->user(), $request->validated());
 
-        if (! $message) {
-            return $this->error('Forbidden.', 403);
+            if (! $message) {
+                return $this->error('Forbidden.', 403);
+            }
+
+            return $this->success(new LeadershipMessageResource($message), 'Message sent successfully.', 201);
+        } catch (HttpException $exception) {
+            return $this->error($exception->getMessage(), $exception->getStatusCode());
         }
-
-        return $this->success(new LeadershipMessageResource($message), 'Message sent successfully.', 201);
     }
 }

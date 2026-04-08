@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class LeadershipGroupChatService
 {
@@ -21,6 +22,7 @@ class LeadershipGroupChatService
         $validMessageIds = LeadershipGroupMessage::query()
             ->where('circle_id', $circle->id)
             ->whereNull('deleted_at')
+            ->where('sender_user_id', '!=', $user->id)
             ->whereIn('id', $messageIds)
             ->pluck('id')
             ->all();
@@ -69,6 +71,7 @@ class LeadershipGroupChatService
                 },
             ])
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage);
 
         $replyIds = collect($paginator->items())
@@ -98,6 +101,18 @@ class LeadershipGroupChatService
     {
         if (! $this->isActiveMember($circle, $user)) {
             return null;
+        }
+
+        if (! empty($data['reply_to_message_id'])) {
+            $isValidReplyMessage = LeadershipGroupMessage::query()
+                ->where('id', $data['reply_to_message_id'])
+                ->where('circle_id', $circle->id)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if (! $isValidReplyMessage) {
+                throw new HttpException(422, 'The reply message must belong to this circle.');
+            }
         }
 
         $message = DB::transaction(function () use ($circle, $user, $data): LeadershipGroupMessage {
