@@ -52,7 +52,10 @@
         @else
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label for="level2Select" class="form-label">Select Level 2 Category</label>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="level2Select" class="form-label mb-1">Select Level 2 Category</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-add-level="2">Add Level 2</button>
+                    </div>
                     <select id="level2Select" class="form-select">
                         <option value="">Select Level 2 Category</option>
                         @foreach($level2Categories as $item)
@@ -62,14 +65,20 @@
                     <div id="level2Message" class="form-text text-muted mt-2"></div>
                 </div>
                 <div class="col-md-4">
-                    <label for="level3Select" class="form-label">Select Level 3 Category</label>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="level3Select" class="form-label mb-1">Select Level 3 Category</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-add-level="3">Add Level 3</button>
+                    </div>
                     <select id="level3Select" class="form-select" disabled>
                         <option value="">Select Level 3 Category</option>
                     </select>
                     <div id="level3Message" class="form-text text-muted mt-2">Select a Level 2 category.</div>
                 </div>
                 <div class="col-md-4">
-                    <label for="level4Select" class="form-label">Select Level 4 Category</label>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="level4Select" class="form-label mb-1">Select Level 4 Category</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-add-level="4">Add Level 4</button>
+                    </div>
                     <select id="level4Select" class="form-select" disabled>
                         <option value="">Select Level 4 Category</option>
                     </select>
@@ -106,6 +115,41 @@
 </div>
 
 @if($level2Categories->isNotEmpty())
+<div class="modal fade" id="addHierarchyCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addHierarchyModalTitle">Add Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addHierarchyCategoryForm">
+                @csrf
+                <div class="modal-body">
+                    <input type="hidden" id="modalLevel" name="level">
+                    <input type="hidden" id="modalParentId" name="parent_id">
+                    <div id="modalErrorBox" class="alert alert-danger d-none"></div>
+                    <div class="mb-3">
+                        <label for="modalCategoryName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="modalCategoryName" name="category_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalSector" class="form-label">Sector</label>
+                        <input type="text" class="form-control" id="modalSector" name="sector">
+                    </div>
+                    <div>
+                        <label for="modalRemarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="modalRemarks" name="remarks" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const level2Select = document.getElementById('level2Select');
@@ -115,6 +159,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const level4Message = document.getElementById('level4Message');
     const branchTableBody = document.getElementById('branchTableBody');
     const childrenUrlTemplate = @json(route('admin.categories.children', ['category' => '__ID__']));
+    const hierarchyStoreUrl = @json(route('admin.categories.hierarchy.store', $category));
+    const addButtons = document.querySelectorAll('[data-add-level]');
+    const modalEl = document.getElementById('addHierarchyCategoryModal');
+    const modalForm = document.getElementById('addHierarchyCategoryForm');
+    const modalTitle = document.getElementById('addHierarchyModalTitle');
+    const modalLevel = document.getElementById('modalLevel');
+    const modalParentId = document.getElementById('modalParentId');
+    const modalErrorBox = document.getElementById('modalErrorBox');
+    const modalCategoryName = document.getElementById('modalCategoryName');
+    const modalSector = document.getElementById('modalSector');
+    const modalRemarks = document.getElementById('modalRemarks');
+    const addModal = window.bootstrap ? new window.bootstrap.Modal(modalEl) : null;
 
     const clearSelect = (select, placeholder, disable = true) => {
         select.innerHTML = `<option value="">${placeholder}</option>`;
@@ -165,6 +221,114 @@ document.addEventListener('DOMContentLoaded', function () {
 
         return data;
     };
+
+    const resolveParentForLevel = (level) => {
+        if (level === 2) {
+            return {{ (int) $category->id }};
+        }
+
+        if (level === 3) {
+            return level2Select.value ? parseInt(level2Select.value, 10) : null;
+        }
+
+        if (level === 4) {
+            return level3Select.value ? parseInt(level3Select.value, 10) : null;
+        }
+
+        return null;
+    };
+
+    const showInlineError = (message) => {
+        modalErrorBox.textContent = message;
+        modalErrorBox.classList.remove('d-none');
+    };
+
+    addButtons.forEach((button) => {
+        button.addEventListener('click', function () {
+            const level = parseInt(this.dataset.addLevel, 10);
+            const parentId = resolveParentForLevel(level);
+
+            if (level === 3 && !parentId) {
+                level3Message.textContent = 'Please select a Level 2 category first.';
+                return;
+            }
+
+            if (level === 4 && !parentId) {
+                level4Message.textContent = 'Please select a Level 3 category first.';
+                return;
+            }
+
+            modalErrorBox.classList.add('d-none');
+            modalErrorBox.textContent = '';
+            modalForm.reset();
+            modalLevel.value = level;
+            modalParentId.value = parentId;
+            modalTitle.textContent = `Add Level ${level} Category`;
+
+            if (addModal) {
+                addModal.show();
+            }
+        });
+    });
+
+    modalForm.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        modalErrorBox.classList.add('d-none');
+
+        const formData = new FormData(modalForm);
+
+        try {
+            const response = await fetch(hierarchyStoreUrl, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': formData.get('_token'),
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || !payload.success) {
+                showInlineError(payload.message || 'Unable to save category.');
+                return;
+            }
+
+            const created = payload.data;
+
+            if (created.level === 2) {
+                const option = document.createElement('option');
+                option.value = created.id;
+                option.textContent = created.name;
+                level2Select.appendChild(option);
+                level2Select.value = String(created.id);
+                level2Select.dispatchEvent(new Event('change'));
+            } else if (created.level === 3) {
+                const option = document.createElement('option');
+                option.value = created.id;
+                option.textContent = created.name;
+                level3Select.appendChild(option);
+                level3Select.disabled = false;
+                level3Select.value = String(created.id);
+                level3Select.dispatchEvent(new Event('change'));
+            } else if (created.level === 4) {
+                const option = document.createElement('option');
+                option.value = created.id;
+                option.textContent = created.name;
+                level4Select.appendChild(option);
+                level4Select.disabled = false;
+                level4Select.value = String(created.id);
+                level4Select.dispatchEvent(new Event('change'));
+            }
+
+            if (addModal) {
+                addModal.hide();
+            }
+        } catch (error) {
+            showInlineError('Unable to save category.');
+        }
+    });
 
     level2Select.addEventListener('change', async function () {
         clearSelect(level3Select, 'Select Level 3 Category');

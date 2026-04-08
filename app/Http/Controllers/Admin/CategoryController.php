@@ -105,6 +105,90 @@ class CategoryController extends Controller
         ]);
     }
 
+    public function storeHierarchy(Request $request, Category $category): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'category_name' => ['required', 'string', 'max:255'],
+            'sector' => ['nullable', 'string', 'max:255'],
+            'remarks' => ['nullable', 'string'],
+            'parent_id' => ['required', 'integer', 'exists:categories,id'],
+            'level' => ['required', 'integer', 'in:2,3,4'],
+        ]);
+
+        $level = (int) $validated['level'];
+        $parentId = (int) $validated['parent_id'];
+
+        if ($level === 2 && $parentId !== (int) $category->id) {
+            return $this->hierarchyErrorResponse($request, 'Invalid Level 2 parent selection.');
+        }
+
+        if ($level === 3) {
+            $parent = Category::query()->find($parentId);
+            if (! $parent || (int) ($parent->level ?? 0) !== 2) {
+                return $this->hierarchyErrorResponse($request, 'Please select a Level 2 category first.');
+            }
+        }
+
+        if ($level === 4) {
+            $parent = Category::query()->find($parentId);
+            if (! $parent || (int) ($parent->level ?? 0) !== 3) {
+                return $this->hierarchyErrorResponse($request, 'Please select a Level 3 category first.');
+            }
+        }
+
+        $payload = $this->filterCategoryPayload([
+            'category_name' => $validated['category_name'],
+            'sector' => $validated['sector'] ?? null,
+            'remarks' => $validated['remarks'] ?? null,
+            'parent_id' => $parentId,
+            'level' => $level,
+            'is_active' => true,
+        ]);
+
+        try {
+            $createdCategory = null;
+            $circleCategoryId = null;
+
+            DB::transaction(function () use ($payload, $parentId, $level, &$createdCategory, &$circleCategoryId): void {
+                if (Schema::hasTable('categories')) {
+                    $createdCategory = Category::query()->create($payload);
+                }
+
+                if (Schema::hasTable('circle_categories')) {
+                    $circleCategoryId = $this->insertIntoCircleCategories($payload, $parentId, $level);
+                }
+            });
+
+            $responseData = [
+                'id' => $createdCategory?->id ?? $circleCategoryId,
+                'name' => $payload['category_name'],
+                'level' => $level,
+                'parent_id' => $parentId,
+                'sector' => $payload['sector'] ?? null,
+                'remarks' => $payload['remarks'] ?? null,
+            ];
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Category created successfully.',
+                    'data' => $responseData,
+                ]);
+            }
+
+            return redirect()
+                ->route('admin.categories.view', $category)
+                ->with('success', 'Category created successfully.');
+        } catch (\Throwable $e) {
+            Log::error('Hierarchy category create failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->hierarchyErrorResponse($request, 'Unable to create category right now. Please try again.');
+        }
+    }
+
     public function create(): View
     {
         return view('admin.categories.create', [
@@ -347,7 +431,7 @@ class CategoryController extends Controller
         ]);
     }
 
-    private function insertIntoCircleCategories(array $payload): void
+    private function insertIntoCircleCategories(array $payload, ?int $parentId = null, ?int $level = null): int
     {
         $name = trim((string) ($payload['category_name'] ?? $payload['name'] ?? ''));
         if ($name === '') {
@@ -359,11 +443,11 @@ class CategoryController extends Controller
         ];
 
         if (Schema::hasColumn('circle_categories', 'parent_id')) {
-            $data['parent_id'] = null;
+            $data['parent_id'] = $parentId;
         }
 
         if (Schema::hasColumn('circle_categories', 'level')) {
-            $data['level'] = 1;
+            $data['level'] = $level ?? 1;
         }
 
         if (Schema::hasColumn('circle_categories', 'is_active')) {
@@ -400,7 +484,7 @@ class CategoryController extends Controller
             $data['updated_at'] = now();
         }
 
-        DB::table('circle_categories')->insert($data);
+        return (int) DB::table('circle_categories')->insertGetId($data);
     }
 
     private function nextUniqueValue(string $table, string $column, string $baseValue, string $separator = '-'): string
@@ -419,5 +503,18 @@ class CategoryController extends Controller
         }
 
         return $candidate;
+    }
+
+    private function hierarchyErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'errors' => ['category_name' => [$message]],
+            ], 422);
+        }
+
+        return redirect()->back()->withErrors(['category_name' => $message]);
     }
 }
