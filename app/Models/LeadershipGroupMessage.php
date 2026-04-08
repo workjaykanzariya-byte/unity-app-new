@@ -22,19 +22,15 @@ class LeadershipGroupMessage extends Model
 
     protected $fillable = [
         'circle_id',
-        'sender_id',
+        'sender_user_id',
         'message_type',
         'message_text',
-        'file_path',
-        'file_name',
-        'file_mime',
-        'file_size',
-        'thumbnail_path',
         'reply_to_message_id',
+        'meta',
     ];
 
     protected $casts = [
-        'file_size' => 'integer',
+        'meta' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

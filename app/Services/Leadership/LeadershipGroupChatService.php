@@ -7,9 +7,30 @@ use App\Models\LeadershipGroupMember;
 use App\Models\LeadershipGroupMessage;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\DB;
 
 class LeadershipGroupChatService
 {
+    public function sendMessage(Circle $circle, User $user, array $data): ?LeadershipGroupMessage
+    {
+        if (! $this->isActiveMember($circle, $user)) {
+            return null;
+        }
+
+        $message = DB::transaction(function () use ($circle, $user, $data): LeadershipGroupMessage {
+            return LeadershipGroupMessage::query()->create([
+                'circle_id' => $circle->id,
+                'sender_user_id' => $user->id,
+                'message_type' => $data['message_type'],
+                'message_text' => $data['message_text'],
+                'reply_to_message_id' => $data['reply_to_message_id'] ?? null,
+                'meta' => null,
+            ]);
+        });
+
+        return $message->load('sender');
+    }
+
     public function getMembersPayload(Circle $circle, User $user): ?array
     {
         if (! $this->isActiveMember($circle, $user)) {

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Leadership;
 
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Requests\Leadership\SendLeadershipMessageRequest;
+use App\Http\Resources\Leadership\LeadershipMessageResource;
 use App\Http\Resources\Leadership\LeadershipMemberResource;
 use App\Models\Circle;
 use App\Services\Leadership\LeadershipGroupChatService;
@@ -29,5 +31,16 @@ class LeadershipGroupChatController extends BaseApiController
             'current_user' => $payload['current_user'],
             'members' => LeadershipMemberResource::collection($payload['members']),
         ], 'Leadership members fetched successfully.');
+    }
+
+    public function sendMessage(SendLeadershipMessageRequest $request, Circle $circle): JsonResponse
+    {
+        $message = $this->leadershipGroupChatService->sendMessage($circle, $request->user(), $request->validated());
+
+        if (! $message) {
+            return $this->error('Forbidden.', 403);
+        }
+
+        return $this->success(new LeadershipMessageResource($message), 'Message sent successfully.', 201);
     }
 }
