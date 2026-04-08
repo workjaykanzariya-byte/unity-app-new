@@ -63,7 +63,7 @@
             <tbody>
                 @forelse ($categories as $category)
                     <tr>
-                        <td>{{ $category->id }}</td>
+                        <td>{{ $category->circle_category_id ?? $category->id }}</td>
                         <td>{{ $category->category_name }}</td>
                         <td>{{ $category->sector ?: '—' }}</td>
                         <td>{{ $category->remarks ?: '—' }}</td>

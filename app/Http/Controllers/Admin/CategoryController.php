@@ -23,19 +23,27 @@ class CategoryController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $categories = Category::query()
+            ->select('categories.*')
+            ->when(
+                Schema::hasTable('circle_categories') && Schema::hasColumn('circle_categories', 'name'),
+                function ($query) {
+                    $query->leftJoin('circle_categories as cc', DB::raw('LOWER(cc.name)'), '=', DB::raw('LOWER(categories.category_name)'))
+                        ->addSelect(DB::raw('cc.id as circle_category_id'));
+                }
+            )
             ->when($this->hierarchyColumnsAvailable(), function ($query) {
-                $query->whereNull('parent_id')
-                    ->where('level', 1)
-                    ->when(Schema::hasColumn('categories', 'is_active'), fn ($q) => $q->where('is_active', true));
+                $query->whereNull('categories.parent_id')
+                    ->where('categories.level', 1)
+                    ->when(Schema::hasColumn('categories', 'is_active'), fn ($q) => $q->where('categories.is_active', true));
             })
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
                     $subQuery
-                        ->where('category_name', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('sector', 'ILIKE', '%' . $search . '%');
+                        ->where('categories.category_name', 'ILIKE', '%' . $search . '%')
+                        ->orWhere('categories.sector', 'ILIKE', '%' . $search . '%');
                 });
             })
-            ->orderBy('id')
+            ->orderBy('categories.id')
             ->paginate(20)
             ->appends($request->query());
 
