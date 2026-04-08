@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\TestimonialController;
 use App\Http\Controllers\Api\UserContactController;
 use App\Http\Controllers\Api\V1\Billing\BillingCheckoutController;
 use App\Http\Controllers\Api\V1\Billing\CircleSubscriptionController;
+use App\Http\Controllers\Api\V1\Billing\InvoiceController;
 use App\Http\Controllers\Api\V1\Billing\ZohoBillingWebhookController;
 use App\Http\Controllers\Api\V1\Circles\CircleMemberController as V1CircleMemberController;
 use App\Http\Controllers\Api\V1\CoinClaimController;
@@ -389,6 +390,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/billing/checkout', [BillingCheckoutController::class, 'checkout']);
         Route::get('/billing/checkout/{hostedpage_id}', [BillingCheckoutController::class, 'status']);
         Route::get('/billing/hostedpages/{hostedpageId}/sync', [BillingCheckoutController::class, 'syncHostedPage']);
+        Route::get('/billing/invoices', [InvoiceController::class, 'index']);
+        Route::get('/billing/invoices/{invoiceId}', [InvoiceController::class, 'show']);
         Route::get('/circles/{circle}/package', [CircleSubscriptionController::class, 'package']);
         Route::post('/billing/circle-checkout/{circle}', [CircleSubscriptionController::class, 'checkout']);
     });
