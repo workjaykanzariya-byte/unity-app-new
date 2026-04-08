@@ -157,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const level3Message = document.getElementById('level3Message');
     const level4Message = document.getElementById('level4Message');
     const branchTableBody = document.getElementById('branchTableBody');
+    const rootSectorName = @json($category->category_name);
     const childrenUrlTemplate = @json(route('admin.categories.children', ['category' => '__ID__']));
     const hierarchyStoreUrl = @json(route('admin.categories.hierarchy.store', $category));
     const addButtons = document.querySelectorAll('[data-add-level]');
@@ -190,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${row.name}</td>
                 <td>${row.level ?? '—'}</td>
                 <td>${row.parent_name ?? '—'}</td>
-                <td>${row.sector ?? '—'}</td>
+                <td>${rootSectorName ?? '—'}</td>
                 <td>${row.remarks ?? '—'}</td>
             </tr>
         `).join('');
@@ -411,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
             name: this.options[this.selectedIndex].text,
             level: 4,
             parent_name: level3Select.options[level3Select.selectedIndex]?.text || null,
-            sector: null,
+            sector: rootSectorName,
             remarks: null,
         }]);
 
