@@ -32,6 +32,8 @@ class ZohoBillingClient
             'final_url' => $url,
             'query_keys' => $asQuery ? array_keys($payload) : [],
             'body_keys' => $asQuery ? [] : array_keys($payload),
+            'contains_invoice_number' => $this->payloadContainsKey($payload, 'invoice_number'),
+            'contains_ignore_auto_number_generation' => $this->payloadContainsKey($payload, 'ignore_auto_number_generation'),
         ]);
 
         try {
@@ -87,6 +89,30 @@ class ZohoBillingClient
         }
     }
 
+    public function requestPdf(string $path, array $query = []): array
+    {
+        $url = rtrim((string) config('zoho_billing.base_url'), '/') . '/' . ltrim($path, '/');
+        $token = $this->tokenService->getAccessToken();
+
+        $response = Http::timeout(config('zoho_billing.http_timeout', 20))
+            ->retry(config('zoho_billing.http_retry_times', 2), config('zoho_billing.http_retry_sleep_ms', 200))
+            ->withHeaders([
+                'Authorization' => 'Zoho-oauthtoken ' . $token,
+                'X-com-zoho-subscriptions-organizationid' => (string) config('zoho_billing.org_id'),
+                'Accept' => 'application/pdf',
+            ])
+            ->get($url, $query);
+
+        if (! $response->successful()) {
+            $this->throwZohoException($response->status(), $response->json(), $response->body());
+        }
+
+        return [
+            'content' => $response->body(),
+            'content_type' => (string) ($response->header('Content-Type') ?: 'application/pdf'),
+        ];
+    }
+
     private function throwZohoException(int $status, mixed $json, ?string $body = null): void
     {
         $code = data_get($json, 'code');
@@ -101,5 +127,20 @@ class ZohoBillingClient
 
         $formattedCode = $code ? ' code ' . $code : '';
         throw new RuntimeException('Zoho API request failed' . $formattedCode . ': ' . $message, $status);
+    }
+
+    private function payloadContainsKey(array $payload, string $targetKey): bool
+    {
+        foreach ($payload as $key => $value) {
+            if ((string) $key === $targetKey) {
+                return true;
+            }
+
+            if (is_array($value) && $this->payloadContainsKey($value, $targetKey)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
