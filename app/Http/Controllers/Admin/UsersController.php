@@ -477,10 +477,13 @@ class UsersController extends Controller
                     $membershipAttributes['joined_at'] = $validated['circle_joined_at'] ?? now();
                 }
 
-                $memberRecord = CircleMember::query()->firstOrNew([
+                $memberRecord = CircleMember::query()->withTrashed()->firstOrNew([
                     'user_id' => $user->id,
                     'circle_id' => $selectedCircleId,
                 ]);
+                if ($memberRecord->trashed()) {
+                    $memberRecord->deleted_at = null;
+                }
                 $memberRecord->fill(array_merge($membershipAttributes, ['left_at' => null]));
                 $memberRecord->save();
                 $this->upsertCircleMemberCategorySelection($memberRecord, $user->id, $validated);
@@ -561,10 +564,13 @@ class UsersController extends Controller
                     $additionalMembership['joined_at'] = $validated['circle_joined_at'] ?? now();
                 }
 
-                $additionalMemberRecord = CircleMember::query()->firstOrNew([
+                $additionalMemberRecord = CircleMember::query()->withTrashed()->firstOrNew([
                     'user_id' => $user->id,
                     'circle_id' => $additionalCircleId,
                 ]);
+                if ($additionalMemberRecord->trashed()) {
+                    $additionalMemberRecord->deleted_at = null;
+                }
                 $additionalMemberRecord->fill(array_merge($additionalMembership, ['left_at' => null]));
                 $additionalMemberRecord->save();
                 $this->upsertCircleMemberCategorySelection($additionalMemberRecord, $user->id, $validated);
