@@ -9,6 +9,23 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        #referralsMainScrollArea .admin-sticky-scrollbar.is-floating {
+            position: fixed;
+            z-index: 1040;
+            bottom: 12px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        #referralsMainScrollArea .admin-sticky-scrollbar.is-anchored {
+            position: absolute;
+            left: 0;
+            right: 0;
+            width: 100% !important;
+            bottom: 0;
+            z-index: 20;
+            box-shadow: none;
+        }
     </style>
     @php
         $displayName = function (?string $display, ?string $first, ?string $last): string {
@@ -51,46 +68,41 @@
         <div class="card-header bg-white">
             <strong>Top 5 Peers</strong>
         </div>
-        <div class="admin-sticky-scroll-area">
-            <div class="admin-sticky-scroll-content table-responsive">
-                <table class="table mb-0 align-middle">
-                    <thead class="table-light">
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Peer Name</th>
+                        <th>Total Referrals</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($topMembers as $index => $member)
                         <tr>
-                            <th>Rank</th>
-                            <th>Peer Name</th>
-                            <th>Total Referrals</th>
+                            <td>{{ $index + 1 }}</td>
+                            <td>
+                                @include('admin.components.peer-card', [
+                                    'name' => $member->peer_name ?? $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null),
+                                    'company' => $member->peer_company ?? '',
+                                    'city' => $member->peer_city ?? '',
+                                    'maxWidth' => 260,
+                                ])
+                            </td>
+                            <td>{{ $member->total_count ?? 0 }}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($topMembers as $index => $member)
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>
-                                    @include('admin.components.peer-card', [
-                                        'name' => $member->peer_name ?? $displayName($member->display_name ?? null, $member->first_name ?? null, $member->last_name ?? null),
-                                        'company' => $member->peer_company ?? '',
-                                        'city' => $member->peer_city ?? '',
-                                        'maxWidth' => 260,
-                                    ])
-                                </td>
-                                <td>{{ $member->total_count ?? 0 }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="text-center text-muted">No data available.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="admin-sticky-scrollbar" aria-hidden="true">
-                <div class="admin-sticky-scrollbar-inner"></div>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">No data available.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
     <div class="card shadow-sm">
-        <div class="admin-sticky-scroll-area">
+        <div id="referralsMainScrollArea" class="admin-sticky-scroll-area">
             <div class="admin-sticky-scroll-content table-responsive">
                 <table class="table mb-0 align-middle">
                     <thead class="table-light">
@@ -207,4 +219,82 @@
     <div class="mt-3">
         {{ $items->links() }}
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const scrollArea = document.getElementById('referralsMainScrollArea');
+            const scrollContent = scrollArea?.querySelector('.admin-sticky-scroll-content');
+            const stickyBar = scrollArea?.querySelector('.admin-sticky-scrollbar');
+
+            if (!scrollArea || !scrollContent || !stickyBar) {
+                return;
+            }
+
+            const resetStickyBarPosition = () => {
+                stickyBar.classList.remove('is-floating', 'is-anchored');
+                stickyBar.style.left = '';
+                stickyBar.style.width = '';
+                stickyBar.style.bottom = '';
+            };
+
+            const syncFloatingState = () => {
+                const hasOverflow = scrollContent.scrollWidth > scrollContent.clientWidth;
+                if (!hasOverflow || stickyBar.style.display === 'none') {
+                    resetStickyBarPosition();
+                    return;
+                }
+
+                const areaRect = scrollArea.getBoundingClientRect();
+                const contentRect = scrollContent.getBoundingClientRect();
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+                const barHeight = stickyBar.offsetHeight || 16;
+                const floatingBottom = 12;
+                const floatingTop = viewportHeight - floatingBottom - barHeight;
+                const areaBottomTop = areaRect.bottom - barHeight;
+
+                const isAreaVisible = areaRect.top < viewportHeight && areaRect.bottom > 0;
+                if (!isAreaVisible) {
+                    resetStickyBarPosition();
+                    return;
+                }
+
+                if (floatingTop >= areaBottomTop) {
+                    stickyBar.classList.remove('is-floating');
+                    stickyBar.classList.add('is-anchored');
+                    stickyBar.style.left = '';
+                    stickyBar.style.width = '';
+                    stickyBar.style.bottom = '';
+                    return;
+                }
+
+                stickyBar.classList.add('is-floating');
+                stickyBar.classList.remove('is-anchored');
+                stickyBar.style.left = `${contentRect.left}px`;
+                stickyBar.style.width = `${contentRect.width}px`;
+                stickyBar.style.bottom = `${floatingBottom}px`;
+            };
+
+            const scheduleSync = () => requestAnimationFrame(syncFloatingState);
+
+            window.addEventListener('scroll', scheduleSync, { passive: true });
+            window.addEventListener('resize', scheduleSync);
+            document.addEventListener('shown.bs.tab', scheduleSync);
+            document.addEventListener('shown.bs.collapse', scheduleSync);
+
+            if (window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(scheduleSync);
+                resizeObserver.observe(scrollArea);
+                resizeObserver.observe(scrollContent);
+                const table = scrollContent.querySelector('table');
+                if (table) {
+                    resizeObserver.observe(table);
+                }
+            }
+
+            scheduleSync();
+            window.addEventListener('load', scheduleSync);
+        });
+    </script>
+    @endpush
 @endsection
