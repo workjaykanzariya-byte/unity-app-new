@@ -54,6 +54,10 @@
             return;
         }
 
+        if (container.parentElement) {
+            container.parentElement.classList.add('sticky-x-scroll-scope');
+        }
+
         const sticky = document.createElement('div');
         sticky.className = 'sticky-x-scrollbar d-none';
         sticky.setAttribute('aria-hidden', 'true');
