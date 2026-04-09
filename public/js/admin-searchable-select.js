@@ -1,8 +1,6 @@
 (function () {
-    const AUTO_SEARCH_OPTION_THRESHOLD = 12;
     const ROOT_SELECTOR = '.admin-content';
-    const FORCE_SELECTOR = '.js-searchable-select, [data-searchable="true"]';
-    const SKIP_SELECTOR = '.js-no-searchable-select, .js-user-select, [data-searchable="false"]';
+    const SKIP_SELECTOR = '.js-no-searchable-select, [data-searchable="false"]';
 
     function hasSelect2Support() {
         return typeof window.jQuery !== 'undefined' && typeof window.jQuery.fn.select2 === 'function';
@@ -21,7 +19,7 @@
     }
 
     function isEligible(select) {
-        if (!(select instanceof HTMLSelectElement) || select.disabled) {
+        if (!(select instanceof HTMLSelectElement)) {
             return false;
         }
 
@@ -33,15 +31,7 @@
             return false;
         }
 
-        if (select.multiple && !select.matches(FORCE_SELECTOR)) {
-            return false;
-        }
-
-        if (select.matches(FORCE_SELECTOR)) {
-            return true;
-        }
-
-        return select.options.length >= AUTO_SEARCH_OPTION_THRESHOLD;
+        return true;
     }
 
     function resolvePlaceholder(select) {
