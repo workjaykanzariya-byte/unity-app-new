@@ -1,6 +1,7 @@
 (function () {
     const CONTAINER_SELECTOR = '.admin-content .table-responsive, .admin-content .js-horizontal-scroll';
     const STATE = new WeakMap();
+    const REGISTERED_CONTAINERS = new Set();
 
     function syncFromContainer(container) {
         const state = STATE.get(container);
@@ -35,18 +36,48 @@
         }
 
         const hasOverflow = container.scrollWidth > container.clientWidth + 1;
+        state.hasOverflow = hasOverflow;
         state.inner.style.width = container.scrollWidth + 'px';
 
         if (hasOverflow) {
             container.classList.add('has-sticky-x-scroll');
             state.sticky.classList.remove('d-none');
             state.sticky.scrollLeft = container.scrollLeft;
+            updateStickyPosition(container);
             return;
         }
 
         container.classList.remove('has-sticky-x-scroll');
+        state.sticky.classList.remove('is-floating');
+        state.sticky.style.left = '';
+        state.sticky.style.width = '';
         state.sticky.classList.add('d-none');
         state.sticky.scrollLeft = 0;
+    }
+
+    function updateStickyPosition(container) {
+        const state = STATE.get(container);
+        if (!state || !state.hasOverflow) {
+            return;
+        }
+
+        const rect = container.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const isVerticallyVisible = rect.bottom > 12 && rect.top < viewportHeight - 12;
+
+        if (!isVerticallyVisible || rect.width <= 0) {
+            state.sticky.classList.add('d-none');
+            state.sticky.classList.remove('is-floating');
+            state.sticky.style.left = '';
+            state.sticky.style.width = '';
+            return;
+        }
+
+        state.sticky.classList.remove('d-none');
+        state.sticky.classList.add('is-floating');
+        state.sticky.style.left = Math.max(rect.left, 0) + 'px';
+        state.sticky.style.width = Math.min(rect.width, window.innerWidth) + 'px';
+        state.sticky.scrollLeft = container.scrollLeft;
     }
 
     function setupContainer(container) {
@@ -73,9 +104,11 @@
             inner,
             syncingFromContainer: false,
             syncingFromSticky: false,
+            hasOverflow: false,
         };
 
         STATE.set(container, state);
+        REGISTERED_CONTAINERS.add(container);
 
         container.addEventListener('scroll', function () {
             syncFromContainer(container);
@@ -106,8 +139,21 @@
         });
     }
 
+    function refreshStickyPositions() {
+        REGISTERED_CONTAINERS.forEach(function (container) {
+            updateStickyPosition(container);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', refreshAllStickyXScrollbars);
     window.addEventListener('load', refreshAllStickyXScrollbars, { passive: true });
-    window.addEventListener('resize', refreshAllStickyXScrollbars, { passive: true });
-    window.addEventListener('admin:refresh-sticky-x-scroll', refreshAllStickyXScrollbars);
+    window.addEventListener('resize', function () {
+        refreshAllStickyXScrollbars();
+        refreshStickyPositions();
+    }, { passive: true });
+    window.addEventListener('scroll', refreshStickyPositions, { passive: true });
+    window.addEventListener('admin:refresh-sticky-x-scroll', function () {
+        refreshAllStickyXScrollbars();
+        refreshStickyPositions();
+    });
 })();
