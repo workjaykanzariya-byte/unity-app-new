@@ -2,35 +2,6 @@
 
 @section('title', 'All Posts')
 
-@push('styles')
-<style>
-    .posts-index-scroll-area {
-        position: relative;
-    }
-
-    .posts-index-table-scroll {
-        overflow-x: auto;
-        overflow-y: visible;
-        padding-bottom: 0.75rem;
-    }
-
-    .posts-index-scrollbar-sticky {
-        position: sticky;
-        bottom: 0;
-        z-index: 5;
-        overflow-x: auto;
-        overflow-y: hidden;
-        height: 16px;
-        background: #f8f9fb;
-        border-top: 1px solid #e7eaf1;
-    }
-
-    .posts-index-scrollbar-inner {
-        height: 1px;
-    }
-</style>
-@endpush
-
 @section('content')
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -90,8 +61,8 @@
             </div>
         </div>
 
-        <div class="posts-index-scroll-area">
-            <div id="postsIndexTableScroll" class="posts-index-table-scroll table-responsive">
+        <div class="admin-sticky-scroll-area posts-index-scroll-area">
+            <div class="admin-sticky-scroll-content posts-index-table-scroll table-responsive">
                 <table class="table mb-0 align-middle text-nowrap">
                     <thead class="table-light">
                         <tr>
@@ -245,64 +216,11 @@
                     </tbody>
                 </table>
             </div>
-            <div id="postsIndexStickyScrollbar" class="posts-index-scrollbar-sticky" aria-hidden="true">
-                <div id="postsIndexStickyScrollbarInner" class="posts-index-scrollbar-inner"></div>
+            <div class="admin-sticky-scrollbar posts-index-scrollbar-sticky" aria-hidden="true">
+                <div class="admin-sticky-scrollbar-inner posts-index-scrollbar-inner"></div>
             </div>
         </div>
     </div>
 
     <div class="mt-3">{{ $posts->links() }}</div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const tableScroll = document.getElementById('postsIndexTableScroll');
-        const stickyScroll = document.getElementById('postsIndexStickyScrollbar');
-        const stickyInner = document.getElementById('postsIndexStickyScrollbarInner');
-
-        if (!tableScroll || !stickyScroll || !stickyInner) {
-            return;
-        }
-
-        let isSyncing = false;
-
-        const syncStickyWidth = () => {
-            stickyInner.style.width = `${tableScroll.scrollWidth}px`;
-            stickyScroll.style.display = tableScroll.scrollWidth > tableScroll.clientWidth ? 'block' : 'none';
-        };
-
-        tableScroll.addEventListener('scroll', () => {
-            if (isSyncing) {
-                return;
-            }
-
-            isSyncing = true;
-            stickyScroll.scrollLeft = tableScroll.scrollLeft;
-            isSyncing = false;
-        });
-
-        stickyScroll.addEventListener('scroll', () => {
-            if (isSyncing) {
-                return;
-            }
-
-            isSyncing = true;
-            tableScroll.scrollLeft = stickyScroll.scrollLeft;
-            isSyncing = false;
-        });
-
-        syncStickyWidth();
-        window.addEventListener('resize', syncStickyWidth);
-
-        if (window.ResizeObserver) {
-            const resizeObserver = new ResizeObserver(syncStickyWidth);
-            resizeObserver.observe(tableScroll);
-            const table = tableScroll.querySelector('table');
-            if (table) {
-                resizeObserver.observe(table);
-            }
-        }
-    });
-</script>
-@endpush

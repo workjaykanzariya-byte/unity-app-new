@@ -172,3 +172,35 @@ body {
     min-height: 2.25rem;
     border-radius: .375rem;
 }
+
+.admin-content .admin-sticky-scroll-area {
+    position: relative;
+}
+
+.admin-content .admin-sticky-scroll-content {
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: .75rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.admin-content .admin-sticky-scroll-content::-webkit-scrollbar {
+    height: 0 !important;
+    display: none;
+}
+
+.admin-content .admin-sticky-scrollbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 16px;
+    background: #f8f9fb;
+    border-top: 1px solid var(--gray-300);
+}
+
+.admin-content .admin-sticky-scrollbar-inner {
+    height: 1px;
+}

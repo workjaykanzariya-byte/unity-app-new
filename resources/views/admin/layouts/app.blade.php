@@ -128,6 +128,126 @@
             });
         })();
     </script>
+    <script>
+        (function () {
+            const AREA_SELECTOR = '.admin-content .admin-sticky-scroll-area';
+
+            function syncArea(area) {
+                const content = area.querySelector('.admin-sticky-scroll-content');
+                const stickyBar = area.querySelector('.admin-sticky-scrollbar');
+                const stickyInner = area.querySelector('.admin-sticky-scrollbar-inner');
+
+                if (!content || !stickyBar || !stickyInner) {
+                    return;
+                }
+
+                stickyInner.style.width = `${content.scrollWidth}px`;
+                stickyBar.style.display = content.scrollWidth > content.clientWidth ? 'block' : 'none';
+                stickyBar.scrollLeft = content.scrollLeft;
+            }
+
+            function initArea(area) {
+                if (!(area instanceof Element) || area.dataset.stickyScrollInitialized === 'true') {
+                    return;
+                }
+
+                const content = area.querySelector('.admin-sticky-scroll-content');
+                const stickyBar = area.querySelector('.admin-sticky-scrollbar');
+
+                if (!content || !stickyBar) {
+                    return;
+                }
+
+                let isSyncing = false;
+
+                content.addEventListener('scroll', () => {
+                    if (isSyncing) {
+                        return;
+                    }
+
+                    isSyncing = true;
+                    stickyBar.scrollLeft = content.scrollLeft;
+                    isSyncing = false;
+                });
+
+                stickyBar.addEventListener('scroll', () => {
+                    if (isSyncing) {
+                        return;
+                    }
+
+                    isSyncing = true;
+                    content.scrollLeft = stickyBar.scrollLeft;
+                    isSyncing = false;
+                });
+
+                const queueSync = () => requestAnimationFrame(() => syncArea(area));
+
+                window.addEventListener('resize', queueSync);
+
+                if (window.ResizeObserver) {
+                    const resizeObserver = new ResizeObserver(queueSync);
+                    resizeObserver.observe(content);
+                    const table = content.querySelector('table');
+                    if (table) {
+                        resizeObserver.observe(table);
+                    }
+                }
+
+                area.dataset.stickyScrollInitialized = 'true';
+                area.__adminStickyScrollSync = queueSync;
+                syncArea(area);
+            }
+
+            function initAllAreas(root) {
+                const scope = root instanceof Element ? root : document;
+                const areas = scope.matches?.(AREA_SELECTOR)
+                    ? [scope]
+                    : scope.querySelectorAll(AREA_SELECTOR);
+
+                areas.forEach((area) => initArea(area));
+            }
+
+            window.AdminStickyScrollbar = {
+                refresh(root) {
+                    initAllAreas(root || document);
+                    document.querySelectorAll(AREA_SELECTOR).forEach((area) => {
+                        if (typeof area.__adminStickyScrollSync === 'function') {
+                            area.__adminStickyScrollSync();
+                        }
+                    });
+                }
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initAllAreas(document);
+
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type !== 'childList' || mutation.addedNodes.length === 0) {
+                            continue;
+                        }
+
+                        for (const node of mutation.addedNodes) {
+                            if (!(node instanceof Element)) {
+                                continue;
+                            }
+
+                            if (node.matches?.(AREA_SELECTOR) || node.querySelector?.(AREA_SELECTOR)) {
+                                initAllAreas(node);
+                                return;
+                            }
+                        }
+                    }
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+
+                document.addEventListener('shown.bs.tab', () => window.AdminStickyScrollbar.refresh());
+                document.addEventListener('shown.bs.collapse', () => window.AdminStickyScrollbar.refresh());
+                document.addEventListener('shown.bs.modal', () => window.AdminStickyScrollbar.refresh());
+            });
+        })();
+    </script>
     @stack('scripts')
 </body>
 </html>
