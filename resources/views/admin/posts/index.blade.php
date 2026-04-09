@@ -2,6 +2,35 @@
 
 @section('title', 'All Posts')
 
+@push('styles')
+<style>
+    .posts-index-scroll-area {
+        position: relative;
+    }
+
+    .posts-index-table-scroll {
+        overflow-x: auto;
+        overflow-y: visible;
+        padding-bottom: 0.75rem;
+    }
+
+    .posts-index-scrollbar-sticky {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        overflow-x: auto;
+        overflow-y: hidden;
+        height: 16px;
+        background: #f8f9fb;
+        border-top: 1px solid #e7eaf1;
+    }
+
+    .posts-index-scrollbar-inner {
+        height: 1px;
+    }
+</style>
+@endpush
+
 @section('content')
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -61,161 +90,219 @@
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table mb-0 align-middle text-nowrap">
-                <thead class="table-light">
-                    <tr>
-                        <th>Created At</th>
-                        <th>Peer Name</th>
-                        <th>Visibility</th>
-                        <th>Moderation Status</th>
-                        <th>Active?</th>
-                        <th>Content</th>
-                        <th>Media</th>
-                        <th>Actions</th>
-                    </tr>
-                    <tr class="bg-light">
-                        <th></th>
-                        <th><input type="text" name="peer" form="postsFiltersForm" class="form-control form-control-sm" style="min-width:180px" value="{{ $peer ?? '' }}" placeholder="Peer/Company/City"></th>
-                        <th>
-                            <select name="inline_visibility" form="postsFiltersForm" class="form-select form-select-sm">
-                                <option value="any">Any</option>
-                                @foreach ($visibilities as $visibility)
-                                    <option value="{{ $visibility }}" @selected(($inlineVisibility ?? 'any') === $visibility)>{{ ucfirst($visibility) }}</option>
-                                @endforeach
-                            </select>
-                        </th>
-                        <th>
-                            <select name="inline_moderation_status" form="postsFiltersForm" class="form-select form-select-sm">
-                                @foreach ($moderationOptions as $value => $label)
-                                    <option value="{{ $value }}" @selected(($inlineModerationStatus ?? 'any') === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </th>
-                        <th>
-                            <select name="inline_active" form="postsFiltersForm" class="form-select form-select-sm">
-                                <option value="any" @selected(($inlineActive ?? 'any') === 'any')>Any</option>
-                                <option value="yes" @selected(($inlineActive ?? '') === 'yes')>Yes</option>
-                                <option value="no" @selected(($inlineActive ?? '') === 'no')>No</option>
-                            </select>
-                        </th>
-                        <th></th>
-                        <th>
-                            <select name="media" form="postsFiltersForm" class="form-select form-select-sm">
-                                <option value="any" @selected(($media ?? 'any') === 'any')>Any</option>
-                                <option value="has" @selected(($media ?? '') === 'has')>Has Media</option>
-                                <option value="none" @selected(($media ?? '') === 'none')>No Media</option>
-                            </select>
-                        </th>
-                        <th class="text-end" style="white-space:nowrap;">
-                            <div class="d-inline-flex align-items-center gap-2" style="flex-wrap:nowrap;">
-                                <button type="submit" form="postsFiltersForm" class="btn btn-sm btn-primary">Apply</button>
-                                <a href="{{ route('admin.posts.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($posts as $post)
-                        @php
-                            $isImpact = ($post->source_type ?? 'post') === 'impact';
-                            $owner = $post->user;
-                            $circleName = optional($post->circle)->name;
-                            $isActive = $isImpact
-                                ? ! is_null($post->timeline_posted_at ?? null)
-                                : $post->deleted_at === null;
-                            $mediaUrl = (function ($media) {
-                                if (empty($media)) {
-                                    return null;
-                                }
-
-                                $items = [];
-
-                                if (is_array($media)) {
-                                    $items = $media;
-                                } elseif (is_object($media)) {
-                                    $items = data_get($media, 'items', []);
-                                }
-
-                                if (! is_array($items)) {
-                                    return null;
-                                }
-
-                                $imageItem = collect($items)->first(function ($item) {
-                                    return data_get($item, 'type') === 'image';
-                                });
-
-                                $candidate = $imageItem ?? (collect($items)->first() ?? []);
-                                $url = data_get($candidate, 'url');
-
-                                if ($url) {
-                                    return $url;
-                                }
-
-                                $id = data_get($candidate, 'id') ?? data_get($candidate, 'file_id');
-
-                                if ($id) {
-                                    return url('/api/v1/files/' . $id);
-                                }
-
-                                return data_get($candidate, 'path');
-                            })($post->media ?? null);
-                        @endphp
+        <div class="posts-index-scroll-area">
+            <div id="postsIndexTableScroll" class="posts-index-table-scroll table-responsive">
+                <table class="table mb-0 align-middle text-nowrap">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ $post->created_at?->format('Y-m-d H:i') }}</td>
-                            <td>@include('admin.partials.peer_identity', ['user' => $owner, 'circleName' => $circleName])</td>
-                            <td>{{ ucfirst($post->visibility) }}</td>
-                            <td>{{ $post->moderation_status ? ucfirst($post->moderation_status) : '—' }}</td>
-                            <td>{{ $isActive ? 'Yes' : 'No' }}</td>
-                            <td>
-                                @if($isImpact)
-                                    <span class="badge bg-info text-dark me-1">Impact</span>
-                                @endif
-                                {{ \Illuminate\Support\Str::limit($post->content_text, 60) }}
-                            </td>
-                            <td style="white-space:nowrap;">
-                                @if ($mediaUrl)
-                                    <a class="btn btn-sm btn-outline-primary" target="_blank" href="{{ $mediaUrl }}">View</a>
-                                @else
-                                    <span class="text-muted">None</span>
-                                @endif
-                            </td>
-                            <td class="text-end" style="white-space:nowrap;">
-                                @if($isImpact)
-                                    <a href="{{ route('admin.impacts.show', $post->id) }}" class="btn btn-outline-primary btn-sm">View</a>
-                                    <form method="POST"
-                                          action="{{ route('admin.posts.impacts.deactivate', $post->id) }}"
-                                          style="display:inline-block; margin-left:6px;">
-                                        @csrf
-                                        <button type="submit"
-                                                class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Are you sure you want to deactivate this impact?')">
-                                            Deactivate
-                                        </button>
-                                    </form>
-                                @else
-                                    <a href="{{ route('admin.posts.show', $post) }}" class="btn btn-outline-primary btn-sm">View</a>
-
-                                    <form method="POST"
-                                          action="{{ route('admin.posts.deactivate', $post) }}"
-                                          style="display:inline-block; margin-left:6px;">
-                                        @csrf
-                                        <button type="submit"
-                                                class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Are you sure you want to deactivate this post?')">
-                                            Deactivate
-                                        </button>
-                                    </form>
-                                @endif
-                            </td>
+                            <th>Created At</th>
+                            <th>Peer Name</th>
+                            <th>Visibility</th>
+                            <th>Moderation Status</th>
+                            <th>Active?</th>
+                            <th>Content</th>
+                            <th>Media</th>
+                            <th>Actions</th>
                         </tr>
-                    @empty
-                        <tr><td colspan="8" class="text-center text-muted">No posts found.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        <tr class="bg-light">
+                            <th></th>
+                            <th><input type="text" name="peer" form="postsFiltersForm" class="form-control form-control-sm" style="min-width:180px" value="{{ $peer ?? '' }}" placeholder="Peer/Company/City"></th>
+                            <th>
+                                <select name="inline_visibility" form="postsFiltersForm" class="form-select form-select-sm">
+                                    <option value="any">Any</option>
+                                    @foreach ($visibilities as $visibility)
+                                        <option value="{{ $visibility }}" @selected(($inlineVisibility ?? 'any') === $visibility)>{{ ucfirst($visibility) }}</option>
+                                    @endforeach
+                                </select>
+                            </th>
+                            <th>
+                                <select name="inline_moderation_status" form="postsFiltersForm" class="form-select form-select-sm">
+                                    @foreach ($moderationOptions as $value => $label)
+                                        <option value="{{ $value }}" @selected(($inlineModerationStatus ?? 'any') === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </th>
+                            <th>
+                                <select name="inline_active" form="postsFiltersForm" class="form-select form-select-sm">
+                                    <option value="any" @selected(($inlineActive ?? 'any') === 'any')>Any</option>
+                                    <option value="yes" @selected(($inlineActive ?? '') === 'yes')>Yes</option>
+                                    <option value="no" @selected(($inlineActive ?? '') === 'no')>No</option>
+                                </select>
+                            </th>
+                            <th></th>
+                            <th>
+                                <select name="media" form="postsFiltersForm" class="form-select form-select-sm">
+                                    <option value="any" @selected(($media ?? 'any') === 'any')>Any</option>
+                                    <option value="has" @selected(($media ?? '') === 'has')>Has Media</option>
+                                    <option value="none" @selected(($media ?? '') === 'none')>No Media</option>
+                                </select>
+                            </th>
+                            <th class="text-end" style="white-space:nowrap;">
+                                <div class="d-inline-flex align-items-center gap-2" style="flex-wrap:nowrap;">
+                                    <button type="submit" form="postsFiltersForm" class="btn btn-sm btn-primary">Apply</button>
+                                    <a href="{{ route('admin.posts.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($posts as $post)
+                            @php
+                                $isImpact = ($post->source_type ?? 'post') === 'impact';
+                                $owner = $post->user;
+                                $circleName = optional($post->circle)->name;
+                                $isActive = $isImpact
+                                    ? ! is_null($post->timeline_posted_at ?? null)
+                                    : $post->deleted_at === null;
+                                $mediaUrl = (function ($media) {
+                                    if (empty($media)) {
+                                        return null;
+                                    }
+
+                                    $items = [];
+
+                                    if (is_array($media)) {
+                                        $items = $media;
+                                    } elseif (is_object($media)) {
+                                        $items = data_get($media, 'items', []);
+                                    }
+
+                                    if (! is_array($items)) {
+                                        return null;
+                                    }
+
+                                    $imageItem = collect($items)->first(function ($item) {
+                                        return data_get($item, 'type') === 'image';
+                                    });
+
+                                    $candidate = $imageItem ?? (collect($items)->first() ?? []);
+                                    $url = data_get($candidate, 'url');
+
+                                    if ($url) {
+                                        return $url;
+                                    }
+
+                                    $id = data_get($candidate, 'id') ?? data_get($candidate, 'file_id');
+
+                                    if ($id) {
+                                        return url('/api/v1/files/' . $id);
+                                    }
+
+                                    return data_get($candidate, 'path');
+                                })($post->media ?? null);
+                            @endphp
+                            <tr>
+                                <td>{{ $post->created_at?->format('Y-m-d H:i') }}</td>
+                                <td>@include('admin.partials.peer_identity', ['user' => $owner, 'circleName' => $circleName])</td>
+                                <td>{{ ucfirst($post->visibility) }}</td>
+                                <td>{{ $post->moderation_status ? ucfirst($post->moderation_status) : '—' }}</td>
+                                <td>{{ $isActive ? 'Yes' : 'No' }}</td>
+                                <td>
+                                    @if($isImpact)
+                                        <span class="badge bg-info text-dark me-1">Impact</span>
+                                    @endif
+                                    {{ \Illuminate\Support\Str::limit($post->content_text, 60) }}
+                                </td>
+                                <td style="white-space:nowrap;">
+                                    @if ($mediaUrl)
+                                        <a class="btn btn-sm btn-outline-primary" target="_blank" href="{{ $mediaUrl }}">View</a>
+                                    @else
+                                        <span class="text-muted">None</span>
+                                    @endif
+                                </td>
+                                <td class="text-end" style="white-space:nowrap;">
+                                    @if($isImpact)
+                                        <a href="{{ route('admin.impacts.show', $post->id) }}" class="btn btn-outline-primary btn-sm">View</a>
+                                        <form method="POST"
+                                              action="{{ route('admin.posts.impacts.deactivate', $post->id) }}"
+                                              style="display:inline-block; margin-left:6px;">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to deactivate this impact?')">
+                                                Deactivate
+                                            </button>
+                                        </form>
+                                    @else
+                                        <a href="{{ route('admin.posts.show', $post) }}" class="btn btn-outline-primary btn-sm">View</a>
+
+                                        <form method="POST"
+                                              action="{{ route('admin.posts.deactivate', $post) }}"
+                                              style="display:inline-block; margin-left:6px;">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Are you sure you want to deactivate this post?')">
+                                                Deactivate
+                                            </button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="8" class="text-center text-muted">No posts found.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div id="postsIndexStickyScrollbar" class="posts-index-scrollbar-sticky" aria-hidden="true">
+                <div id="postsIndexStickyScrollbarInner" class="posts-index-scrollbar-inner"></div>
+            </div>
         </div>
     </div>
 
     <div class="mt-3">{{ $posts->links() }}</div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tableScroll = document.getElementById('postsIndexTableScroll');
+        const stickyScroll = document.getElementById('postsIndexStickyScrollbar');
+        const stickyInner = document.getElementById('postsIndexStickyScrollbarInner');
+
+        if (!tableScroll || !stickyScroll || !stickyInner) {
+            return;
+        }
+
+        let isSyncing = false;
+
+        const syncStickyWidth = () => {
+            stickyInner.style.width = `${tableScroll.scrollWidth}px`;
+            stickyScroll.style.display = tableScroll.scrollWidth > tableScroll.clientWidth ? 'block' : 'none';
+        };
+
+        tableScroll.addEventListener('scroll', () => {
+            if (isSyncing) {
+                return;
+            }
+
+            isSyncing = true;
+            stickyScroll.scrollLeft = tableScroll.scrollLeft;
+            isSyncing = false;
+        });
+
+        stickyScroll.addEventListener('scroll', () => {
+            if (isSyncing) {
+                return;
+            }
+
+            isSyncing = true;
+            tableScroll.scrollLeft = stickyScroll.scrollLeft;
+            isSyncing = false;
+        });
+
+        syncStickyWidth();
+        window.addEventListener('resize', syncStickyWidth);
+
+        if (window.ResizeObserver) {
+            const resizeObserver = new ResizeObserver(syncStickyWidth);
+            resizeObserver.observe(tableScroll);
+            const table = tableScroll.querySelector('table');
+            if (table) {
+                resizeObserver.observe(table);
+            }
+        }
+    });
+</script>
+@endpush
