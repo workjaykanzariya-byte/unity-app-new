@@ -7,6 +7,9 @@ use App\Http\Requests\Admin\Categories\StoreCategoryRequest;
 use App\Http\Requests\Admin\Categories\UpdateCategoryRequest;
 use App\Imports\CategoriesImport;
 use App\Models\CircleCategory;
+use App\Models\CircleCategoryLevel2;
+use App\Models\CircleCategoryLevel3;
+use App\Models\CircleCategoryLevel4;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +46,77 @@ class CategoryController extends Controller
                 'is_active' => true,
                 'sort_order' => 0,
             ]),
+        ]);
+    }
+
+    public function show(CircleCategory $category): View
+    {
+        abort_unless((int) $category->level === 1, 404);
+
+        $level2Categories = CircleCategoryLevel2::query()
+            ->where('circle_category_id', $category->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $level3Categories = CircleCategoryLevel3::query()
+            ->where('circle_category_id', $category->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $level4Categories = CircleCategoryLevel4::query()
+            ->where('circle_category_id', $category->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $level3ByLevel2 = [];
+        foreach ($level3Categories as $level3Category) {
+            $level2Id = $level3Category->level2_id ?? $level3Category->circle_category_level2_id ?? null;
+            if ($level2Id === null) {
+                continue;
+            }
+
+            $level3ByLevel2[$level2Id][] = $level3Category;
+        }
+
+        $level4ByLevel3 = [];
+        foreach ($level4Categories as $level4Category) {
+            $level3Id = $level4Category->level3_id ?? $level4Category->circle_category_level3_id ?? null;
+            if ($level3Id === null) {
+                continue;
+            }
+
+            $level4ByLevel3[$level3Id][] = $level4Category;
+        }
+
+        $children = [];
+        foreach ($level2Categories as $level2Category) {
+            $level3Children = $level3ByLevel2[$level2Category->id] ?? [];
+
+            $children[] = [
+                'category' => $level2Category,
+                'children' => collect($level3Children)->map(function ($level3Category) use ($level4ByLevel3) {
+                    return [
+                        'category' => $level3Category,
+                        'children' => $level4ByLevel3[$level3Category->id] ?? [],
+                    ];
+                })->all(),
+            ];
+        }
+
+        $level2Count = $level2Categories->count();
+        $level3Count = $level3Categories->count();
+        $level4Count = $level4Categories->count();
+
+        return view('admin.categories.view', [
+            'category' => $category,
+            'level2Count' => $level2Count,
+            'level3Count' => $level3Count,
+            'level4Count' => $level4Count,
+            'totalChildren' => $level2Count + $level3Count + $level4Count,
+            'children' => $children,
         ]);
     }
 
