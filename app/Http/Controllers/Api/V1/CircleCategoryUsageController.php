@@ -252,7 +252,6 @@ class CircleCategoryUsageController extends Controller
                     'level1_category' => null,
                     'available_level2_categories' => [],
                     'available_level3_categories' => [],
-                    'available_level4_categories' => [],
                 ],
             ]);
         }
@@ -272,7 +271,6 @@ class CircleCategoryUsageController extends Controller
 
         $selectedLevel2Id = (int) ($selectedRow?->level2_category_id ?? 0);
         $selectedLevel3Id = (int) ($selectedRow?->level3_category_id ?? 0);
-        $selectedLevel4Id = (int) ($selectedRow?->level4_category_id ?? 0);
 
         $level2Query = CircleCategoryLevel2::query()
             ->where('circle_category_id', $mainCategoryId)
@@ -283,22 +281,18 @@ class CircleCategoryUsageController extends Controller
             $level2Query->where('id', '!=', $selectedLevel2Id);
         }
 
-        $level3Query = CircleCategoryLevel3::query()
-            ->where('circle_category_id', $mainCategoryId)
-            ->orderBy('sort_order')
-            ->orderBy('id');
+        $availableLevel3Categories = [];
+        if ($selectedLevel2Id > 0) {
+            $level3Query = CircleCategoryLevel3::query()
+                ->where('level2_id', $selectedLevel2Id)
+                ->orderBy('sort_order')
+                ->orderBy('id');
 
-        if ($selectedLevel3Id > 0) {
-            $level3Query->where('id', '!=', $selectedLevel3Id);
-        }
+            if ($selectedLevel3Id > 0) {
+                $level3Query->where('id', '!=', $selectedLevel3Id);
+            }
 
-        $level4Query = CircleCategoryLevel4::query()
-            ->where('circle_category_id', $mainCategoryId)
-            ->orderBy('sort_order')
-            ->orderBy('id');
-
-        if ($selectedLevel4Id > 0) {
-            $level4Query->where('id', '!=', $selectedLevel4Id);
+            $availableLevel3Categories = $level3Query->get(['id', 'name'])->all();
         }
 
         return response()->json([
@@ -313,8 +307,7 @@ class CircleCategoryUsageController extends Controller
                     ? ['id' => $mainCategory->id, 'name' => $mainCategory->name]
                     : null,
                 'available_level2_categories' => $level2Query->get(['id', 'name']),
-                'available_level3_categories' => $level3Query->get(['id', 'name']),
-                'available_level4_categories' => $level4Query->get(['id', 'name']),
+                'available_level3_categories' => $availableLevel3Categories,
             ],
         ]);
     }
