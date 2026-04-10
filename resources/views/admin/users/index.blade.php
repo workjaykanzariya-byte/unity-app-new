@@ -6,6 +6,15 @@
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
+@if(session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+@if(session('warning'))
+    <div class="alert alert-warning">{{ session('warning') }}</div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -329,6 +338,62 @@
                                                 </table>
                                             </div>
                                         @endforeach
+                                    </div>
+                                    @php
+                                        $welcomeSent = filled($user->welcome_membership_email_sent_at);
+                                        $welcomeStatus = $user->welcome_membership_email_status ?: ($welcomeSent ? 'sent' : 'not_sent');
+                                    @endphp
+                                    <div class="card mt-3 border-0 shadow-sm">
+                                        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                                            <span>Membership Welcome Email</span>
+                                            @if ($welcomeSent)
+                                                <span class="badge bg-success-subtle text-success">Already Sent</span>
+                                            @else
+                                                <span class="badge bg-warning-subtle text-warning">Not Sent Yet</span>
+                                            @endif
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Welcome Email Sent</div>
+                                                    <div class="fw-semibold">{{ $welcomeSent ? 'Yes' : 'No' }}</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Sent At</div>
+                                                    <div class="fw-semibold">{{ optional($user->welcome_membership_email_sent_at)->format('Y-m-d H:i:s') ?: '—' }}</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Status</div>
+                                                    <div class="fw-semibold text-capitalize">{{ str_replace('_', ' ', $welcomeStatus) }}</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Plan Code At Send</div>
+                                                    <div class="fw-semibold">{{ $user->welcome_membership_email_plan_code ?: '—' }}</div>
+                                                </div>
+                                                <div class="col-md-8">
+                                                    <div class="small text-muted">Last Error</div>
+                                                    <div class="text-break">{{ $user->welcome_membership_email_error ?: '—' }}</div>
+                                                </div>
+                                                <div class="col-12 d-flex justify-content-end">
+                                                    @if ($canEditUsers)
+                                                        @if ($welcomeSent)
+                                                            <button type="button" class="btn btn-success btn-sm" disabled>Already Sent</button>
+                                                        @else
+                                                            <form method="POST" action="{{ route('admin.users.membership-welcome-email.send', $user->id) }}">
+                                                                @csrf
+                                                                <button
+                                                                    type="submit"
+                                                                    class="btn btn-outline-primary btn-sm"
+                                                                    onclick="return confirm('Send membership welcome email now?');"
+                                                                >
+                                                                    Send Welcome Mail
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

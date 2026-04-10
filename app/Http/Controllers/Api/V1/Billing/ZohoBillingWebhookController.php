@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Billing\MembershipSyncService;
 use App\Services\EmailLogs\EmailLogService;
 use App\Services\Circles\CircleJoinRequestPaymentSyncService;
+use App\Services\Membership\MembershipWelcomeEmailService;
 use App\Services\Circles\PaidCircleMembershipFinalizer;
 use App\Support\Zoho\ZohoBillingService;
 use Carbon\Carbon;
@@ -27,6 +28,7 @@ class ZohoBillingWebhookController extends Controller
         private readonly ZohoBillingService $zohoBillingService,
         private readonly MembershipSyncService $membershipSyncService,
         private readonly CircleJoinRequestPaymentSyncService $circleJoinRequestPaymentSyncService,
+        private readonly MembershipWelcomeEmailService $membershipWelcomeEmailService,
         private readonly PaidCircleMembershipFinalizer $paidCircleMembershipFinalizer,
     ) {
     }
@@ -89,6 +91,7 @@ class ZohoBillingWebhookController extends Controller
                 'invoice' => $invoice,
             ]);
 
+            $this->membershipWelcomeEmailService->sendIfEligible($syncedUser);
             $this->sendMembershipPurchaseCongratulationsEmail($syncedUser);
 
             return response()->json(['success' => true]);

@@ -14,6 +14,18 @@
 @if (session('status'))
     <div class="alert alert-success">{{ session('status') }}</div>
 @endif
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+@if (session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+@if (session('warning'))
+    <div class="alert alert-warning">{{ session('warning') }}</div>
+@endif
+@if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 @if ($errors->any())
     <div class="alert alert-danger">
@@ -31,6 +43,10 @@
         @csrf
     </form>
 @endif
+
+<form id="sendWelcomeMailForm" method="POST" action="{{ route('admin.users.membership-welcome-email.send', $user->id) }}">
+    @csrf
+</form>
 
 <form id="userEditForm" action="{{ route('admin.users.update', $user->id) }}" method="POST">
     @csrf
@@ -412,6 +428,59 @@
                             <textarea name="{{ $field }}" class="form-control" rows="3" placeholder="Enter comma separated values (e.g. IT, Finance, Retail)">{{ old($field, $asCsv($value)) }}</textarea>
                         </div>
                     @endforeach
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            @php
+                $welcomeSent = filled($user->welcome_membership_email_sent_at);
+                $welcomeStatus = $user->welcome_membership_email_status ?: ($welcomeSent ? 'sent' : 'not_sent');
+            @endphp
+            <div class="card">
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                    <span>Membership Welcome Email</span>
+                    @if ($welcomeSent)
+                        <span class="badge bg-success-subtle text-success">Already Sent</span>
+                    @else
+                        <span class="badge bg-warning-subtle text-warning">Not Sent Yet</span>
+                    @endif
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Welcome Email Sent</label>
+                        <input type="text" class="form-control" value="{{ $welcomeSent ? 'Yes' : 'No' }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sent At</label>
+                        <input type="text" class="form-control" value="{{ optional($user->welcome_membership_email_sent_at)->format('Y-m-d H:i:s') ?: '—' }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <input type="text" class="form-control text-capitalize" value="{{ str_replace('_', ' ', $welcomeStatus) }}" disabled>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Plan Code At Send</label>
+                        <input type="text" class="form-control" value="{{ $user->welcome_membership_email_plan_code ?: '—' }}" disabled>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Last Error</label>
+                        <textarea class="form-control" rows="2" disabled>{{ $user->welcome_membership_email_error ?: '—' }}</textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        @if ($welcomeSent)
+                            <button type="button" class="btn btn-success" disabled>Already Sent</button>
+                        @else
+                            <button
+                                type="submit"
+                                form="sendWelcomeMailForm"
+                                class="btn btn-outline-primary"
+                                onclick="return confirm('Send membership welcome email now?');"
+                            >
+                                Send Welcome Mail
+                            </button>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
