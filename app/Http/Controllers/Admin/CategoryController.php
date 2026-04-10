@@ -13,6 +13,8 @@ use App\Models\CircleCategoryLevel4;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CategoryController extends Controller
@@ -117,7 +119,99 @@ class CategoryController extends Controller
             'level4Count' => $level4Count,
             'totalChildren' => $level2Count + $level3Count + $level4Count,
             'children' => $children,
+            'level2Options' => $level2Categories,
+            'level3Options' => $level3Categories,
         ]);
+    }
+
+    public function storeLevel2(Request $request, CircleCategory $category): RedirectResponse
+    {
+        abort_unless((int) $category->level === 1, 404);
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('circle_category_level2', 'name')->where(fn ($query) => $query->where('circle_category_id', $category->id)),
+            ],
+        ]);
+
+        CircleCategoryLevel2::query()->create([
+            'circle_category_id' => $category->id,
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'is_active' => true,
+            'sort_order' => ((int) CircleCategoryLevel2::query()->where('circle_category_id', $category->id)->max('sort_order')) + 1,
+        ]);
+
+        return redirect()->route('admin.categories.view', $category)->with('success', 'Level 2 category added successfully.');
+    }
+
+    public function storeLevel3(Request $request, CircleCategory $category): RedirectResponse
+    {
+        abort_unless((int) $category->level === 1, 404);
+
+        $validated = $request->validate([
+            'level2_id' => [
+                'required',
+                'integer',
+                Rule::exists('circle_category_level2', 'id')->where(fn ($query) => $query->where('circle_category_id', $category->id)),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('circle_category_level3', 'name')->where(fn ($query) => $query->where('level2_id', (int) $request->input('level2_id'))),
+            ],
+        ]);
+
+        CircleCategoryLevel3::query()->create([
+            'circle_category_id' => $category->id,
+            'level2_id' => (int) $validated['level2_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'is_active' => true,
+            'sort_order' => ((int) CircleCategoryLevel3::query()->where('level2_id', (int) $validated['level2_id'])->max('sort_order')) + 1,
+        ]);
+
+        return redirect()->route('admin.categories.view', $category)->with('success', 'Level 3 category added successfully.');
+    }
+
+    public function storeLevel4(Request $request, CircleCategory $category): RedirectResponse
+    {
+        abort_unless((int) $category->level === 1, 404);
+
+        $validated = $request->validate([
+            'level2_id' => [
+                'required',
+                'integer',
+                Rule::exists('circle_category_level2', 'id')->where(fn ($query) => $query->where('circle_category_id', $category->id)),
+            ],
+            'level3_id' => [
+                'required',
+                'integer',
+                Rule::exists('circle_category_level3', 'id')->where(fn ($query) => $query->where('level2_id', (int) $request->input('level2_id'))->where('circle_category_id', $category->id)),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('circle_category_level4', 'name')->where(fn ($query) => $query->where('level3_id', (int) $request->input('level3_id'))),
+            ],
+        ]);
+
+        CircleCategoryLevel4::query()->create([
+            'circle_category_id' => $category->id,
+            'level2_id' => (int) $validated['level2_id'],
+            'level3_id' => (int) $validated['level3_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'is_active' => true,
+            'sort_order' => ((int) CircleCategoryLevel4::query()->where('level3_id', (int) $validated['level3_id'])->max('sort_order')) + 1,
+        ]);
+
+        return redirect()->route('admin.categories.view', $category)->with('success', 'Level 4 category added successfully.');
     }
 
     public function store(StoreCategoryRequest $request): RedirectResponse

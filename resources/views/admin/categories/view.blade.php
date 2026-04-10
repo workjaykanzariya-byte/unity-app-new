@@ -52,6 +52,59 @@
     </div>
 </div>
 
+
+<div class="card shadow-sm mb-3">
+    <div class="card-header fw-semibold">Add Child Categories</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <h6 class="mb-2">Add Level 2 Category</h6>
+                <form method="POST" action="{{ route('admin.categories.level2.store', $category) }}" class="d-grid gap-2">
+                    @csrf
+                    <input type="text" name="name" class="form-control" placeholder="Level 2 Category Name" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Level 2</button>
+                </form>
+            </div>
+
+            <div class="col-lg-4">
+                <h6 class="mb-2">Add Level 3 Category</h6>
+                <form method="POST" action="{{ route('admin.categories.level3.store', $category) }}" class="d-grid gap-2">
+                    @csrf
+                    <select name="level2_id" class="form-select" required>
+                        <option value="">Select Level 2 Parent</option>
+                        @foreach($level2Options as $option)
+                            <option value="{{ $option->id }}">{{ $option->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" name="name" class="form-control" placeholder="Level 3 Category Name" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Level 3</button>
+                </form>
+            </div>
+
+            <div class="col-lg-4">
+                <h6 class="mb-2">Add Level 4 Category</h6>
+                <form method="POST" action="{{ route('admin.categories.level4.store', $category) }}" class="d-grid gap-2" id="add-level4-form">
+                    @csrf
+                    <select name="level2_id" class="form-select" id="level4-level2" required>
+                        <option value="">Select Level 2 Parent</option>
+                        @foreach($level2Options as $option)
+                            <option value="{{ $option->id }}">{{ $option->name }}</option>
+                        @endforeach
+                    </select>
+                    <select name="level3_id" class="form-select" id="level4-level3" required>
+                        <option value="">Select Level 3 Parent</option>
+                        @foreach($level3Options as $option)
+                            <option value="{{ $option->id }}" data-level2-id="{{ $option->level2_id }}">{{ $option->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="text" name="name" class="form-control" placeholder="Level 4 Category Name" required>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Level 4</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm">
     <div class="card-header fw-semibold">Hierarchical Category Tree</div>
     <div class="card-body">
@@ -88,3 +141,45 @@
     </div>
 </div>
 @endsection
+
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const level2Select = document.getElementById('level4-level2');
+    const level3Select = document.getElementById('level4-level3');
+
+    if (!level2Select || !level3Select) {
+        return;
+    }
+
+    const originalOptions = Array.from(level3Select.querySelectorAll('option')).map((option) => option.cloneNode(true));
+
+    const renderLevel3Options = () => {
+        const selectedLevel2 = level2Select.value;
+        level3Select.innerHTML = '';
+
+        originalOptions.forEach((option) => {
+            if (!option.value) {
+                level3Select.appendChild(option.cloneNode(true));
+                return;
+            }
+
+            if (selectedLevel2 && option.dataset.level2Id === selectedLevel2) {
+                level3Select.appendChild(option.cloneNode(true));
+            }
+        });
+
+        if (level3Select.options.length <= 1) {
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = selectedLevel2 ? 'No Level 3 categories for selected Level 2' : 'Select Level 3 Parent';
+            level3Select.appendChild(placeholder);
+        }
+    };
+
+    level2Select.addEventListener('change', renderLevel3Options);
+    renderLevel3Options();
+});
+</script>
+@endpush
