@@ -764,6 +764,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         handleLevel3Change(oldLevel4);
                     }
                 }
+            } else if ((data.level1 || []).length === 1 && level1Select) {
+                level1Select.value = String(data.level1[0].id);
+                handleLevel1Change();
             }
         };
 
@@ -774,6 +777,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const data = getCircleData();
             fillSelect(level1Select, data.level1 || [], 'Select level 1 category');
+            if ((data.level1 || []).length === 1 && level1Select) {
+                level1Select.value = String(data.level1[0].id);
+                handleLevel1Change();
+            }
         });
         level1Select?.addEventListener('change', () => handleLevel1Change());
         level2Select?.addEventListener('change', () => handleLevel2Change());
