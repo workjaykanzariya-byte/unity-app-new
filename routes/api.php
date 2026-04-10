@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\V1\Admin\ImpactAdminController;
 use App\Http\Controllers\Api\V1\AppVersionController;
 use App\Http\Controllers\Api\V1\Connections\MyConnectionsController;
 use App\Http\Controllers\Api\V1\CircleCategoryController;
+use App\Http\Controllers\Api\V1\CircleCategoryUsageController;
 use App\Http\Controllers\Api\V1\EventGalleryApiController;
 use App\Http\Controllers\Api\V1\FollowController;
 use App\Http\Controllers\Api\V1\Forms\LeaderInterestController;
@@ -170,6 +171,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/circles/{circle}/members', [V1CircleMemberController::class, 'index']);
         Route::put('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
         Route::patch('/circles/{circleId}/members/{memberId}', [CircleController::class, 'updateMember']);
+
+        Route::get('/circles/{circleId}/category-tree', [CircleCategoryUsageController::class, 'circleCategoryTree']);
+        Route::get('/members/{memberId}/selected-categories', [CircleCategoryUsageController::class, 'memberSelectedCategories']);
+        Route::get('/members/{memberId}/available-categories', [CircleCategoryUsageController::class, 'memberAvailableCategories']);
 
         // Circle Join Requests
         Route::post('/circle-join-requests', [CircleJoinRequestController::class, 'store']);
