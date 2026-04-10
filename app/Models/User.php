@@ -97,6 +97,10 @@ class User extends Authenticatable
         'active_circle_id',
         'active_circle_addon_code',
         'active_circle_addon_name',
+        'welcome_membership_email_sent_at',
+        'welcome_membership_email_status',
+        'welcome_membership_email_error',
+        'welcome_membership_email_plan_code',
     ];
 
     protected $hidden = [
@@ -121,6 +125,7 @@ class User extends Authenticatable
         'last_payment_at' => 'datetime',
         'circle_joined_at' => 'datetime',
         'circle_expires_at' => 'datetime',
+        'welcome_membership_email_sent_at' => 'datetime',
         'dob' => 'date',
         'skills' => 'array',
         'interests' => 'array',

@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Models\UserMembership;
 use App\Services\Billing\MembershipSyncService;
+use App\Services\Membership\MembershipWelcomeEmailService;
 use App\Support\Zoho\ZohoBillingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class BillingCheckoutController extends Controller
     public function __construct(
         private readonly ZohoBillingService $zohoBillingService,
         private readonly MembershipSyncService $membershipSyncService,
+        private readonly MembershipWelcomeEmailService $membershipWelcomeEmailService,
     ) {
     }
 
@@ -291,6 +293,8 @@ class BillingCheckoutController extends Controller
 
                 return $syncedUser;
             });
+
+            $this->membershipWelcomeEmailService->sendIfEligible($freshUser);
 
             return response()->json([
                 'success' => true,
