@@ -42,8 +42,14 @@ class CircleJoinRequestsController extends Controller
                 ->orWhere('city', 'ILIKE', $like));
         }
 
-        $query->when($request->query('circle_id'), fn ($q, $v) => $q->where('circle_id', $v))
-            ->when($request->query('status'), fn ($q, $v) => $q->where('status', $v))
+        $pendingStatuses = [
+            CircleJoinRequest::STATUS_PENDING_CD_APPROVAL,
+            CircleJoinRequest::STATUS_PENDING_ID_APPROVAL,
+        ];
+
+        $query->whereIn('status', $pendingStatuses)
+            ->when($request->query('circle_id'), fn ($q, $v) => $q->where('circle_id', $v))
+            ->when($request->query('status'), fn ($q, $v) => in_array($v, $pendingStatuses, true) ? $q->where('status', $v) : $q->whereRaw('1=0'))
             ->when($request->query('date_from'), fn ($q, $v) => $q->whereDate('requested_at', '>=', $v))
             ->when($request->query('date_to'), fn ($q, $v) => $q->whereDate('requested_at', '<=', $v));
 
