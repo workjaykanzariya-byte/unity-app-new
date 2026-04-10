@@ -634,6 +634,12 @@ class UsersController extends Controller
             $result = $this->membershipWelcomeEmailService->sendIfEligible($user);
             $reason = (string) ($result['reason'] ?? '');
 
+            Log::info('admin.users.membership_welcome_send_result', [
+                'user_id' => (string) $user->id,
+                'reason' => $reason,
+                'sent' => (bool) ($result['sent'] ?? false),
+            ]);
+
             return back()->with(...$this->welcomeMailFlashMessage($reason));
         } catch (Throwable $throwable) {
             Log::warning('admin.users.membership_welcome_send_failed', [
@@ -1068,6 +1074,10 @@ class UsersController extends Controller
                 'membership_starts_at',
                 'membership_ends_at',
                 'last_payment_at',
+                'welcome_membership_email_sent_at',
+                'welcome_membership_email_status',
+                'welcome_membership_email_error',
+                'welcome_membership_email_plan_code',
             ])
             ->with([
                 'city',

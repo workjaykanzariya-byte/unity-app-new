@@ -433,56 +433,12 @@
         </div>
 
         <div class="col-12">
-            @php
-                $welcomeSent = filled($user->welcome_membership_email_sent_at);
-                $welcomeStatus = $user->welcome_membership_email_status ?: ($welcomeSent ? 'sent' : 'not_sent');
-            @endphp
-            <div class="card">
-                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
-                    <span>Membership Welcome Email</span>
-                    @if ($welcomeSent)
-                        <span class="badge bg-success-subtle text-success">Already Sent</span>
-                    @else
-                        <span class="badge bg-warning-subtle text-warning">Not Sent Yet</span>
-                    @endif
-                </div>
-                <div class="card-body row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Welcome Email Sent</label>
-                        <input type="text" class="form-control" value="{{ $welcomeSent ? 'Yes' : 'No' }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Sent At</label>
-                        <input type="text" class="form-control" value="{{ optional($user->welcome_membership_email_sent_at)->format('Y-m-d H:i:s') ?: '—' }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Status</label>
-                        <input type="text" class="form-control text-capitalize" value="{{ str_replace('_', ' ', $welcomeStatus) }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Plan Code At Send</label>
-                        <input type="text" class="form-control" value="{{ $user->welcome_membership_email_plan_code ?: '—' }}" disabled>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">Last Error</label>
-                        <textarea class="form-control" rows="2" disabled>{{ $user->welcome_membership_email_error ?: '—' }}</textarea>
-                    </div>
-                    <div class="col-12 d-flex justify-content-end">
-                        @if ($welcomeSent)
-                            <button type="button" class="btn btn-success" disabled>Already Sent</button>
-                        @else
-                            <button
-                                type="submit"
-                                form="sendWelcomeMailForm"
-                                class="btn btn-outline-primary"
-                                onclick="return confirm('Send membership welcome email now?');"
-                            >
-                                Send Welcome Mail
-                            </button>
-                        @endif
-                    </div>
-                </div>
-            </div>
+            @include('admin.users.partials.membership_welcome_email_card', [
+                'user' => $user,
+                'showSendButton' => true,
+                'sendFormId' => 'sendWelcomeMailForm',
+                'sendButtonClass' => 'btn btn-outline-primary',
+            ])
         </div>
 
         <div class="col-12">
