@@ -263,6 +263,15 @@ class CircleCategoryUsageController extends Controller
             ->where('id', $mainCategoryId)
             ->first();
 
+        $selectedLevel4Id = 0;
+        if (Schema::hasTable('joined_circle_categories')) {
+            $selectedLevel4Id = (int) (JoinedCircleCategory::query()
+                ->where('user_id', $member->id)
+                ->where('circle_id', $circle->id)
+                ->latest('updated_at')
+                ->value('level4_category_id') ?? 0);
+        }
+
         $level2 = CircleCategoryLevel2::query()
             ->where('circle_category_id', $mainCategoryId)
             ->orderBy('sort_order')
@@ -281,13 +290,18 @@ class CircleCategoryUsageController extends Controller
 
         $level3Ids = $level3->pluck('id')->values();
 
+        $level4Query = CircleCategoryLevel4::query()
+            ->whereIn('level3_id', $level3Ids)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+
+        if ($selectedLevel4Id > 0) {
+            $level4Query->where('id', '!=', $selectedLevel4Id);
+        }
+
         $level4 = $level3Ids->isEmpty()
             ? collect()
-            : CircleCategoryLevel4::query()
-                ->whereIn('level3_id', $level3Ids)
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get(['id', 'name', 'level3_id']);
+            : $level4Query->get(['id', 'name', 'level3_id']);
 
         $level4ByLevel3 = [];
         foreach ($level4 as $row) {
