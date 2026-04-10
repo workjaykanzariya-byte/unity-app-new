@@ -77,24 +77,24 @@ class CircleCategoryUsageController extends Controller
         $level3 = $level2Ids->isEmpty()
             ? collect()
             : CircleCategoryLevel3::query()
-                ->whereIn('circle_category_level2_id', $level2Ids)
+                ->whereIn('level2_id', $level2Ids)
                 ->orderBy('sort_order')
                 ->orderBy('id')
-                ->get(['id', 'name', 'circle_category_level2_id']);
+                ->get(['id', 'name', 'level2_id']);
 
         $level3Ids = $level3->pluck('id')->values();
 
         $level4 = $level3Ids->isEmpty()
             ? collect()
             : CircleCategoryLevel4::query()
-                ->whereIn('circle_category_level3_id', $level3Ids)
+                ->whereIn('level3_id', $level3Ids)
                 ->orderBy('sort_order')
                 ->orderBy('id')
-                ->get(['id', 'name', 'circle_category_level3_id']);
+                ->get(['id', 'name', 'level3_id']);
 
         $level4ByLevel3 = [];
         foreach ($level4 as $row) {
-            $parentId = (int) ($row->circle_category_level3_id ?? 0);
+            $parentId = (int) ($row->level3_id ?? 0);
             if ($parentId <= 0) {
                 continue;
             }
@@ -108,7 +108,7 @@ class CircleCategoryUsageController extends Controller
 
         $level3ByLevel2 = [];
         foreach ($level3 as $row) {
-            $parentId = (int) ($row->circle_category_level2_id ?? 0);
+            $parentId = (int) ($row->level2_id ?? 0);
             if ($parentId <= 0) {
                 continue;
             }

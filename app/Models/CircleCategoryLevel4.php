@@ -26,11 +26,11 @@ class CircleCategoryLevel4 extends Model
 
     public function level2Category(): BelongsTo
     {
-        return $this->belongsTo(CircleCategoryLevel2::class, 'circle_category_level2_id');
+        return $this->belongsTo(CircleCategoryLevel2::class, 'level2_id');
     }
 
     public function level3Category(): BelongsTo
     {
-        return $this->belongsTo(CircleCategoryLevel3::class, 'circle_category_level3_id');
+        return $this->belongsTo(CircleCategoryLevel3::class, 'level3_id');
     }
 }
