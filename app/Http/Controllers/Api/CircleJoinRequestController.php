@@ -9,7 +9,6 @@ use App\Models\CircleJoinRequest;
 use App\Services\Circles\CircleJoinRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class CircleJoinRequestController extends BaseApiController
@@ -39,15 +38,14 @@ class CircleJoinRequestController extends BaseApiController
                 ]
             );
 
-            $record->load(['circle:id,name', 'user:id,display_name,email,phone,company_name,city']);
-            if (Schema::hasColumns('circle_join_requests', ['level1_category_id', 'level2_category_id', 'level3_category_id', 'level4_category_id'])) {
-                $record->load([
-                    'level1Category:id,name',
-                    'level2Category:id,name',
-                    'level3Category:id,name',
-                    'level4Category:id,name',
-                ]);
-            }
+            $record->load([
+                'circle:id,name',
+                'user:id,display_name,email,phone,company_name,city',
+                'level1Category:id,name',
+                'level2Category:id,name',
+                'level3Category:id,name',
+                'level4Category:id,name',
+            ]);
 
             return $this->success($this->transformJoinRequest($record), 'Circle join request submitted successfully.', 201);
         } catch (ValidationException $exception) {
@@ -62,7 +60,13 @@ class CircleJoinRequestController extends BaseApiController
         $items = CircleJoinRequest::query()
             ->where('user_id', $request->user()->id)
             ->when($status, fn ($q) => $q->where('status', $status))
-            ->with(['circle:id,name'])
+            ->with([
+                'circle:id,name',
+                'level1Category:id,name',
+                'level2Category:id,name',
+                'level3Category:id,name',
+                'level4Category:id,name',
+            ])
             ->latest('created_at')
             ->paginate(20);
 
@@ -79,7 +83,18 @@ class CircleJoinRequestController extends BaseApiController
 
     public function show(Request $request, string $id): JsonResponse
     {
-        $record = CircleJoinRequest::query()->with(['circle', 'user', 'cdApprovedBy', 'cdRejectedBy', 'idApprovedBy', 'idRejectedBy'])->findOrFail($id);
+        $record = CircleJoinRequest::query()->with([
+            'circle',
+            'user',
+            'cdApprovedBy',
+            'cdRejectedBy',
+            'idApprovedBy',
+            'idRejectedBy',
+            'level1Category:id,name',
+            'level2Category:id,name',
+            'level3Category:id,name',
+            'level4Category:id,name',
+        ])->findOrFail($id);
 
         if ((string) $record->user_id !== (string) $request->user()->id) {
             return $this->error('Forbidden.', 403);

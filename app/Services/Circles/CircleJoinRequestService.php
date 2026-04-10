@@ -3,6 +3,8 @@
 namespace App\Services\Circles;
 
 use App\Models\Circle;
+use App\Models\CircleCategoryLevel3;
+use App\Models\CircleCategoryLevel4;
 use App\Models\CircleJoinRequest;
 use App\Models\CircleMember;
 use App\Models\Role;
@@ -70,6 +72,8 @@ class CircleJoinRequestService
                 }
             }
 
+            $selection = $this->resolveCategorySelection($selection);
+
             $hasCategoryColumns = Schema::hasColumns('circle_join_requests', [
                 'level1_category_id',
                 'level2_category_id',
@@ -91,6 +95,54 @@ class CircleJoinRequestService
 
             return $request;
         });
+    }
+
+    private function resolveCategorySelection(array $selection): array
+    {
+        $level4CategoryId = (int) ($selection['level4_category_id'] ?? 0);
+        if ($level4CategoryId <= 0) {
+            return $selection;
+        }
+
+        $level4 = CircleCategoryLevel4::query()
+            ->select(['id', 'level3_id', 'level2_id', 'circle_category_id'])
+            ->find($level4CategoryId);
+
+        if (! $level4) {
+            return $selection;
+        }
+
+        $level3CategoryId = (int) ($selection['level3_category_id'] ?? 0);
+        if ($level3CategoryId <= 0 && (int) $level4->level3_id > 0) {
+            $selection['level3_category_id'] = (int) $level4->level3_id;
+            $level3CategoryId = (int) $selection['level3_category_id'];
+        }
+
+        $level3Level2Id = null;
+        if ($level3CategoryId > 0) {
+            $level3 = CircleCategoryLevel3::query()
+                ->select(['id', 'level2_id'])
+                ->find($level3CategoryId);
+
+            $level3Level2Id = $level3 ? (int) ($level3->level2_id ?? 0) : null;
+        }
+
+        $level2CategoryId = (int) ($selection['level2_category_id'] ?? 0);
+        if ($level2CategoryId <= 0) {
+            $level2FromLevel4 = (int) ($level4->level2_id ?? 0);
+            $selection['level2_category_id'] = $level2FromLevel4 > 0 ? $level2FromLevel4 : (int) ($level3Level2Id ?? 0);
+        }
+
+        $level1CategoryId = (int) ($selection['level1_category_id'] ?? 0);
+        if ($level1CategoryId <= 0 && (int) $level4->circle_category_id > 0) {
+            $selection['level1_category_id'] = (int) $level4->circle_category_id;
+        }
+
+        foreach (['level1_category_id', 'level2_category_id', 'level3_category_id', 'level4_category_id'] as $key) {
+            $selection[$key] = (int) ($selection[$key] ?? 0) > 0 ? (int) $selection[$key] : null;
+        }
+
+        return $selection;
     }
 
     public function approveByCd(CircleJoinRequest $request, User $admin): CircleJoinRequest
