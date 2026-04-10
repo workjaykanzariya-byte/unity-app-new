@@ -243,56 +243,38 @@ class CircleCategoryUsageController extends Controller
         }
 
         $mainCategoryId = $this->resolveCircleMainCategoryId($circle->id);
-        if (! $mainCategoryId) {
-            return response()->json([
-                'success' => true,
-                'message' => null,
-                'data' => [
-                    'circle' => ['id' => $circle->id, 'name' => $circle->name],
-                    'level1_category' => null,
-                    'available_level2_categories' => [],
-                    'available_level3_categories' => [],
-                ],
-            ]);
-        }
-
-        $mainCategory = CircleCategory::query()
-            ->select(['id', 'name'])
-            ->where('id', $mainCategoryId)
-            ->first();
+        $mainCategory = $mainCategoryId
+            ? CircleCategory::query()->select(['id', 'name'])->where('id', $mainCategoryId)->first()
+            : null;
 
         $selectedRow = Schema::hasTable('joined_circle_categories')
             ? JoinedCircleCategory::query()
                 ->where('user_id', $member->id)
                 ->where('circle_id', $circle->id)
+                ->with([
+                    'level1Category:id,name',
+                    'level2Category:id,name',
+                    'level3Category:id,name',
+                ])
                 ->latest('updated_at')
                 ->first()
             : null;
 
-        $selectedLevel2Id = (int) ($selectedRow?->level2_category_id ?? 0);
         $selectedLevel3Id = (int) ($selectedRow?->level3_category_id ?? 0);
+        $selectedLevel4Id = (int) ($selectedRow?->level4_category_id ?? 0);
 
-        $level2Query = CircleCategoryLevel2::query()
-            ->where('circle_category_id', $mainCategoryId)
-            ->orderBy('sort_order')
-            ->orderBy('id');
-
-        if ($selectedLevel2Id > 0) {
-            $level2Query->where('id', '!=', $selectedLevel2Id);
-        }
-
-        $availableLevel3Categories = [];
-        if ($selectedLevel2Id > 0) {
-            $level3Query = CircleCategoryLevel3::query()
-                ->where('level2_id', $selectedLevel2Id)
+        $availableLevel4Categories = [];
+        if ($selectedLevel3Id > 0) {
+            $level4Query = CircleCategoryLevel4::query()
+                ->where('level3_id', $selectedLevel3Id)
                 ->orderBy('sort_order')
                 ->orderBy('id');
 
-            if ($selectedLevel3Id > 0) {
-                $level3Query->where('id', '!=', $selectedLevel3Id);
+            if ($selectedLevel4Id > 0) {
+                $level4Query->where('id', '!=', $selectedLevel4Id);
             }
 
-            $availableLevel3Categories = $level3Query->get(['id', 'name'])->all();
+            $availableLevel4Categories = $level4Query->get(['id', 'name'])->all();
         }
 
         return response()->json([
@@ -303,11 +285,16 @@ class CircleCategoryUsageController extends Controller
                     'id' => $circle->id,
                     'name' => $circle->name,
                 ],
-                'level1_category' => $mainCategory
-                    ? ['id' => $mainCategory->id, 'name' => $mainCategory->name]
+                'level1_category' => $selectedRow?->level1Category
+                    ? ['id' => $selectedRow->level1Category->id, 'name' => $selectedRow->level1Category->name]
+                    : ($mainCategory ? ['id' => $mainCategory->id, 'name' => $mainCategory->name] : null),
+                'level2_category' => $selectedRow?->level2Category
+                    ? ['id' => $selectedRow->level2Category->id, 'name' => $selectedRow->level2Category->name]
                     : null,
-                'available_level2_categories' => $level2Query->get(['id', 'name']),
-                'available_level3_categories' => $availableLevel3Categories,
+                'level3_category' => $selectedRow?->level3Category
+                    ? ['id' => $selectedRow->level3Category->id, 'name' => $selectedRow->level3Category->name]
+                    : null,
+                'available_level4_categories' => $availableLevel4Categories,
             ],
         ]);
     }
