@@ -52,15 +52,23 @@ class MembershipWelcomeMail extends Mailable
         $fromAddress = trim((string) config('mail.from_pravin.address', 'pravin@peersglobal.com'));
         $fromName = trim((string) config('mail.from_pravin.name', 'Peers Global Unity'));
         $pravinHost = trim((string) config('mail.mailers.smtp_pravin.host', ''));
+        $pravinPort = (string) config('mail.mailers.smtp_pravin.port', '');
+        $pravinEncryption = trim((string) config('mail.mailers.smtp_pravin.encryption', ''));
         $pravinUsername = trim((string) config('mail.mailers.smtp_pravin.username', ''));
         $pravinPassword = trim((string) config('mail.mailers.smtp_pravin.password', ''));
 
         Log::info('membership.welcome_email.mailer_selection', [
             'user_id' => (string) $this->user->id,
             'mailer' => $selectedMailer,
+            'smtp_host' => $pravinHost,
+            'smtp_port' => $pravinPort,
+            'smtp_username' => $pravinUsername,
+            'smtp_encryption' => $pravinEncryption,
+            'smtp_password_exists' => $pravinPassword !== '',
             'from_address' => $fromAddress,
             'from_name' => $fromName,
             'smtp_pravin_config_detected' => $pravinHost !== '' && $pravinUsername !== '' && $pravinPassword !== '',
+            'delivery_mode' => 'immediate',
         ]);
 
         $mail = $this->mailer($selectedMailer)
@@ -75,6 +83,8 @@ class MembershipWelcomeMail extends Mailable
             Log::warning('membership.welcome_email.pravin_mailer_not_configured', [
                 'user_id' => (string) $this->user->id,
                 'configured_host' => $pravinHost !== '',
+                'configured_port' => $pravinPort !== '',
+                'configured_encryption' => $pravinEncryption !== '',
                 'configured_username' => $pravinUsername !== '',
                 'configured_password' => $pravinPassword !== '',
             ]);
