@@ -51,7 +51,7 @@ return [
 
         'smtp_pravin' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST_PRAVIN', 'smtp.zoho.in'),
+            'host' => env('MAIL_HOST_PRAVIN', 'smtppro.zoho.in'),
             'port' => env('MAIL_PORT_PRAVIN', 587),
             'encryption' => env('MAIL_ENCRYPTION_PRAVIN', 'tls'),
             'username' => env('MAIL_USERNAME_PRAVIN'),
