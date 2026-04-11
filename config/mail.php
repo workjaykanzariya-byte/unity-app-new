@@ -49,6 +49,17 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        'smtp_pravin' => [
+            'transport' => 'smtp',
+            'host' => env('MAIL_HOST_PRAVIN', 'smtp.zoho.in'),
+            'port' => env('MAIL_PORT_PRAVIN', 587),
+            'encryption' => env('MAIL_ENCRYPTION_PRAVIN', 'tls'),
+            'username' => env('MAIL_USERNAME_PRAVIN'),
+            'password' => env('MAIL_PASSWORD_PRAVIN'),
+            'timeout' => null,
+            'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],
@@ -113,6 +124,11 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
+    ],
+
+    'from_pravin' => [
+        'address' => env('MAIL_FROM_ADDRESS_PRAVIN', 'pravin@peersglobal.com'),
+        'name' => env('MAIL_FROM_NAME_PRAVIN', 'Peers Global Unity'),
     ],
 
 ];

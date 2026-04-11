@@ -48,12 +48,32 @@ class MembershipWelcomeMail extends Mailable
             'user_id' => (string) $this->user->id,
         ]);
 
-        $mail = $this->from('pravin@peersglobal.com', 'Peers Global Unity')
-            ->subject('Welcome to your Peers Unity Membership')
+        $fromAddress = trim((string) config('mail.from_pravin.address', ''));
+        $fromName = trim((string) config('mail.from_pravin.name', ''));
+        $pravinHost = trim((string) config('mail.mailers.smtp_pravin.host', ''));
+        $pravinUsername = trim((string) config('mail.mailers.smtp_pravin.username', ''));
+        $pravinPassword = trim((string) config('mail.mailers.smtp_pravin.password', ''));
+
+        $mail = $this->subject('Welcome to your Peers Unity Membership')
             ->view('emails.membership.membership_welcome')
             ->with([
                 'user' => $this->user,
             ]);
+
+        if ($fromAddress !== '') {
+            $mail->from($fromAddress, $fromName !== '' ? $fromName : null);
+        }
+
+        if ($pravinHost !== '' && $pravinUsername !== '' && $pravinPassword !== '') {
+            $mail->mailer('smtp_pravin');
+        } else {
+            Log::warning('membership.welcome_email.pravin_mailer_not_configured', [
+                'user_id' => (string) $this->user->id,
+                'configured_host' => $pravinHost !== '',
+                'configured_username' => $pravinUsername !== '',
+                'configured_password' => $pravinPassword !== '',
+            ]);
+        }
 
         foreach ($this->resolveAttachmentsForMail() as $attachment) {
             $mail->attach($attachment['path'], [
