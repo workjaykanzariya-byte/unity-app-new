@@ -14,6 +14,18 @@
 @if (session('status'))
     <div class="alert alert-success">{{ session('status') }}</div>
 @endif
+@if (session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+@if (session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+@if (session('warning'))
+    <div class="alert alert-warning">{{ session('warning') }}</div>
+@endif
+@if (session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 @if ($errors->any())
     <div class="alert alert-danger">
@@ -31,6 +43,10 @@
         @csrf
     </form>
 @endif
+
+<form id="sendWelcomeMailForm" method="POST" action="{{ route('admin.users.membership-welcome-email.send', $user->id) }}">
+    @csrf
+</form>
 
 <form id="userEditForm" action="{{ route('admin.users.update', $user->id) }}" method="POST">
     @csrf
@@ -513,6 +529,15 @@
                     @endforeach
                 </div>
             </div>
+        </div>
+
+        <div class="col-12">
+            @include('admin.users.partials.membership_welcome_email_card', [
+                'user' => $user,
+                'showSendButton' => true,
+                'sendFormId' => 'sendWelcomeMailForm',
+                'sendButtonClass' => 'btn btn-outline-primary',
+            ])
         </div>
 
         <div class="col-12">

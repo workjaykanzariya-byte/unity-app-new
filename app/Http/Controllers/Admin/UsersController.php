@@ -14,6 +14,7 @@ use App\Models\City;
 use App\Models\JoinedCircleCategory;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Membership\MembershipWelcomeEmailService;
 use App\Services\Users\PublicProfileSlugService;
 use App\Support\AdminAccess;
 use App\Support\Zoho\ZohoBillingService;
@@ -29,12 +30,14 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class UsersController extends Controller
 {
     public function __construct(
         private readonly ZohoBillingService $zohoBillingService,
         private readonly PublicProfileSlugService $publicProfileSlugService,
+        private readonly MembershipWelcomeEmailService $membershipWelcomeEmailService,
     ) {
     }
 
@@ -655,6 +658,35 @@ class UsersController extends Controller
         return back()->with('success', 'Role removed successfully.');
     }
 
+    public function sendWelcomeMembershipEmail(Request $request, string $userId): RedirectResponse
+    {
+        if (! AdminAccess::canEditUsers(Auth::guard('admin')->user())) {
+            abort(403);
+        }
+
+        $user = User::query()->findOrFail($userId);
+
+        try {
+            $result = $this->membershipWelcomeEmailService->sendIfEligible($user);
+            $reason = (string) ($result['reason'] ?? '');
+
+            Log::info('admin.users.membership_welcome_send_result', [
+                'user_id' => (string) $user->id,
+                'reason' => $reason,
+                'sent' => (bool) ($result['sent'] ?? false),
+            ]);
+
+            return back()->with(...$this->welcomeMailFlashMessage($reason));
+        } catch (Throwable $throwable) {
+            Log::warning('admin.users.membership_welcome_send_failed', [
+                'user_id' => (string) $user->id,
+                'message' => $throwable->getMessage(),
+            ]);
+
+            return back()->with('error', 'Welcome email failed to send.');
+        }
+    }
+
     public function importForm(): View
     {
         return view('admin.users.import');
@@ -1078,6 +1110,10 @@ class UsersController extends Controller
                 'membership_starts_at',
                 'membership_ends_at',
                 'last_payment_at',
+                'welcome_membership_email_sent_at',
+                'welcome_membership_email_status',
+                'welcome_membership_email_error',
+                'welcome_membership_email_plan_code',
             ])
             ->with([
                 'city',
@@ -1500,6 +1536,16 @@ class UsersController extends Controller
                 'level4_category_id' => $level4Id > 0 ? $level4Id : null,
             ]
         );
+    private function welcomeMailFlashMessage(string $reason): array
+    {
+        return match ($reason) {
+            'sent' => ['success', 'Welcome email sent successfully.'],
+            'already_sent' => ['info', 'Welcome email was already sent earlier.'],
+            'not_paid' => ['warning', 'User is not eligible for welcome email yet.'],
+            'missing_email' => ['warning', 'User does not have an email address.'],
+            'disabled' => ['warning', 'Membership welcome email is currently disabled.'],
+            default => ['error', 'Welcome email failed to send.'],
+        };
     }
 
 }

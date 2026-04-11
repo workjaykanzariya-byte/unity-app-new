@@ -4,6 +4,7 @@ namespace App\Support\Zoho;
 
 use App\Models\Circle;
 use App\Models\User;
+use App\Services\Membership\MembershipWelcomeEmailService;
 use App\Support\Membership\MembershipUpdater;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,7 @@ class ZohoBillingService
     public function __construct(
         private readonly ZohoBillingClient $client,
         private readonly MembershipUpdater $membershipUpdater,
+        private readonly MembershipWelcomeEmailService $membershipWelcomeEmailService,
     ) {
     }
 
@@ -576,7 +578,7 @@ class ZohoBillingService
             return false;
         }
 
-        return $this->membershipUpdater->applyPaidMembership($user, [
+        $applied = $this->membershipUpdater->applyPaidMembership($user, [
             'zoho_subscription_id' => $subscription['subscription_id'] ?? null,
             'zoho_plan_code' => $subscription['plan']['plan_code'] ?? null,
             'zoho_last_invoice_id' => $hostedPage['invoice']['invoice_id'] ?? ($subscription['invoice_id'] ?? null),
@@ -584,6 +586,12 @@ class ZohoBillingService
             'membership_ends_at' => $subscription['next_billing_at'] ?? $subscription['expires_at'] ?? null,
             'last_payment_at' => now(),
         ]);
+
+        if ($applied) {
+            $this->triggerMembershipWelcomeEmailAfterPaidActivation($user, 'zoho_hosted_page_sync');
+        }
+
+        return $applied;
     }
 
     public function applyWebhookEvent(array $event): bool
@@ -689,7 +697,7 @@ class ZohoBillingService
                 return false;
             }
 
-            return $this->membershipUpdater->applyPaidMembership($user, [
+            $applied = $this->membershipUpdater->applyPaidMembership($user, [
                 'zoho_customer_id' => $customerId !== '' ? $customerId : $user->zoho_customer_id,
                 'zoho_subscription_id' => $subscriptionId,
                 'zoho_plan_code' => $planCode !== '' ? $planCode : $user->zoho_plan_code,
@@ -698,6 +706,12 @@ class ZohoBillingService
                 'membership_ends_at' => $endsAt,
                 'last_payment_at' => now(),
             ]);
+
+            if ($applied) {
+                $this->triggerMembershipWelcomeEmailAfterPaidActivation($user, 'zoho_webhook_subscription_payload');
+            }
+
+            return $applied;
         }
 
         $customerId = Arr::get($payload, 'customer.customer_id')
@@ -754,7 +768,7 @@ class ZohoBillingService
             'invoice_paid',
             'payment_success',
         ], true)) {
-            return $this->membershipUpdater->applyPaidMembership($user, [
+            $applied = $this->membershipUpdater->applyPaidMembership($user, [
                 'zoho_customer_id' => $customerId,
                 'zoho_subscription_id' => $subscriptionId,
                 'zoho_plan_code' => $planCode,
@@ -767,9 +781,55 @@ class ZohoBillingService
                     ?? Arr::get($payload, 'subscription.current_term_ends_at'),
                 'last_payment_at' => now(),
             ]);
+
+            if ($applied) {
+                $this->triggerMembershipWelcomeEmailAfterPaidActivation($user, 'zoho_webhook_event_type');
+            }
+
+            return $applied;
         }
 
         return false;
+    }
+
+    private function triggerMembershipWelcomeEmailAfterPaidActivation(User $user, string $source): void
+    {
+        $freshUser = User::query()->find($user->id);
+
+        if (! $freshUser) {
+            Log::warning('membership.welcome_email.auto_hook_user_not_found', [
+                'source' => $source,
+                'user_id' => (string) $user->id,
+            ]);
+
+            return;
+        }
+
+        try {
+            Log::info('membership.welcome_email.auto_hook_reached', [
+                'source' => $source,
+                'user_id' => (string) $freshUser->id,
+                'email' => (string) ($freshUser->email ?? ''),
+                'membership_status' => (string) ($freshUser->membership_status ?? ''),
+                'zoho_subscription_id' => (string) ($freshUser->zoho_subscription_id ?? ''),
+                'zoho_plan_code' => (string) ($freshUser->zoho_plan_code ?? ''),
+            ]);
+
+            $result = $this->membershipWelcomeEmailService->sendIfEligible($freshUser);
+
+            Log::info('membership.welcome_email.auto_hook_result', [
+                'source' => $source,
+                'user_id' => (string) $freshUser->id,
+                'sent' => (bool) ($result['sent'] ?? false),
+                'reason' => (string) ($result['reason'] ?? 'unknown'),
+            ]);
+        } catch (Throwable $throwable) {
+            Log::warning('membership.welcome_email.auto_hook_exception', [
+                'source' => $source,
+                'user_id' => (string) $freshUser->id,
+                'message' => $throwable->getMessage(),
+            ]);
+        }
     }
 
     private function findCustomerByEmail(string $email): ?string

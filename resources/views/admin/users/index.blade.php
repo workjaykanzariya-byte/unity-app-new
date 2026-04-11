@@ -6,6 +6,15 @@
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
+@if(session('info'))
+    <div class="alert alert-info">{{ session('info') }}</div>
+@endif
+@if(session('warning'))
+    <div class="alert alert-warning">{{ session('warning') }}</div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
 
 <div class="card p-3">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -387,6 +396,14 @@
                                             </div>
                                         @endif
                                     </div>
+                                    @include('admin.users.partials.membership_welcome_email_card', [
+                                        'user' => $user,
+                                        'showSendButton' => $canEditUsers,
+                                        'cardClass' => 'mt-3 border-0 shadow-sm',
+                                        'headerClass' => 'bg-white',
+                                        'bodyClass' => '',
+                                        'sendButtonClass' => 'btn btn-outline-primary btn-sm',
+                                    ])
                                 </div>
                             </div>
                         </td>
