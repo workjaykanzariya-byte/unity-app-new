@@ -48,25 +48,30 @@ class MembershipWelcomeMail extends Mailable
             'user_id' => (string) $this->user->id,
         ]);
 
-        $fromAddress = trim((string) config('mail.from_pravin.address', ''));
-        $fromName = trim((string) config('mail.from_pravin.name', ''));
+        $selectedMailer = 'smtp_pravin';
+        $fromAddress = trim((string) config('mail.from_pravin.address', 'pravin@peersglobal.com'));
+        $fromName = trim((string) config('mail.from_pravin.name', 'Peers Global Unity'));
         $pravinHost = trim((string) config('mail.mailers.smtp_pravin.host', ''));
         $pravinUsername = trim((string) config('mail.mailers.smtp_pravin.username', ''));
         $pravinPassword = trim((string) config('mail.mailers.smtp_pravin.password', ''));
 
-        $mail = $this->subject('Welcome to your Peers Unity Membership')
+        Log::info('membership.welcome_email.mailer_selection', [
+            'user_id' => (string) $this->user->id,
+            'mailer' => $selectedMailer,
+            'from_address' => $fromAddress,
+            'from_name' => $fromName,
+            'smtp_pravin_config_detected' => $pravinHost !== '' && $pravinUsername !== '' && $pravinPassword !== '',
+        ]);
+
+        $mail = $this->mailer($selectedMailer)
+            ->from($fromAddress, $fromName)
+            ->subject('Welcome to your Peers Unity Membership')
             ->view('emails.membership.membership_welcome')
             ->with([
                 'user' => $this->user,
             ]);
 
-        if ($fromAddress !== '') {
-            $mail->from($fromAddress, $fromName !== '' ? $fromName : null);
-        }
-
-        if ($pravinHost !== '' && $pravinUsername !== '' && $pravinPassword !== '') {
-            $mail->mailer('smtp_pravin');
-        } else {
+        if ($pravinHost === '' || $pravinUsername === '' || $pravinPassword === '') {
             Log::warning('membership.welcome_email.pravin_mailer_not_configured', [
                 'user_id' => (string) $this->user->id,
                 'configured_host' => $pravinHost !== '',
