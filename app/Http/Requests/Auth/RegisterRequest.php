@@ -65,7 +65,7 @@ class RegisterRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
 
             // PASSWORD WITH CONDITIONAL CONFIRMATION
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'confirmed'],
 
             // NEW OPTIONAL FIELDS FOR REGISTRATION
             'company_name' => ['nullable', 'string', 'max:255'],
