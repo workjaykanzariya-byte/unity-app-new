@@ -43,14 +43,12 @@ class ReferralService
             ];
         }
 
-        $name = trim((string) ($user->display_name ?: ($user->first_name . ' ' . $user->last_name)));
-        $code = $this->referralCodeService->generateUniqueCode($name);
-        $link = $this->referralCodeService->buildReferralLink($code);
+        $code = $this->referralCodeService->generateUniqueCode();
+        $link = $this->buildReferralLinkFromToken($code);
 
         $insertPayload = [
             $this->referralLinksUserColumn() => $user->id,
-            $this->referralLinksCodeColumn() => $code,
-            $this->referralLinksLinkColumn() => $link,
+            'token' => $code,
             'created_at' => now(),
             'updated_at' => now(),
         ];
@@ -86,16 +84,14 @@ class ReferralService
     {
         $normalized = strtoupper(trim($code));
         $userColumn = $this->referralLinksUserColumn();
-        $codeColumn = $this->referralLinksCodeColumn();
-        $linkColumn = $this->referralLinksLinkColumn();
 
         $row = DB::table('referral_links as rl')
             ->join('users as u', 'u.id', '=', 'rl.' . $userColumn)
-            ->where('rl.' . $codeColumn, $normalized)
+            ->where('rl.token', $normalized)
             ->select([
                 DB::raw('rl."' . $userColumn . '" as "user_id"'),
-                DB::raw('rl."' . $codeColumn . '" as "referral_code"'),
-                DB::raw('rl."' . $linkColumn . '" as "referral_link"'),
+                DB::raw('rl."token" as "referral_code"'),
+                DB::raw('CONCAT(\'https://peersglobal.com/join/\', rl."token") as "referral_link"'),
                 'u.first_name',
                 'u.last_name',
                 'u.display_name',
@@ -147,11 +143,10 @@ class ReferralService
     {
         $normalized = strtoupper(trim($code));
         $userColumn = $this->referralLinksUserColumn();
-        $codeColumn = $this->referralLinksCodeColumn();
 
-        return DB::transaction(function () use ($newUser, $normalized, $userColumn, $codeColumn) {
+        return DB::transaction(function () use ($newUser, $normalized, $userColumn) {
             $link = DB::table('referral_links')
-                ->where($codeColumn, $normalized)
+                ->where('token', $normalized)
                 ->lockForUpdate()
                 ->first();
 
@@ -434,16 +429,11 @@ class ReferralService
     private function getReferralLinkRowByUserId(string $userId): ?object
     {
         $userColumn = $this->referralLinksUserColumn();
-        $codeColumn = $this->referralLinksCodeColumn();
-        $linkColumn = $this->referralLinksLinkColumn();
 
         return DB::table('referral_links')
             ->where($userColumn, $userId)
             ->orderBy('id', 'asc')
-            ->select([
-                DB::raw('"' . $codeColumn . '" as "referral_code"'),
-                DB::raw('"' . $linkColumn . '" as "referral_link"'),
-            ])
+            ->selectRaw('token as referral_code, CONCAT(\'https://peersglobal.com/join/\', token) as referral_link')
             ->first();
     }
 
@@ -456,25 +446,8 @@ class ReferralService
         return 'referrer_user_id';
     }
 
-    private function referralLinksCodeColumn(): string
+    private function buildReferralLinkFromToken(string $token): string
     {
-        if (Schema::hasColumn('referral_links', 'referral_code')) {
-            return 'referral_code';
-        }
-
-        return 'token';
-    }
-
-    private function referralLinksLinkColumn(): string
-    {
-        if (Schema::hasColumn('referral_links', 'referral_link')) {
-            return 'referral_link';
-        }
-
-        if (Schema::hasColumn('referral_links', 'referralLink')) {
-            return 'referralLink';
-        }
-
-        return 'referral_link';
+        return 'https://peersglobal.com/join/' . $token;
     }
 }
