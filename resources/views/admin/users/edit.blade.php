@@ -44,10 +44,6 @@
     </form>
 @endif
 
-<form id="sendWelcomeMailForm" method="POST" action="{{ route('admin.users.membership-welcome-email.send', $user->id) }}">
-    @csrf
-</form>
-
 <form id="userEditForm" action="{{ route('admin.users.update', $user->id) }}" method="POST">
     @csrf
     @method('PUT')
@@ -527,15 +523,6 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-
-        <div class="col-12">
-            @include('admin.users.partials.membership_welcome_email_card', [
-                'user' => $user,
-                'showSendButton' => true,
-                'sendFormId' => 'sendWelcomeMailForm',
-                'sendButtonClass' => 'btn btn-outline-primary',
-            ])
         </div>
 
         <div class="col-12">
