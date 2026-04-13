@@ -19,6 +19,9 @@ class LifeImpactService
         array $meta = [],
     ): int {
         $impactValue = (int) $impactValue;
+        $activityId = (is_string($activityId) && Str::isUuid($activityId))
+            ? $activityId
+            : null;
 
         if ($impactValue <= 0) {
             return $this->getCurrentTotal($userId);

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ReferralService
@@ -269,11 +270,15 @@ class ReferralService
             }
 
             if (! $alreadyGrantedForReferredUser) {
+                $lifeImpactActivityId = (is_string($data->id) && Str::isUuid($data->id))
+                    ? (string) $data->id
+                    : null;
+
                 $updatedLifeImpacted = $this->lifeImpactService->addLifeImpact(
                     $referrerUserId,
                     $newUserId,
                     'referral_registration',
-                    (string) $data->id,
+                    $lifeImpactActivityId,
                     5,
                     'New referral joined successfully',
                     'Life impact added for successful referral-based registration.',

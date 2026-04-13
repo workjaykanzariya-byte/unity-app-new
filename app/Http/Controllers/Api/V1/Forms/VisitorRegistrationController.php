@@ -36,7 +36,7 @@ class VisitorRegistrationController extends BaseApiController
             'visitor_registration',
             'Brought a quality visitor to the meeting',
             (string) $authUser->id,
-            (string) $registration->id,
+            null,
             'Life impact added for visitor registration activity.',
             [
                 'event_type' => $registration->event_type,
