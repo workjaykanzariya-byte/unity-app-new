@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Services\Blocks\PeerBlockService;
 use App\Services\Coins\CoinsService;
 use App\Services\Notifications\NotifyUserService;
+use App\Services\LifeImpact\LifeImpactService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -115,8 +117,12 @@ class BusinessDealController extends BaseApiController
         ]);
     }
 
-    public function store(StoreBusinessDealRequest $request, NotifyUserService $notifyUserService, PeerBlockService $peerBlockService)
-    {
+    public function store(
+        StoreBusinessDealRequest $request,
+        NotifyUserService $notifyUserService,
+        PeerBlockService $peerBlockService,
+        LifeImpactService $lifeImpactService
+    ) {
         $authUser = $request->user();
         $targetUserId = (string) $request->input('to_user_id');
 
@@ -125,23 +131,35 @@ class BusinessDealController extends BaseApiController
         }
 
         try {
-            $businessDeal = BusinessDeal::create([
-                'from_user_id' => $authUser->id,
-                'to_user_id' => $request->input('to_user_id'),
-                'deal_date' => $request->input('deal_date'),
-                'deal_amount' => $request->input('deal_amount'),
-                'business_type' => $request->input('business_type'),
-                'comment' => $request->input('comment'),
-                'is_deleted' => false,
-            ]);
+            [$businessDeal, $coinsLedger, $lifeImpact] = DB::transaction(function () use ($request, $authUser, $lifeImpactService) {
+                $businessDeal = BusinessDeal::create([
+                    'from_user_id' => $authUser->id,
+                    'to_user_id' => $request->input('to_user_id'),
+                    'deal_date' => $request->input('deal_date'),
+                    'deal_amount' => $request->input('deal_amount'),
+                    'business_type' => $request->input('business_type'),
+                    'comment' => $request->input('comment'),
+                    'is_deleted' => false,
+                ]);
 
-            $coinsLedger = app(CoinsService::class)->rewardForActivity(
-                $authUser,
-                'business_deal',
-                null,
-                'Activity: business_deal',
-                $authUser->id
-            );
+                Log::info('business_deal.created', [
+                    'business_deal_id' => (string) $businessDeal->id,
+                    'from_user_id' => (string) $authUser->id,
+                    'to_user_id' => (string) $businessDeal->to_user_id,
+                ]);
+
+                $coinsLedger = app(CoinsService::class)->rewardForActivity(
+                    $authUser,
+                    'business_deal',
+                    null,
+                    'Activity: business_deal',
+                    $authUser->id
+                );
+
+                $lifeImpact = $lifeImpactService->createBusinessDealImpact($authUser, $businessDeal);
+
+                return [$businessDeal, $coinsLedger, $lifeImpact];
+            });
 
             if ($coinsLedger) {
                 $businessDeal->setAttribute('coins', [
@@ -149,6 +167,13 @@ class BusinessDealController extends BaseApiController
                     'balance_after' => $coinsLedger->balance_after,
                 ]);
             }
+
+            $businessDeal->setAttribute('life_impact', [
+                'earned' => (int) ($lifeImpact['earned'] ?? 0),
+                'total_after' => (int) ($lifeImpact['total_after'] ?? 0),
+                'history_id' => (string) ($lifeImpact['history']->id ?? ''),
+                'action_key' => (string) ($lifeImpact['history']->action_key ?? 'closed_business_deal'),
+            ]);
 
             $this->createPostForBusinessDeal($businessDeal);
 
@@ -176,19 +201,14 @@ class BusinessDealController extends BaseApiController
                 );
             }
 
-            // Postman example (business deal create):
-            // {
-            //   "to_user_id": "<receiver-user-uuid>",
-            //   "deal_date": "2026-01-20",
-            //   "deal_amount": 5000,
-            //   "business_type": "B2B",
-            //   "comment": "Closed via referral"
-            // }
-            // Verify SQL:
-            // select * from notifications where user_id = '<receiver-user-uuid>' order by created_at desc limit 20;
-
             return $this->success($businessDeal, 'Business deal saved successfully', 201);
         } catch (Throwable $e) {
+            Log::error('business_deal.create_failed', [
+                'user_id' => (string) $authUser->id,
+                'to_user_id' => $targetUserId,
+                'error' => $e->getMessage(),
+            ]);
+
             return $this->error('Something went wrong', 500);
         }
     }
