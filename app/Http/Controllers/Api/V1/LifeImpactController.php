@@ -19,6 +19,10 @@ class LifeImpactController extends BaseApiController
 
     public function actions(): JsonResponse
     {
+        Log::info('life_impact.actions_requested', [
+            'user_id' => (string) auth()->id(),
+        ]);
+
         return $this->success([
             'items' => $this->lifeImpactService->actions(),
         ]);
@@ -77,6 +81,11 @@ class LifeImpactController extends BaseApiController
 
     public function show(Request $request, string $id): JsonResponse
     {
+        Log::info('life_impact.show_requested', [
+            'user_id' => (string) $request->user()->id,
+            'history_id' => $id,
+        ]);
+
         $item = LifeImpactHistory::query()
             ->with('user:id,display_name,first_name,last_name')
             ->where('id', $id)

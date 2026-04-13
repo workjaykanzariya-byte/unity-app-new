@@ -252,9 +252,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/impacts/timeline', [ImpactController::class, 'timeline']);
 
         // Life impact system
-        Route::get('/life-impacts/actions', [LifeImpactController::class, 'actions']);
         Route::get('/life-impacts/history', [LifeImpactController::class, 'history']);
         Route::get('/life-impacts/summary', [LifeImpactController::class, 'summary']);
+        Route::get('/life-impacts/actions', [LifeImpactController::class, 'actions']);
         Route::get('/life-impacts/{id}', [LifeImpactController::class, 'show'])->whereUuid('id');
 
         Route::prefix('activities')->group(function () {
