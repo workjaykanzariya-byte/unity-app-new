@@ -349,6 +349,47 @@ class AuthController extends BaseApiController
 
     private function buildJoinedCategoriesPayload(User $user): array
     {
+        $joinedStatus = (string) config('circle.member_joined_status', 'approved');
+
+        $memberships = CircleMember::query()
+            ->where('user_id', (string) $user->id)
+            ->where('status', $joinedStatus)
+            ->whereNull('deleted_at')
+            ->whereNull('left_at')
+            ->with([
+                'circle:id,name',
+                'level1Category:id,name',
+                'level2Category:id,name',
+                'level3Category:id,name',
+                'level4Category:id,name',
+            ])
+            ->orderByDesc('joined_at')
+            ->get();
+
+        if ($memberships->isNotEmpty()) {
+            return $memberships
+                ->map(function (CircleMember $membership): array {
+                    return [
+                        'circle_id' => $membership->circle_id,
+                        'circle_name' => $membership->circle?->name,
+                        'level1_category' => $membership->level1Category
+                            ? ['id' => $membership->level1Category->id, 'name' => $membership->level1Category->name]
+                            : null,
+                        'level2_category' => $membership->level2Category
+                            ? ['id' => $membership->level2Category->id, 'name' => $membership->level2Category->name]
+                            : null,
+                        'level3_category' => $membership->level3Category
+                            ? ['id' => $membership->level3Category->id, 'name' => $membership->level3Category->name]
+                            : null,
+                        'level4_category' => $membership->level4Category
+                            ? ['id' => $membership->level4Category->id, 'name' => $membership->level4Category->name]
+                            : null,
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
         if (! Schema::hasTable('joined_circle_categories')) {
             return [];
         }
