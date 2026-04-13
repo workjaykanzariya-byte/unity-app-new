@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\V1\Forms\WebsiteFormsController;
 use App\Http\Controllers\Api\V1\IndustryController;
 use App\Http\Controllers\Api\V1\ImpactController;
 use App\Http\Controllers\Api\V1\Leadership\LeadershipGroupChatController;
+use App\Http\Controllers\Api\V1\LifeImpactController;
 use App\Http\Controllers\Api\V1\MembershipPlanController;
 use App\Http\Controllers\Api\V1\P2PMeetingRequestController;
 use App\Http\Controllers\Api\V1\PaymentController;
@@ -249,6 +250,13 @@ Route::prefix('v1')->group(function () {
         Route::post('/impacts', [ImpactController::class, 'store']);
         Route::get('/impacts/my', [ImpactController::class, 'my']);
         Route::get('/impacts/timeline', [ImpactController::class, 'timeline']);
+
+        // Life impact system
+        Route::get('/life-impacts/actions', [LifeImpactController::class, 'actions']);
+        Route::post('/life-impacts', [LifeImpactController::class, 'store']);
+        Route::get('/life-impacts/history', [LifeImpactController::class, 'history']);
+        Route::get('/life-impacts/summary', [LifeImpactController::class, 'summary']);
+        Route::get('/life-impacts/{id}', [LifeImpactController::class, 'show'])->whereUuid('id');
 
         Route::prefix('activities')->group(function () {
             Route::get('p2p-meetings', [P2pMeetingHistoryController::class, 'index']);
