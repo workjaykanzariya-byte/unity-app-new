@@ -9,6 +9,7 @@ use App\Models\LifeImpactHistory;
 use App\Services\LifeImpact\LifeImpactService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LifeImpactController extends BaseApiController
 {
@@ -27,6 +28,11 @@ class LifeImpactController extends BaseApiController
     {
         $filters = $request->validated();
         $perPage = (int) ($filters['per_page'] ?? 15);
+
+        Log::info('life_impact.history_requested', [
+            'user_id' => (string) $request->user()->id,
+            'filters' => $filters,
+        ]);
 
         $query = $this->lifeImpactService->historyQueryForUser($request->user());
 
@@ -61,6 +67,10 @@ class LifeImpactController extends BaseApiController
 
     public function summary(Request $request): JsonResponse
     {
+        Log::info('life_impact.summary_requested', [
+            'user_id' => (string) $request->user()->id,
+        ]);
+
         return $this->success($this->lifeImpactService->summaryForUser($request->user()));
     }
 

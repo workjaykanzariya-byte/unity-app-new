@@ -171,8 +171,6 @@ class BusinessDealController extends BaseApiController
             $businessDeal->setAttribute('life_impact', [
                 'earned' => (int) ($lifeImpact['earned'] ?? 0),
                 'total_after' => (int) ($lifeImpact['total_after'] ?? 0),
-                'history_id' => (string) ($lifeImpact['history']->id ?? ''),
-                'action_key' => (string) ($lifeImpact['history']->action_key ?? 'closed_business_deal'),
             ]);
 
             $this->createPostForBusinessDeal($businessDeal);
