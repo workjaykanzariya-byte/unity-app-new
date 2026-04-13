@@ -118,6 +118,7 @@ class LifeImpactService
 
         return [
             'user_id' => (string) $user->id,
+            'user_name' => $this->resolveUserName($user),
             'total_life_impacted' => $total,
             'approved_life_impacted' => $approved,
             'pending_life_impacted' => $pending,
@@ -194,5 +195,18 @@ class LifeImpactService
         }
 
         return (int) ($user->life_impacted_count ?? 0);
+    }
+
+    private function resolveUserName(User $user): ?string
+    {
+        $displayName = trim((string) ($user->display_name ?? ''));
+
+        if ($displayName !== '') {
+            return $displayName;
+        }
+
+        $fullName = trim((string) ($user->first_name ?? '') . ' ' . (string) ($user->last_name ?? ''));
+
+        return $fullName !== '' ? $fullName : null;
     }
 }

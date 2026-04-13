@@ -34,7 +34,8 @@ class LifeImpactController extends BaseApiController
             'filters' => $filters,
         ]);
 
-        $query = $this->lifeImpactService->historyQueryForUser($request->user());
+        $query = $this->lifeImpactService->historyQueryForUser($request->user())
+            ->with('user:id,display_name,first_name,last_name');
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -77,6 +78,7 @@ class LifeImpactController extends BaseApiController
     public function show(Request $request, string $id): JsonResponse
     {
         $item = LifeImpactHistory::query()
+            ->with('user:id,display_name,first_name,last_name')
             ->where('id', $id)
             ->where('user_id', $request->user()->id)
             ->firstOrFail();

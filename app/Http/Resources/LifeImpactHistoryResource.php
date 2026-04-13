@@ -18,6 +18,7 @@ class LifeImpactHistoryResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'user_id' => (string) $this->user_id,
+            'user_name' => $this->resolveUserName(),
             'action_key' => (string) $this->action_key,
             'action_label' => (string) $this->action_label,
             'impact_category' => $this->impact_category,
@@ -33,5 +34,22 @@ class LifeImpactHistoryResource extends JsonResource
                 'type' => $activityType !== '' ? $activityType : 'activity',
             ],
         ];
+    }
+
+    private function resolveUserName(): ?string
+    {
+        if (! $this->relationLoaded('user') || ! $this->user) {
+            return null;
+        }
+
+        $name = trim((string) ($this->user->display_name ?? ''));
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        $fullName = trim((string) ($this->user->first_name ?? '') . ' ' . (string) ($this->user->last_name ?? ''));
+
+        return $fullName !== '' ? $fullName : null;
     }
 }
