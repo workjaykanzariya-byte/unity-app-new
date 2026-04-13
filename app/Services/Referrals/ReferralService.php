@@ -173,6 +173,10 @@ class ReferralService
             $alreadyReferred = ReferralData::query()
                 ->where('referred_user_id', $newUserId)
                 ->exists();
+            $alreadyGrantedForReferredUser = ReferralData::query()
+                ->where('referred_user_id', $newUserId)
+                ->where('reward_status', 'granted')
+                ->exists();
 
             Log::info('referral.registration.referred_lookup', [
                 'referred_user_id' => $newUserId,
@@ -258,6 +262,21 @@ class ReferralService
                     'referrer_user_id' => (string) $referrer->id,
                     'referred_user_id' => $newUserId,
                     'coins' => $rewardCoins,
+                    'referral_data_id' => (int) $data->id,
+                ]);
+            }
+
+            if (! $alreadyGrantedForReferredUser) {
+                User::query()
+                    ->whereKey($referrerUserId)
+                    ->update([
+                        'life_impacted_count' => DB::raw('COALESCE(life_impacted_count, 0) + 5'),
+                    ]);
+
+                Log::info('referral.life_impacted.incremented', [
+                    'referrer_user_id' => $referrerUserId,
+                    'referred_user_id' => $newUserId,
+                    'increment_by' => 5,
                     'referral_data_id' => (int) $data->id,
                 ]);
             }
