@@ -354,6 +354,18 @@
                                                                 Joined Circle: {{ $circleTree['circle']?->name ?: ($circleTree['membership']->circle?->name ?? '—') }}
                                                             </div>
 
+                                                            @php
+                                                                $selectedPath = $circleTree['selected_category_path'] ?? [];
+                                                            @endphp
+                                                            @if(!empty($selectedPath['level1']) || !empty($selectedPath['level2']) || !empty($selectedPath['level3']) || !empty($selectedPath['level4']))
+                                                                <div class="small mb-2">
+                                                                    @if(!empty($selectedPath['level1'])) <div><strong>Level 1:</strong> {{ $selectedPath['level1']->name }}</div> @endif
+                                                                    @if(!empty($selectedPath['level2'])) <div><strong>Level 2:</strong> {{ $selectedPath['level2']->name }}</div> @endif
+                                                                    @if(!empty($selectedPath['level3'])) <div><strong>Level 3:</strong> {{ $selectedPath['level3']->name }}</div> @endif
+                                                                    @if(!empty($selectedPath['level4'])) <div><strong>Level 4:</strong> {{ $selectedPath['level4']->name }}</div> @endif
+                                                                </div>
+                                                            @endif
+
                                                             @if(($circleTree['categories'] ?? collect())->isEmpty())
                                                                 <div class="text-muted">—</div>
                                                             @else
