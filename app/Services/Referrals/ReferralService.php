@@ -269,13 +269,13 @@ class ReferralService
             }
 
             if (! $alreadyGrantedForReferredUser) {
-                $updatedLifeImpacted = $this->lifeImpactService->incrementAndLog(
+                $updatedLifeImpacted = $this->lifeImpactService->addLifeImpact(
                     $referrerUserId,
-                    5,
-                    'referral_registration',
-                    'New referral joined successfully',
                     $newUserId,
+                    'referral_registration',
                     (string) $data->id,
+                    5,
+                    'New referral joined successfully',
                     'Life impact added for successful referral-based registration.',
                     [
                         'to_user_id' => $newUserId,

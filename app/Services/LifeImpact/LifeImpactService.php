@@ -8,17 +8,17 @@ use Illuminate\Support\Str;
 
 class LifeImpactService
 {
-    public function incrementAndLog(
+    public function addLifeImpact(
         string $userId,
-        int $points,
+        ?string $triggeredByUserId,
         string $activityType,
-        string $title,
-        ?string $triggeredByUserId = null,
         ?string $activityId = null,
+        int $impactValue = 0,
+        string $title = '',
         ?string $description = null,
-        ?array $meta = null,
+        array $meta = [],
     ): int {
-        $impactValue = (int) $points;
+        $impactValue = (int) $impactValue;
 
         if ($impactValue <= 0) {
             return $this->getCurrentTotal($userId);
@@ -41,13 +41,35 @@ class LifeImpactService
                 'impact_value' => $impactValue,
                 'title' => $title,
                 'description' => $description,
-                'meta' => $meta,
+                'meta' => $meta ?: null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             return $this->getCurrentTotal($userId);
         });
+    }
+
+    public function incrementAndLog(
+        string $userId,
+        int $points,
+        string $activityType,
+        string $title,
+        ?string $triggeredByUserId = null,
+        ?string $activityId = null,
+        ?string $description = null,
+        ?array $meta = null,
+    ): int {
+        return $this->addLifeImpact(
+            $userId,
+            $triggeredByUserId,
+            $activityType,
+            $activityId,
+            (int) $points,
+            $title,
+            $description,
+            $meta ?? []
+        );
     }
 
     public function getCurrentTotal(string $userId): int

@@ -83,15 +83,15 @@ class BaseApiController extends Controller
         ?array $meta = null,
     ): int
     {
-        return app(LifeImpactService::class)->incrementAndLog(
+        return app(LifeImpactService::class)->addLifeImpact(
             $userId,
-            $points,
-            $activityType,
-            $title,
             $triggeredByUserId,
+            $activityType,
             $activityId,
+            $points,
+            $title,
             $description,
-            $meta
+            $meta ?? []
         );
     }
 
