@@ -197,6 +197,8 @@ class TestimonialController extends BaseApiController
                 $data['coins'] = $testimonial->getAttribute('coins');
             }
 
+            $data['life_impacted_count'] = $this->getLifeImpactedCount((string) $authUser->id);
+
             return $this->success($data, 'Testimonial saved successfully', 201);
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);

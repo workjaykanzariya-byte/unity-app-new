@@ -31,11 +31,13 @@ class VisitorRegistrationController extends BaseApiController
         ]);
 
         $this->increaseLifeImpact((string) $authUser->id, 1);
+        $updatedLifeImpact = $this->getLifeImpactedCount((string) $authUser->id);
 
         return $this->success([
             'id' => $registration->id,
             'status' => $registration->status,
             'created_at' => $registration->created_at,
+            'life_impacted_count' => $updatedLifeImpact,
         ], 'Visitor registration submitted successfully.', 201);
     }
 

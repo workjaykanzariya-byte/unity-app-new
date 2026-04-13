@@ -215,6 +215,7 @@ class ReferralController extends BaseApiController
             }
 
             $this->increaseLifeImpact((string) $authUser->id, 1);
+            $referral->setAttribute('life_impacted_count', $this->getLifeImpactedCount((string) $authUser->id));
 
             // Postman example (referral create):
             // {

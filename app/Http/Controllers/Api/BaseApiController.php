@@ -87,4 +87,11 @@ class BaseApiController extends Controller
                 'updated_at' => now(),
             ]);
     }
+
+    protected function getLifeImpactedCount(string $userId): int
+    {
+        return (int) (DB::table('users')
+            ->where('id', $userId)
+            ->value('life_impacted_count') ?? 0);
+    }
 }
