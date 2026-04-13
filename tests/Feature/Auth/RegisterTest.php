@@ -148,6 +148,36 @@ class RegisterTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['password']);
     }
 
+    public function test_registration_treats_string_null_password_as_absent(): void
+    {
+        $payload = [
+            'first_name' => 'String',
+            'last_name' => 'Null',
+            'email' => 'string-null@example.com',
+            'phone' => '8888888888',
+            'password' => 'null',
+        ];
+
+        $response = $this->postJson('/api/v1/auth/register', $payload);
+
+        $response->assertStatus(201)->assertJson(['success' => true]);
+    }
+
+    public function test_registration_treats_empty_password_as_absent(): void
+    {
+        $payload = [
+            'first_name' => 'Empty',
+            'last_name' => 'Password',
+            'email' => 'empty-password@example.com',
+            'phone' => '9999999999',
+            'password' => '',
+        ];
+
+        $response = $this->postJson('/api/v1/auth/register', $payload);
+
+        $response->assertStatus(201)->assertJson(['success' => true]);
+    }
+
     private function setUpInMemoryDatabase(): void
     {
         Schema::dropIfExists('personal_access_tokens');

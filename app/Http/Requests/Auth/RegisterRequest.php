@@ -32,6 +32,15 @@ class RegisterRequest extends FormRequest
             'level4_category_id' => $level4,
         ];
 
+        if ($this->has('password')) {
+            $rawPassword = $this->input('password');
+
+            if ($rawPassword === '' || (is_string($rawPassword) && strtolower(trim($rawPassword)) === 'null')) {
+                $payload['password'] = null;
+                $payload['password_confirmation'] = null;
+            }
+        }
+
         if (! blank($incomingReferralCode)) {
             $payload['referral_code'] = strtoupper(trim((string) $incomingReferralCode));
         }
