@@ -5,7 +5,7 @@
     <title>Welcome to Peers Global</title>
 </head>
 <body style="font-family: Arial, sans-serif; color: #111827; line-height: 1.6;">
-<p>Hello {{ trim((string) ($name ?? '')) !== '' ? $name : 'Peer' }},</p>
+<p>Hello {{ $user->display_name ?: trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'Peer' }},</p>
 
 <p>Welcome to Peers Global! We are happy to have you in the community.</p>
 

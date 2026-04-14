@@ -488,10 +488,7 @@ class AuthController extends BaseApiController
         }
 
         try {
-            Mail::to($user->email)->send(new WelcomePeerMail([
-                'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
-                'email' => $user->email,
-            ]));
+            Mail::to($user->email)->send(new WelcomePeerMail($user));
 
             EmailLog::query()->create([
                 'to_email' => (string) $user->email,

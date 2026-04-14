@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -10,11 +11,11 @@ class WelcomePeerMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public array $payload;
+    public User $user;
 
-    public function __construct(array $payload = [])
+    public function __construct(User $user)
     {
-        $this->payload = $payload;
+        $this->user = $user;
     }
 
     public function build()
@@ -22,8 +23,7 @@ class WelcomePeerMail extends Mailable
         return $this->subject('Welcome to Peers Global')
             ->view('emails.welcome_peer')
             ->with([
-                'name' => (string) ($this->payload['name'] ?? ''),
-                'email' => (string) ($this->payload['email'] ?? ''),
+                'user' => $this->user,
             ]);
     }
 }
