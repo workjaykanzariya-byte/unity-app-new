@@ -58,18 +58,21 @@ class CategoryController extends Controller
 
         $level2Categories = CircleCategoryLevel2::query()
             ->where('circle_category_id', $category->id)
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
         $level3Categories = CircleCategoryLevel3::query()
             ->where('circle_category_id', $category->id)
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
         $level4Categories = CircleCategoryLevel4::query()
             ->where('circle_category_id', $category->id)
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -263,46 +266,45 @@ class CategoryController extends Controller
                     ->with('error', 'Category not found.');
             }
 
-            if (
-                DB::getSchemaBuilder()->hasColumn('event_galleries', 'circle_category_id') &&
-                DB::table('event_galleries')->where('circle_category_id', $circleCategory->id)->exists()
-            ) {
-                return redirect()
-                    ->route('admin.categories.index')
-                    ->with('error', 'This category is in use and cannot be deleted.');
-            }
-
             DB::transaction(function () use ($circleCategory): void {
+                $now = now();
+
                 CircleCategoryLevel4::query()
                     ->where('circle_category_id', $circleCategory->id)
-                    ->delete();
+                    ->update([
+                        'is_active' => false,
+                        'updated_at' => $now,
+                    ]);
 
                 CircleCategoryLevel3::query()
                     ->where('circle_category_id', $circleCategory->id)
-                    ->delete();
+                    ->update([
+                        'is_active' => false,
+                        'updated_at' => $now,
+                    ]);
 
                 CircleCategoryLevel2::query()
                     ->where('circle_category_id', $circleCategory->id)
-                    ->delete();
+                    ->update([
+                        'is_active' => false,
+                        'updated_at' => $now,
+                    ]);
 
-                if (DB::getSchemaBuilder()->hasTable('circle_category_mappings')) {
-                    DB::table('circle_category_mappings')
-                        ->where('category_id', $circleCategory->id)
-                        ->delete();
-                }
-
-                $deletedMain = CircleCategory::query()
+                $deactivatedMain = CircleCategory::query()
                     ->where('id', $circleCategory->id)
-                    ->delete();
+                    ->update([
+                        'is_active' => false,
+                        'updated_at' => $now,
+                    ]);
 
-                if ($deletedMain !== 1) {
-                    throw new \RuntimeException('Circle category deletion did not affect any rows.');
+                if ($deactivatedMain !== 1) {
+                    throw new \RuntimeException('Circle category deactivation did not affect any rows.');
                 }
             });
 
             return redirect()
                 ->route('admin.categories.index')
-                ->with('success', 'Category deleted successfully.');
+                ->with('success', 'Category deactivated successfully.');
         } catch (\Throwable $e) {
             Log::error('admin.circle_category.delete_failed', [
                 'category_id' => (int) $category,
