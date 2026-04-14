@@ -573,8 +573,12 @@ class AuthController extends BaseApiController
         $user->membership_expiry = $trialEndsAt;
         $user->coins_balance = $user->coins_balance ?? 0;
 
-        // Store the hashed password in password_hash (not password)
-        $user->password_hash = Hash::make($data['password']);
+        // Store the hashed password in password_hash only when provided (OTP-only registration is allowed)
+        if (! empty($data['password'])) {
+            $user->password_hash = Hash::make($data['password']);
+        } else {
+            $user->password_hash = null;
+        }
 
         // Ensure any legacy password attribute isn't used
         if (isset($user->password)) {
