@@ -174,6 +174,51 @@
         return form;
     }
 
+
+    function isClosedSelect2SelectionTarget(target) {
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        if (!target.closest('.select2-selection')) {
+            return false;
+        }
+
+        return !target.closest('.select2-container--open');
+    }
+
+    function resolveSelectFromSelect2Target(target) {
+        if (!(target instanceof HTMLElement)) {
+            return null;
+        }
+
+        const container = target.closest('.select2-container');
+        if (!container) {
+            return null;
+        }
+
+        const previous = container.previousElementSibling;
+        if (previous instanceof HTMLSelectElement) {
+            return previous;
+        }
+
+        const next = container.nextElementSibling;
+        if (next instanceof HTMLSelectElement) {
+            return next;
+        }
+
+        const containerId = container.id || '';
+        if (containerId.startsWith('select2-') && containerId.endsWith('-container')) {
+            const selectId = containerId.slice(8, -10);
+            const byId = document.getElementById(selectId);
+            if (byId instanceof HTMLSelectElement) {
+                return byId;
+            }
+        }
+
+        return null;
+    }
+
     function bindEnterSubmit() {
         document.addEventListener('keydown', function (event) {
             if (event.key !== 'Enter') {
@@ -182,6 +227,25 @@
 
             const target = event.target;
             if (isInteractiveTypingField(target)) {
+                return;
+            }
+
+            if (isClosedSelect2SelectionTarget(target)) {
+                const select = resolveSelectFromSelect2Target(target);
+                const form = resolveFilterFormFromTarget(select);
+                if (!form) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    return;
+                }
+
+                form.submit();
                 return;
             }
 
@@ -195,6 +259,7 @@
             }
 
             event.preventDefault();
+            event.stopPropagation();
 
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
@@ -202,7 +267,7 @@
             }
 
             form.submit();
-        });
+        }, true);
     }
 
     function boot() {
