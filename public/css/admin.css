@@ -6,6 +6,17 @@
     --gray-300: #e7eaf1;
 }
 
+
+html,
+body.admin-layout {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body.admin-layout {
+    margin: 0;
+}
+
 body {
     background: var(--gray-100);
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -32,6 +43,8 @@ body {
 
 .admin-shell {
     min-height: 100vh;
+    width: 100%;
+    max-width: 100%;
 }
 
 .admin-sidebar {
@@ -105,6 +118,7 @@ body {
     background: var(--gray-100);
     min-height: 100vh;
     min-width: 0;
+    max-width: 100%;
 }
 
 .admin-topbar .input-group .form-control {
@@ -141,4 +155,9 @@ body {
     border-radius: 50%;
     display: inline-block;
     margin-right: 6px;
+}
+
+.admin-content .table-responsive {
+    overflow-x: auto;
+    max-width: 100%;
 }
