@@ -269,28 +269,28 @@ class CategoryController extends Controller
             DB::transaction(function () use ($category): void {
                 $now = now();
 
-                CircleCategoryLevel4::query()
+                DB::table('circle_category_level4')
                     ->where('circle_category_id', $category->id)
                     ->update([
                         'is_active' => false,
                         'updated_at' => $now,
                     ]);
 
-                CircleCategoryLevel3::query()
+                DB::table('circle_category_level3')
                     ->where('circle_category_id', $category->id)
                     ->update([
                         'is_active' => false,
                         'updated_at' => $now,
                     ]);
 
-                CircleCategoryLevel2::query()
+                DB::table('circle_category_level2')
                     ->where('circle_category_id', $category->id)
                     ->update([
                         'is_active' => false,
                         'updated_at' => $now,
                     ]);
 
-                $deactivatedMain = CircleCategory::query()
+                $deactivatedMain = DB::table('circle_categories')
                     ->where('id', $category->id)
                     ->update([
                         'is_active' => false,
