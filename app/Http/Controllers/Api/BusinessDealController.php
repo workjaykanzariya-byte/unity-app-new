@@ -243,13 +243,17 @@ class BusinessDealController extends BaseApiController
         }
 
         try {
-            $businessDeal->is_deleted = true;
-            $businessDeal->save();
-            $businessDeal->delete();
+            $updatedLifeImpact = app(LifeImpactService::class)
+                ->reverseBusinessDealLifeImpact($businessDeal, (string) $authUser->id);
+
+            $businessDeal->forceFill([
+                'is_deleted' => true,
+                'deleted_at' => now(),
+            ])->save();
 
             return $this->success([
                 'id' => (string) $businessDeal->id,
-                'life_impacted_count' => app(LifeImpactService::class)->getCurrentTotal((string) $businessDeal->from_user_id),
+                'life_impacted_count' => $updatedLifeImpact,
             ], 'Business deal deleted successfully');
         } catch (Throwable $e) {
             return $this->error('Something went wrong', 500);
