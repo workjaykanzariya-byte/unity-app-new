@@ -228,6 +228,19 @@
                         <label class="form-label">Coins Balance</label>
                         <input type="number" name="coins_balance" class="form-control" min="0" value="{{ old('coins_balance', $user->coins_balance) }}">
                     </div>
+                    @if (!empty($hasCoinsRemarkColumn))
+                        <div class="col-md-4">
+                            <label class="form-label">Coins Remark</label>
+                            <input
+                                type="text"
+                                name="coins_remark"
+                                class="form-control"
+                                maxlength="1000"
+                                value="{{ old('coins_remark', $user->coins_remark) }}"
+                                placeholder="Optional admin note about coins balance"
+                            >
+                        </div>
+                    @endif
                     <div class="col-md-4">
                         <label class="form-label">Influencer Stars</label>
                         <input type="number" name="influencer_stars" class="form-control" min="0" value="{{ old('influencer_stars', $user->influencer_stars) }}">

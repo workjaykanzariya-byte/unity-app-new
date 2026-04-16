@@ -307,6 +307,8 @@ class UsersController extends Controller
                 ->values();
         }
 
+        $hasCoinsRemarkColumn = Schema::hasColumn('users', 'coins_remark');
+
         return view('admin.users.edit', [
             'user' => $user,
             'cities' => $cities,
@@ -329,6 +331,7 @@ class UsersController extends Controller
             'hasAssignedAdminRole' => $assignedAdminRoles->isNotEmpty(),
             'membershipPlanOptions' => $this->membershipPlanOptions($user->zoho_plan_code),
             'circleCategoryOptionsByCircle' => $circleCategoryOptionsByCircle,
+            'hasCoinsRemarkColumn' => $hasCoinsRemarkColumn,
         ]);
     }
 
@@ -422,6 +425,12 @@ class UsersController extends Controller
         ], [
             'role_ids.max' => 'You can not assign multiple roles.',
         ]);
+
+        if (Schema::hasColumn('users', 'coins_remark')) {
+            $validated += $request->validate([
+                'coins_remark' => ['nullable', 'string', 'max:1000'],
+            ]);
+        }
 
         $validated = $this->validateCategoryHierarchy($validated, $request);
 
