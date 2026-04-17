@@ -4,7 +4,6 @@ namespace App\Services\Impacts;
 
 use App\Models\AdminUser;
 use App\Models\Impact;
-use App\Models\LifeImpactHistory;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -209,9 +208,9 @@ class ImpactService
 
     private function storeApprovedImpactHistory(Impact $impact, string $adminId, ?string $reviewRemarks = null): void
     {
-        $alreadyExists = LifeImpactHistory::query()
+        $alreadyExists = DB::table('life_impact_histories')
             ->where('activity_id', (string) $impact->id)
-            ->where('activity_type', 'impact')
+            ->where('impact_category', 'impact')
             ->exists();
 
         if ($alreadyExists) {
@@ -224,16 +223,19 @@ class ImpactService
             return;
         }
 
-        $history = LifeImpactHistory::query()->create([
-            'id' => (string) Str::uuid(),
+        $historyId = (string) Str::uuid();
+        $approvedAt = $impact->approved_at ?? now();
+
+        DB::table('life_impact_histories')->insert([
+            'id' => $historyId,
             'user_id' => (string) $impact->user_id,
-            'triggered_by_user_id' => $adminId,
-            'activity_type' => 'impact',
             'activity_id' => (string) $impact->id,
-            'impact_value' => max(1, (int) ($impact->life_impacted ?? 1)),
-            'title' => (string) $impact->action,
-            'description' => $impact->additional_remarks ?: $reviewRemarks,
-            'meta' => [
+            'action_key' => Str::slug((string) $impact->action, '_'),
+            'action_label' => (string) $impact->action,
+            'impact_category' => 'impact',
+            'life_impacted' => max(1, (int) ($impact->life_impacted ?? 1)),
+            'remarks' => $impact->additional_remarks ?: $reviewRemarks,
+            'meta' => json_encode([
                 'source' => 'impact_approval',
                 'impact_id' => (string) $impact->id,
                 'impact_date' => optional($impact->impact_date)?->toDateString(),
@@ -242,9 +244,11 @@ class ImpactService
                 'additional_remarks' => $impact->additional_remarks,
                 'review_remarks' => $reviewRemarks,
                 'requires_leadership_approval' => (bool) $impact->requires_leadership_approval,
-                'status' => (string) $impact->status,
-                'approved_at' => optional($impact->approved_at)?->toISOString(),
-            ],
+            ], JSON_UNESCAPED_UNICODE),
+            'status' => 'approved',
+            'approved_at' => $approvedAt,
+            'counted_in_total' => true,
+            'created_by' => $adminId,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -253,7 +257,7 @@ class ImpactService
             'impact_id' => (string) $impact->id,
             'user_id' => (string) $impact->user_id,
             'admin_id' => $adminId,
-            'history_id' => (string) $history->id,
+            'history_id' => $historyId,
         ]);
     }
 }
