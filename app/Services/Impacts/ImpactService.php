@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ImpactService
@@ -181,11 +182,28 @@ class ImpactService
     public function recalculateUserLifeImpactedCount(User|string $userOrId): int
     {
         $userId = $userOrId instanceof User ? (string) $userOrId->id : (string) $userOrId;
+        $sum = 0;
 
-        $sum = (int) Impact::query()
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
-            ->sum(DB::raw('COALESCE(life_impacted, 1)'));
+        if (Schema::hasTable('life_impact_histories')) {
+            $historyQuery = DB::table('life_impact_histories')->where('user_id', $userId);
+
+            if (Schema::hasColumn('life_impact_histories', 'counted_in_total')) {
+                $historyQuery->where('counted_in_total', true);
+            }
+
+            if (Schema::hasColumn('life_impact_histories', 'life_impacted')) {
+                $sum = (int) $historyQuery->sum('life_impacted');
+            } elseif (Schema::hasColumn('life_impact_histories', 'impact_value')) {
+                $sum = (int) $historyQuery->sum('impact_value');
+            }
+        }
+
+        if ($sum === 0) {
+            $sum = (int) Impact::query()
+                ->where('user_id', $userId)
+                ->where('status', 'approved')
+                ->sum(DB::raw('COALESCE(life_impacted, 1)'));
+        }
 
         User::query()
             ->where('id', $userId)
