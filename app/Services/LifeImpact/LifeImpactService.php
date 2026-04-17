@@ -2,8 +2,8 @@
 
 namespace App\Services\LifeImpact;
 
-use App\Models\LifeImpactHistory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class LifeImpactService
@@ -35,19 +35,66 @@ class LifeImpactService
                     'updated_at' => now(),
                 ]);
 
-            LifeImpactHistory::query()->create([
+            $now = now();
+            $payload = [
                 'id' => (string) Str::uuid(),
                 'user_id' => $userId,
-                'triggered_by_user_id' => $triggeredByUserId,
-                'activity_type' => $activityType,
                 'activity_id' => $activityId,
-                'impact_value' => $impactValue,
-                'title' => $title,
-                'description' => $description,
-                'meta' => $meta ?: null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if ($this->hasHistoryColumn('impact_category')) {
+                $payload['impact_category'] = $activityType;
+            } elseif ($this->hasHistoryColumn('activity_type')) {
+                $payload['activity_type'] = $activityType;
+            }
+
+            if ($this->hasHistoryColumn('life_impacted')) {
+                $payload['life_impacted'] = $impactValue;
+            } elseif ($this->hasHistoryColumn('impact_value')) {
+                $payload['impact_value'] = $impactValue;
+            }
+
+            if ($this->hasHistoryColumn('action_key')) {
+                $payload['action_key'] = Str::slug($activityType, '_');
+            }
+
+            if ($this->hasHistoryColumn('action_label')) {
+                $payload['action_label'] = $title;
+            } elseif ($this->hasHistoryColumn('title')) {
+                $payload['title'] = $title;
+            }
+
+            if ($this->hasHistoryColumn('remarks')) {
+                $payload['remarks'] = $description;
+            } elseif ($this->hasHistoryColumn('description')) {
+                $payload['description'] = $description;
+            }
+
+            if ($this->hasHistoryColumn('counted_in_total')) {
+                $payload['counted_in_total'] = true;
+            }
+
+            if ($this->hasHistoryColumn('created_by')) {
+                $payload['created_by'] = $triggeredByUserId;
+            } elseif ($this->hasHistoryColumn('triggered_by_user_id')) {
+                $payload['triggered_by_user_id'] = $triggeredByUserId;
+            }
+
+            if ($this->hasHistoryColumn('status')) {
+                $payload['status'] = 'approved';
+            }
+
+            if ($this->hasHistoryColumn('approved_at')) {
+                $payload['approved_at'] = $now;
+            }
+
+            if ($this->hasHistoryColumn('meta')) {
+                $payload['meta'] = $meta ? json_encode($meta, JSON_UNESCAPED_UNICODE) : null;
+            }
+
+            DB::table('life_impact_histories')->insert($payload);
 
             return $this->getCurrentTotal($userId);
         });
@@ -78,5 +125,16 @@ class LifeImpactService
     public function getCurrentTotal(string $userId): int
     {
         return (int) (DB::table('users')->where('id', $userId)->value('life_impacted_count') ?? 0);
+    }
+
+    private function hasHistoryColumn(string $column): bool
+    {
+        static $columns = null;
+
+        if (! is_array($columns)) {
+            $columns = Schema::getColumnListing('life_impact_histories');
+        }
+
+        return in_array($column, $columns, true);
     }
 }
