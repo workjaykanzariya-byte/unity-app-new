@@ -25,7 +25,7 @@ class LifeImpactHistoryController extends BaseApiController
             ->orderByDesc('created_at');
 
         if (filled($request->query('activity_type'))) {
-            $query->where('activity_type', (string) $request->query('activity_type'));
+            $query->where('impact_category', (string) $request->query('activity_type'));
         }
 
         if (filled($request->query('date_from'))) {
@@ -41,8 +41,9 @@ class LifeImpactHistoryController extends BaseApiController
             ->map(fn (LifeImpactHistory $history): string => $history->resolveImpactValueSource())
             ->countBy()
             ->all();
-        $totalLifeImpacted = (int) $matchingHistories
-            ->sum(fn (LifeImpactHistory $history): int => $history->resolveImpactValue());
+        $totalLifeImpacted = (int) (clone $query)
+            ->where('counted_in_total', true)
+            ->sum('life_impacted');
 
         Log::info('life_impact.history.summary', [
             'user_id' => (string) $user->id,

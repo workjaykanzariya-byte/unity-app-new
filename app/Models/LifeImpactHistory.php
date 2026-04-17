@@ -23,17 +23,24 @@ class LifeImpactHistory extends Model
     protected $fillable = [
         'id',
         'user_id',
-        'triggered_by_user_id',
-        'activity_type',
         'activity_id',
-        'impact_value',
-        'title',
-        'description',
+        'action_key',
+        'action_label',
+        'impact_category',
+        'life_impacted',
+        'remarks',
+        'status',
+        'approved_at',
+        'counted_in_total',
+        'created_by',
         'meta',
     ];
 
     protected $casts = [
+        'life_impacted' => 'integer',
         'impact_value' => 'integer',
+        'counted_in_total' => 'boolean',
+        'approved_at' => 'datetime',
         'meta' => 'array',
     ];
 
@@ -44,11 +51,15 @@ class LifeImpactHistory extends Model
 
     public function triggeredByUser()
     {
-        return $this->belongsTo(User::class, 'triggered_by_user_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function resolveImpactValue(): int
     {
+        if (array_key_exists('life_impacted', $this->attributes) && $this->attributes['life_impacted'] !== null) {
+            return (int) $this->attributes['life_impacted'];
+        }
+
         if (array_key_exists('impact_value', $this->attributes) && $this->attributes['impact_value'] !== null) {
             return (int) $this->attributes['impact_value'];
         }
@@ -63,6 +74,10 @@ class LifeImpactHistory extends Model
 
     public function resolveImpactValueSource(): string
     {
+        if (array_key_exists('life_impacted', $this->attributes) && $this->attributes['life_impacted'] !== null) {
+            return 'column:life_impacted';
+        }
+
         if (array_key_exists('impact_value', $this->attributes) && $this->attributes['impact_value'] !== null) {
             return 'column:impact_value';
         }
